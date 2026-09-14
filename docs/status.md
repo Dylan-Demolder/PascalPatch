@@ -26,7 +26,7 @@
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
 - GUI polish and display-server smoke testing (headless controller is implemented and tested).
 - Character model import, skeleton retargeting, game asset conversion and playable character round trip.
-- Character Studio move/attribute UI and approved move library.
+- Character Studio visual move/attribute UI and approved move library (source-preserving core editor is complete).
 - First-party plugin visual/training behavior in Dolphin.
 
 Do not label pending features as supported.
