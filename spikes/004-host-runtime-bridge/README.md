@@ -1,5 +1,11 @@
 # Spike 004 — Host/runtime bridge
 
-**Verdict: INVALIDATED for MVP scope (deferred).**
+**Verdict: HOST TRANSPORT VALIDATED; PPC ENDPOINT DEFERRED.**
 
-No transport is selected or measured yet. The host core intentionally does not depend on a bridge. Runtime communication must follow a separate ABI experiment after static code composition is proven.
+The host-side protocol is implemented and tested in `host/src/meleemod/bridge.py` and `bridge_transport.py`:
+
+- frames use `MMB1`, version 1, bounded payloads (64 KiB), request IDs, and a truncated SHA-256 payload checksum;
+- fragmented stream reads are reassembled and invalid headers, lengths, versions, checksums, timeouts, and disconnects fail closed;
+- `UnixBridgeServer` is local-only, accepts one bounded request, uses socket mode `0600`, and removes its socket on close.
+
+The runtime cannot open a Unix socket from PPC code. No in-game endpoint is claimed. A future endpoint must provide a PPC-compatible transport adapter or an explicitly supported Dolphin bridge, preserve the frame contract, negotiate version/capabilities, send bounded heartbeat messages, and reset state on timeout or disconnect. Until then, bridge-dependent gameplay features remain disabled by profile capability checks.
