@@ -16,7 +16,7 @@ This audit records the evidence boundary for the current repositories. It is int
 | Launcher and bounded shutdown | Complete | Process-group hard-kill tests and smoke tooling; interactive emulator prompt recovery is not claimed |
 | Online/tournament safety | Fail-closed host policy complete; real Slippi smoke absent | Capability-derived policy tests now reject arbitrary unrecognized capability names as unknown; actual online login/tournament environment remains unverified |
 | Input display and training tools | Frame callback infrastructure observed | Training-tools heartbeat is directly observed in Dolphin; no visual overlay, frame advance, reset, or hit-event proof |
-| GUI | Headless controller and bounded Tk launch complete | Full interactive recovery remains unverified on the base host |
+| GUI | Headless controller, bounded Tk launch, and error-dialog recovery complete | Invalid-profile error recovery is directly observed with extracted Tk/Tcl libraries; full build/launch recovery remains unverified |
 | Diagnostics | Host reporting/symbolization complete | Runtime crash capture remains absent |
 | Registry | Signed indexes, local install, and bounded remote file/ZIP install complete | Dependency-free Ed25519 signatures, trust metadata, revocation/expiry checks, key rotation, HTTPS bounded fetch/cache update, streamed hash verification, and safe ZIP extraction with atomic promotion are tested; remote folders and package-specific semantic validation remain separate |
 

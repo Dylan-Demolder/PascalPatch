@@ -22,4 +22,4 @@ The emulator boot gate is passed. The remaining blockers are plugin-specific run
 - [ ] Safe-profile block verified in Slippi
 - [ ] Character package composed into an Offline profile
 - [ ] Character-select and playable-match round trip
-- [ ] GUI display workflow and recovery test (headless controller and bounded window launch pass; interactive recovery remains)
+- [ ] GUI display workflow and full recovery test (invalid-profile error dismissal is observed; build/launch recovery remains)
