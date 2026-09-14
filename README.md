@@ -47,3 +47,8 @@ gcc -std=c99 -Wall -Wextra -Werror -Iruntime/include \
 ## Legal boundary
 
 This repository contains tooling, schemas and original sample code only. Do not commit, distribute or fetch Nintendo ISO, DOL, extracted assets or copyrighted game data.
+
+
+## Static code profiles
+
+A code profile must explicitly provide `decomp_repo`, `decomp_orig` and `plugin_source_root`. Each selected plugin must declare a relative `.c` `source` and a C entrypoint. The host creates a disposable worktree and stages the generated DOL. An extracted base directory is required; ISO-only code builds are rejected until disc-image recomposition is implemented.
