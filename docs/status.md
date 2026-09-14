@@ -22,9 +22,9 @@
 - Linking the runtime into the Melee DOL.
 - Generalizing static plugin source bundles into the full PPC runtime ABI and lifecycle.
 - PPC plugin composition and runtime loading.
-- Host/runtime transport and frame-time measurements.
+- Runtime endpoint and frame-time measurements (host transport is implemented and socket-pair tested).
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
-- GUI.
+- GUI polish and display-server smoke testing (headless controller is implemented and tested).
 - Character model import, skeleton retargeting, game asset conversion and playable character round trip.
 - Character Studio move/attribute UI and approved move library.
 - First-party plugin visual/training behavior in Dolphin.

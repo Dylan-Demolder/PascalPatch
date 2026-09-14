@@ -22,6 +22,7 @@ PYTHONPATH=host/src python -m meleemod.cli --root . profile list
 PYTHONPATH=host/src python -m meleemod.cli --root . profile validate PROFILE_ID
 PYTHONPATH=host/src python -m meleemod.cli --root . build PROFILE_ID
 PYTHONPATH=host/src python -m meleemod.cli --root . launch PROFILE_ID --dry-run
+PYTHONPATH=host/src python tooling/meleemod_gui.py --root .
 ```
 
 `profile list` and other commands expect `profiles/`, `plugins/`, and `mods/` catalogs under `--root`. Relative base-game and mod paths are resolved from their manifest locations.
@@ -33,7 +34,7 @@ python tooling/extract_disc.py /path/to/GALE01.iso /path/to/extracted-game \
   --dtk /path/to/dtk
 ```
 
-The current host MVP intentionally rejects PPC plugins during profile builds until the in-game integration spike has been boot-tested. The C ABI and static sample contract are present for that next step.
+PPC static profiles require an extracted game directory and explicit decompilation/runtime/source paths. Plugin entrypoints are initialized on the first game-loop frame; in-game behavior still requires emulator observation. The optional Tk GUI is a thin view over the same validated core APIs.
 
 ## Tests
 

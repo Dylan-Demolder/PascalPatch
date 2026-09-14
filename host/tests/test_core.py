@@ -86,4 +86,34 @@ class CoreTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    OSReport(\"#\\n\\n\");\n    return 0;\n}\n"); (t/"src/melee/gm/gm_1A3F.c").write_text("void loop(void) {\n    while (true) {\n        u8 next_mode = run();\n    }\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t,runtime_root=Path(__file__).parents[2]); result=(t/"src/melee/gm/gmmain.c").read_text(); loop=(t/"src/melee/gm/gm_1A3F.c").read_text(); bundle=(t/"src/melee/gm/meleemod_static_bundle.c").read_text(); self.assertIn("mm_meleemod_static_init",result); self.assertIn("mm_meleemod_frame();",loop); self.assertIn("mm_input_history_push",bundle); self.assertTrue((t/"src/melee/gm/meleemod_static_bundle.c").exists())
 
+
+
+class BridgeTransportTests(unittest.TestCase):
+ def test_socket_pair_round_trip_and_handler(self):
+  import socket
+  from meleemod.bridge_transport import receive, send, serve_once
+  left,right=socket.socketpair()
+  try:
+   send(left,Message(1,8,b"ping")); self.assertEqual(serve_once(right,lambda m: Message(2,m.request_id,b"pong")),Message(2,8,b"pong")); self.assertEqual(receive(left),Message(2,8,b"pong"))
+  finally: left.close(); right.close()
+ def test_disconnect_is_bounded_error(self):
+  import socket
+  from meleemod.bridge_transport import BridgeTransportError, receive
+  left,right=socket.socketpair(); right.close()
+  try:
+   with self.assertRaises(BridgeTransportError): receive(left)
+  finally: left.close()
+
+class GuiTests(unittest.TestCase):
+ def test_controller_lists_invalid_profiles_without_tk(self):
+  from meleemod.gui import GuiController
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"profiles").mkdir(); (t/"profiles/bad.json").write_text("{not json")
+   rows=GuiController(t,t/"data").list_profiles()
+   self.assertEqual(len(rows),1); self.assertEqual(rows[0].id,"bad"); self.assertEqual(rows[0].compatibility,"invalid")
+ def test_controller_rejects_profile_path_traversal(self):
+  from meleemod.gui import GuiController
+  with tempfile.TemporaryDirectory() as td:
+   with self.assertRaises(ValueError): GuiController(td)._path("../bad")
+
 if __name__=="__main__": unittest.main()

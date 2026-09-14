@@ -20,11 +20,11 @@ This tracker separates implemented contracts from features that still need game/
 | Task 8 runtime ABI | PPC BUILD COMPLETE | PPC-safe runtime/event ABI is compiled and linked into a DOL; in-game lifecycle proof pending |
 | Task 9 sample plugin | PPC BUILD COMPLETE | Real hello-plugin compiles through SDK/runtime bundle and embeds its log string; in-game load pending |
 | Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation and DOL link succeed; generic runtime hooks pending |
-| Task 11 bridge | Protocol contract complete | Versioned bounded checksum frames; transport/runtime integration pending |
+| Task 11 bridge | Host transport complete | Versioned bounded checksum frames plus fragmented-socket adapter/tests; runtime endpoint pending |
 | Task 12 input history | Frame hook compiled | Bounded ring buffer and frame-event hook are compiled into the PPC bundle; controller sampling pending |
 | Task 13 input display | PPC build complete | First-party subscription/input-reader plugin compiles and links; overlay and emulator proof pending |
 | Task 14 training tools | PPC build complete | Offline frame-heartbeat plugin compiles and links; frame advance/reset/hit events pending |
-| Task 15 GUI | NOT STARTED | CLI/core must remain source of truth |
+| Task 15 GUI | MVP COMPLETE | Headless-tested controller plus optional Tk launcher over core APIs |
 | Task 16 safety | MVP COMPLETE | Capability-based fail-closed decisions |
 | Task 17 diagnostics | Host report complete | Redacted profile/plugin/runtime report; native crash symbolization pending |
 | Task 18 registry | Local MVP complete | Validated local file/folder install with deterministic hash checks; remote signing/update flow pending |
