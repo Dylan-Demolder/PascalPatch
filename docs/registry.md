@@ -17,3 +17,5 @@ Trust metadata has schema `meleemod/trust/1` and records each key's public key, 
 `fetch_https_index` requires HTTPS, enforces a bounded response size and timeout, verifies the signature before returning entries, and never writes unverified data. `update_https_index` verifies first and atomically replaces a signed cache. `install_remote` implements the bounded file-package path: it requires HTTPS, enforces a response limit and timeout, hashes the streamed bytes before staging, and atomically promotes only a matching package. `install_remote_archive` also safely extracts ZIP packages after hash verification. It rejects duplicate members, POSIX or Windows traversal, drive prefixes, symlink and executable entries, and enforces a decompressed-size limit before atomic promotion. Remote folders and package-specific semantic validation remain deliberately separate capabilities.
 
 The implementation has no third-party runtime dependency and is tested against the RFC 8032 Ed25519 test vector, tamper rejection, revocation, key rotation, HTTPS enforcement, and atomic cache updates.
+
+Local directory packages reject symlinked roots and members before hashing or copying.

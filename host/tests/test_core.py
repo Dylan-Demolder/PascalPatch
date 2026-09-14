@@ -175,6 +175,14 @@ class CoreTests(unittest.TestCase):
    with self.assertRaises(ManifestError): install_remote(dict(entry,sha256="0"*64),t/"registry",opener=lambda request,timeout: Response(payload))
    with self.assertRaises(ManifestError): install_remote(dict(entry,source="http://registry.example/plugin"),t/"registry",opener=lambda request,timeout: Response(payload))
 
+ def test_local_registry_rejects_symlinked_packages(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); source=t/"source"; source.mkdir(); (source/"file.txt").write_text("x"); link=source/"link"
+   try: link.symlink_to(source/"file.txt")
+   except (OSError,NotImplementedError): self.skipTest("symlinks unavailable")
+   entry={"id":"symlinked","version":"1.0.0","source":str(source),"sha256":"0"*64,"license":"MIT","compatibility":"offline-only","dependencies":[],"maintainer":"test"}
+   with self.assertRaises(ManifestError): install_local(entry,t/"registry")
+
  def test_remote_registry_archive_extraction_is_safe_and_bounded(self):
   import io, zipfile
   class Response:
