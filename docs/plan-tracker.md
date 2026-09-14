@@ -41,7 +41,7 @@ This tracker separates implemented contracts from features that still need game/
 | Skeleton mapping | BASIC COMPLETE | Deterministic name mapping; transform retargeting pending |
 | Move editor/library | Core editor + Tk UI facade complete | Add/validate moves through CLI/controller; approved library pending |
 | Attribute editor | Core editor + Tk UI facade complete | Numeric edits through CLI/controller; game-unit calibration pending |
-| Preview/test scene | NOT STARTED | Requires renderer and runtime data |
+| Preview/test scene | Authoring skeleton preview complete | Deterministic SVG preview is available; Melee renderer/runtime test scene remains pending |
 | Deterministic package export | MVP COMPLETE | Repeated export hashes match |
 | MeleeMod package validation | MVP COMPLETE | Cross-project package validation passes |
 | Melee composition | Validated-only staging complete | Offline package can be staged outside game files; Melee asset/code conversion remains pending |
