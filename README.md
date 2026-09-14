@@ -68,3 +68,8 @@ PYTHONPATH=host/src python tooling/dolphin_smoke.py \
 ```
 
 The runner kills the complete emulator process group on timeout. It does not leave a Confirm Stop dialog or orphan process.
+
+
+## Verified demo mod
+
+The repository includes a harmless `demo-mod` catalog entry at `plugins/demo-mod/plugin.json`. It is a visual-only static PPC plugin that logs initialization and its first frame callback. Use a temporary profile with your own GALE01 Rev.02 input, then run `profile validate` and `build`; do not commit the ISO or generated game output. Direct loader/Dolphin evidence is in `docs/evidence/demo-mod.md`.

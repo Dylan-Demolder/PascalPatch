@@ -1,0 +1,18 @@
+{
+  "id": "demo-mod",
+  "version": "1.0.0",
+  "api_version": 1,
+  "entrypoint": "plugin_init",
+  "shutdown": "plugin_shutdown",
+  "source": "sdk/examples/demo-mod/plugin.c",
+  "static_signature": "context",
+  "init_phase": "startup",
+  "capabilities": [
+    "visual-only"
+  ],
+  "dependencies": [],
+  "game_versions": [
+    "GALE01-1.02"
+  ],
+  "online_safe": true
+}
