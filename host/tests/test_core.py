@@ -96,6 +96,17 @@ class CoreTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); fake=t/"emu"; fake.write_text("#!/bin/sh\ntrap '' TERM\nsleep 30\n"); fake.chmod(0o755); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=0.1); self.assertTrue(r.timed_out); self.assertIsNotNone(r.exit_code)
 
+ def test_launch_no_build_resolves_iso_game_target(self):
+  import io, contextlib
+  from meleemod import cli
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"profiles").mkdir(); (t/"base.iso").write_bytes(b"disc"); (t/"profiles/iso-profile.json").write_text(json.dumps({"id":"iso-profile","name":"Iso","game_version":"GALE01-1.02","base_game":"../base.iso","plugins":[],"mods":[],"mode":"offline","online_safe":False}))
+   with patch("meleemod.store.inspect_game",return_value=SimpleNamespace(kind="iso",main_dol_sha1=EXPECTED_DOL_SHA1)): built=BuildStore(t/"data").build(load_profile(t/"profiles/iso-profile.json",t)).output
+   current=Path(td)/"data/builds/iso-profile/current/game/game.iso"; self.assertTrue(built.is_file()); self.assertTrue(current.is_file()); self.assertEqual(built.resolve(),current.resolve())
+   out=io.StringIO()
+   with patch("meleemod.cli.find_dolphin",return_value=Path("/usr/bin/dolphin-emu")), contextlib.redirect_stdout(out): code=cli.main(["--root",td,"--data",str(t/"data"),"launch","iso-profile","--no-build","--dry-run"])
+   self.assertEqual(code,0); planned=json.loads(out.getvalue())["command"][2]; self.assertTrue(planned.endswith("game.iso")); self.assertTrue(Path(planned).is_file()); self.assertEqual(Path(planned).resolve(),built.resolve())
+
  def test_iso_static_profile_recomposes_staged_output(self):
   if not ISO.exists(): self.skipTest("local user ISO unavailable")
   with tempfile.TemporaryDirectory() as td:
@@ -324,5 +335,17 @@ class GuiTests(unittest.TestCase):
   from meleemod.gui import GuiController
   with tempfile.TemporaryDirectory() as td:
    with self.assertRaises(ValueError): GuiController(td)._path("../bad")
+ def test_profile_mod_manager_toggles_catalog_entry(self):
+  from meleemod.mods import catalog, resolve, set_enabled
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"profiles").mkdir(); (t/"plugins/demo").mkdir(parents=True)
+   manifest={"id":"demo","version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":[],"game_versions":["GALE01-1.02"],"online_safe":True}
+   (t/"plugins/demo/plugin.json").write_text(json.dumps(manifest))
+   profile={"id":"p","name":"P","game_version":"GALE01-1.02","base_game":"base.iso","plugins":[],"mods":[],"mode":"offline","online_safe":False}
+   (t/"profiles/p.json").write_text(json.dumps(profile))
+   self.assertEqual(sorted(catalog(t)),["demo"]); self.assertEqual(resolve(t,"p")[1],set())
+   result=set_enabled(t,"p","demo",True); self.assertIn("+ demo",result["changed"])
+   self.assertEqual(resolve(t,"p")[1],{"demo"})
+   set_enabled(t,"p","demo",False); self.assertEqual(resolve(t,"p")[1],set())
 
 if __name__=="__main__": unittest.main()

@@ -36,6 +36,22 @@ python tooling/extract_disc.py /path/to/GALE01.iso /path/to/extracted-game \
 
 PPC static profiles require an extracted game directory and explicit decompilation/runtime/source paths. Plugin entrypoints are initialized on the first game-loop frame; in-game behavior still requires emulator observation. The optional Tk GUI is a thin view over the same validated core APIs.
 
+## Launcher dashboard and mod catalog
+
+The Tk launcher provides the profile-first workflow: choose a profile, inspect
+its enabled mods, browse the installed/roadmap catalog, enable or disable
+installed entries, validate, build and launch with standalone Dolphin. Planned
+entries are shown as roadmap items but cannot be enabled until their manifests
+are installed. See `docs/mod-catalog.md` for the current catalog and support
+rules.
+
+Run it with:
+
+```sh
+PYTHONPATH=host/src python tooling/meleemod_gui.py --root . \
+  --data ~/.local/share/meleemod --dolphin /usr/bin/dolphin-emu
+```
+
 ## Tests
 
 ```sh

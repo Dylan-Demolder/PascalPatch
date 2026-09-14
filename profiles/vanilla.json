@@ -1,0 +1,14 @@
+{
+  "id": "vanilla",
+  "name": "Vanilla Melee 1.02",
+  "game_version": "GALE01-1.02",
+  "base_game": "/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso",
+  "plugins": [],
+  "mods": [],
+  "mode": "offline",
+  "online_safe": false,
+  "decomp_repo": "/home/dyland/Documents/MeleeDecomp/melee",
+  "decomp_orig": "/home/dyland/Documents/MeleeDecomp/melee/orig/GALE01",
+  "plugin_source_root": "/home/dyland/Documents/MeleeMod",
+  "runtime_root": "/home/dyland/Documents/MeleeMod"
+}

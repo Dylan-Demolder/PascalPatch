@@ -19,8 +19,13 @@ def cmd_validate(args):
  p=resolve(args); print(json.dumps({"id":p.data["id"],"game_version":p.data["game_version"],"compatibility":p.compatibility,"plugins":[x["id"] for x in p.plugins],"mods":[x["id"] for x in p.mods]},indent=2)); return 0
 def cmd_build(args):
  p=resolve(args); result=BuildStore(args.data).build(p); print(json.dumps({"profile":p.data["id"],"game_version":p.data["game_version"],"output":str(result.output),"metadata":str(result.metadata),"compatibility":result.compatibility},indent=2)); return 0
+def _launch_target(store,profile_id):
+ current=store.root/"builds"/profile_id/"current"/"game"; iso=current/"game.iso"
+ if iso.is_file(): return iso
+ if current.is_dir(): return current
+ raise MeleeModError(f"no built game for {profile_id}; run 'meleemod build {profile_id}' first: {current}")
 def cmd_launch(args):
- p=resolve(args); output=BuildStore(args.data).build(p).output if not args.no_build else BuildStore(args.data).root/"builds"/p.data["id"]/"current"/"game"
+ p=resolve(args); store=BuildStore(args.data); output=store.build(p).output if not args.no_build else _launch_target(store,p.data["id"])
  if p.compatibility != "online-safe" and not args.allow_unsafe: raise MeleeModError(f"profile is {p.compatibility}; pass --allow-unsafe to launch it")
  dolphin=find_dolphin(args.dolphin); logdir=BuildStore(args.data).root/"logs"/p.data["id"]; logdir.mkdir(parents=True,exist_ok=True); log=logdir/(datetime.datetime.now().strftime("%Y%m%dT%H%M%S")+".log")
  cmd=[str(dolphin),"-e",str(output)]
