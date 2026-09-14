@@ -1,4 +1,4 @@
-import json, shutil, tempfile, unittest
+import hashlib, json, shutil, tempfile, unittest
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).parents[1]/"src"))
@@ -12,6 +12,7 @@ from meleemod.plugin_composer import resolve_plugin_order, compose_static_manife
 from meleemod.launcher import launch
 from meleemod.bridge import Message, encode, decode
 from meleemod.diagnostics import report
+from meleemod.registry import install_local
 
 ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
 DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
@@ -75,5 +76,9 @@ class CoreTests(unittest.TestCase):
 
  def test_diagnostics_redact_user_game_path(self):
   r=report("offline","abc",[{"id":"p","version":"1.0.0"}],1,"failed /home/dyland/secret.iso"); self.assertNotIn("/home/dyland",json.dumps(r)); self.assertIn("<GAME_DATA>",r["error"])
+
+ def test_local_registry_install_verifies_hash(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); package=t/"plugin.bin"; package.write_bytes(b"plugin"); digest=hashlib.sha256(b"plugin").hexdigest(); entry={"id":"test-plugin","version":"1.0.0","source":str(package),"sha256":digest,"license":"MIT","compatibility":"online-safe","dependencies":[],"maintainer":"test"}; target=install_local(entry,t/"registry"); self.assertEqual((target/"package").read_bytes(),b"plugin")
 
 if __name__=="__main__": unittest.main()
