@@ -2,4 +2,25 @@
 
 **Verdict: PARTIAL.**
 
-The decompilation build produces a byte-identified GALE01 Rev.02 `main.dol`, so the input and output path are known. A disposable visible code change has not yet been implemented and boot-verified by MeleeMod. Do not claim code-plugin support until this spike has a Dolphin smoke test.
+A disposable worktree was used; the main Melee decompilation checkout was not changed.
+
+## Build evidence
+
+- Source checkout: `doldecomp/melee` at `2ae2f91719796c518638fabe846330e6ff14359d`
+- Change: one additional `OSReport("# MELEEMOD SPIKE 002\n")` after the existing startup banner in `src/melee/gm/gmmain.c`
+- Build: `python configure.py --non-matching --build-dir build-spike && ninja`
+- Result: all 960 Ninja targets completed
+- Clean DOL SHA-1: `08e0bf20134dfcb260699671004527b2d6bb1a45`
+- Modified DOL SHA-1: `04bc31fb2bdb1d6f7c3212ce1f6da7e39e2b1e25`
+- Modified DOL size: 4,425,216 bytes
+
+## Emulator result
+
+A clean extracted layout and a modified extracted layout were tested with the installed Slippi AppImage using batch execution. Both aborted before a menu/game state could be observed. This is currently indistinguishable from an emulator/display/environment problem because the clean input fails the same way. No boot success is claimed.
+
+## Next evidence required
+
+- Run the clean and modified layouts in a known-good Dolphin/Slippi environment.
+- Capture process exit status and emulator log.
+- Verify the startup report or another visible effect.
+- Only then promote this verdict to `VALIDATED`.

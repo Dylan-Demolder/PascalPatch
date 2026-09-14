@@ -8,6 +8,7 @@ from meleemod.profile import load_profile
 from meleemod.store import BuildStore
 from meleemod.errors import ManifestError, CompositionError, DiscoveryError
 from meleemod.character_package import validate_package
+from meleemod.plugin_composer import resolve_plugin_order, compose_static_manifest
 
 ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
 DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
@@ -41,5 +42,10 @@ class CoreTests(unittest.TestCase):
    (t/"character.json").write_text(json.dumps(char)); (t/"moveset.json").write_text(json.dumps({"base_fighter":"mario","moves":[]}))
    import hashlib; (t/"checksums.json").write_text(json.dumps({"assets/model.bin":hashlib.sha256(b"model").hexdigest()}))
    self.assertEqual(validate_package(t)["id"],"clone")
+
+ def test_plugin_order_and_cycle_rejection(self):
+  def p(ident,deps): return {"id":ident,"version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":deps,"game_versions":["GALE01-1.02"],"online_safe":True}
+  ordered=resolve_plugin_order([p("bb",["aa"]),p("aa",[])]); self.assertEqual([x["id"] for x in ordered],["aa","bb"]); self.assertEqual(compose_static_manifest(ordered)["link_status"],"deferred-until-runtime-integration")
+  with self.assertRaises(Exception): resolve_plugin_order([p("aa",["bb"]),p("bb",["aa"])])
 
 if __name__=="__main__": unittest.main()

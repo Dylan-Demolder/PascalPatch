@@ -11,7 +11,7 @@ MeleeMod is a separate host-side project for building isolated Super Smash Bros.
 - Vanilla ISO build outputs use a symlink to the original file; the ISO is not copied or changed.
 - Strict profile/plugin/mod manifest validation.
 - Capability-based safety classification.
-- Initial C runtime event ABI, host-compiled tests, and SDK sample manifest.
+- Initial C runtime event ABI, host-compiled tests, SDK sample manifest, and dependency-ordered static plugin manifest generation.
 - Character-package path safety and checksum validation.
 
 ## Run
