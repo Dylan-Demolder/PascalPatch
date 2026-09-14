@@ -41,3 +41,7 @@ The mailbox publishes payload bytes before its size field. The runtime clears a 
 ## Evidence boundary
 
 This directly validates a real Dolphin GDB transport, the PPC mailbox layout, runtime hello generation, host decoding, host acknowledgment, and runtime consumption. It does not claim a general-purpose network bridge, arbitrary payload callbacks, online safety, or gameplay features. The GDB stub must be explicitly enabled for this development transport; release profiles remain fail-closed unless a trusted transport is configured.
+## GDB execution control note
+
+Dolphin's stub stops the emulated CPU when a debugger connection is attached. A bounded integration must send `c` after the initial stop packet, and must stop again before mailbox memory writes. Repeated asynchronous stop packets can precede a memory response; the development adapter treats unexpected stop responses as transport errors rather than guessing. The attempted plugin payload probe was therefore not promoted without a clean rebuild-and-observe cycle.
+
