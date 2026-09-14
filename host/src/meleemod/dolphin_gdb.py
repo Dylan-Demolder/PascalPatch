@@ -23,6 +23,7 @@ class DolphinGdbClient:
         self.timeout = timeout
         self.sock.settimeout(timeout)
         self.closed = False
+        self._discard_next_stop = False
 
     @classmethod
     def tcp(cls, host: str = "127.0.0.1", port: int = 24689, timeout: float = 3.0):
@@ -84,12 +85,28 @@ class DolphinGdbClient:
         try: self.sock.sendall(_packet(payload))
         except (socket.timeout, OSError) as exc: raise DolphinGdbError("Dolphin GDB send failed") from exc
         response = self._read_packet()
+        if self._discard_next_stop and response[:1] in (b"T", b"S"):
+            self._discard_next_stop = False
+            response = self._read_packet()
         if response.startswith(b"E"):
             raise DolphinGdbError("Dolphin GDB command failed: " + response.decode("ascii", "replace"))
         return response
 
     def stop_reason(self) -> bytes:
         return self.command(b"?")
+
+    def continue_execution(self) -> None:
+        if self.closed: raise DolphinGdbError("Dolphin GDB client is closed")
+        try: self.sock.sendall(_packet(b"c"))
+        except (socket.timeout, OSError) as exc: raise DolphinGdbError("Dolphin GDB continue failed") from exc
+
+    def interrupt(self) -> bytes:
+        if self.closed: raise DolphinGdbError("Dolphin GDB client is closed")
+        try: self.sock.sendall(b"\x03")
+        except (socket.timeout, OSError) as exc: raise DolphinGdbError("Dolphin GDB interrupt failed") from exc
+        response = self._read_packet()
+        self._discard_next_stop = True
+        return response
 
     def read_memory(self, address: int, size: int) -> bytes:
         if not 0 <= address <= 0xffffffff or not 0 <= size <= MAX_TRANSFER:
