@@ -1,0 +1,13 @@
+#include "meleemod/api.h"
+#include "meleemod/input.h"
+extern long long OSGetTime(void);
+extern void OSReport(char *, ...);
+static uint32_t token;
+static uint32_t frames;
+static void on_frame(const mm_event *event, void *user) {
+    unsigned long long start,end; (void)user; if (!event) return;
+    start=OSGetTime(); (void)mm_input_history_get(0); end=OSGetTime();
+    if ((frames++ % 60u)==0u) OSReport("[meleemod] overhead-probe: input-read ticks %llu\n",end-start);
+}
+int plugin_init(const mm_plugin_context *context) { if (!context || context->api_version != MM_PLUGIN_ABI_VERSION) return -1; return mm_subscribe(MM_EVENT_FRAME,on_frame,0,&token); }
+void plugin_shutdown(void) { if (token) mm_unsubscribe(token); token=0; frames=0; }
