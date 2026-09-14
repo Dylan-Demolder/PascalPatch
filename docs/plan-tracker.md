@@ -9,7 +9,7 @@ This tracker separates implemented contracts from features that still need game/
 | Spike 001 reproducible build | VALIDATED on current Linux host | `spikes/001-reproducible-build/README.md`; rerun wrapper passes |
 | Spike 002 safe code change | BOOT + STARTUP + FRAME/INPUT VALIDATED | Clean/static/runtime ISOs boot in standalone Dolphin; recomposed first-frame plugin emits initialization and repeated frame/input callback markers; bounded smoke remains required for each release profile |
 | Spike 003 Dolphin/Slippi launch | BOOT VALIDATED | Standalone Dolphin 2606 reaches the user ISO memory-card prompt; Slippi Online/Playback remain unsuitable as original-title evidence |
-| Spike 004 host/runtime bridge | HOST + PPC STATE MACHINE VALIDATED / PHYSICAL ADAPTER PENDING | Checksummed host transport and PPC callback endpoint are tested; no host-to-game communication is claimed until a supported Dolphin/EXI adapter is implemented |
+| Spike 004 host/runtime bridge | DOLPHIN GDB MAILBOX HANDSHAKE VALIDATED / PRODUCTION ADAPTER PENDING | Host transport, PPC state machine, and a live Dolphin GDB mailbox HELLO/HELLO_ACK exchange are tested; general Dolphin/EXI transport and payload callbacks remain pending |
 | Task 1 manifests | MVP COMPLETE | Versioned schemas and semantic validators |
 | Task 2 profile loading | MVP COMPLETE | Dependency and safety resolution tests |
 | Task 3 game/Dolphin discovery | MVP COMPLETE | ISO hash and emulator identity checks |
@@ -20,7 +20,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 8 runtime ABI | PPC BUILD + STARTUP/FRAME/EVENT LIFECYCLE VALIDATED | Runtime initialization, first-frame plugin call, frame subscription, input-history read, and `MM_EVENT_RUNTIME_READY` dispatch execute in standalone Dolphin; shutdown lifecycle remains pending |
 | Task 9 sample plugin | STARTUP + FRAME/EVENT LOAD VALIDATED | First-party hello/startup-probe/frame-probe plugins compile, link, initialize, subscribe, and log from recomposed in-game ISOs; frame/input callback evidence is recorded in `docs/evidence/frame-input-observation.md` |
 | Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation, deferred first-frame lifecycle, and DOL link succeed |
-| Task 11 bridge | PPC STATE MACHINE + HOST TRANSPORT COMPLETE / PHYSICAL ADAPTER PENDING | Host transport and a transport-neutral PPC endpoint validate bounded `MMB1` frames, checksum, version negotiation, heartbeat, data callbacks, and disconnect reset; Dolphin/EXI adapter remains pending |
+| Task 11 bridge | DEVELOPMENT DOLPHIN GDB MAILBOX COMPLETE / PRODUCTION ADAPTER PENDING | Bounded host GDB adapter and PPC mailbox validate `MMB1`, checksum, version negotiation, heartbeat, and disconnect behavior; live HELLO/HELLO_ACK exchange is recorded in `docs/evidence/dolphin-gdb-bridge.md`; general production transport remains pending |
 | Task 12 input history | FRAME SAMPLING + DISPATCH VALIDATED | Bounded ring receives frame samples from `HSD_PadCopyStatus[4]`; first-party frame probe read a current sample and matched its frame number in standalone Dolphin; values and interactive controller input are not claimed |
 | Task 13 input display | PPC build complete | First-party subscription/input-reader plugin compiles and links; overlay and emulator proof pending |
 | Task 14 training tools | PPC build complete | Offline frame-heartbeat plugin compiles and links; frame advance/reset/hit events pending |

@@ -42,3 +42,35 @@ static int mm_frame_read(mm_bridge_endpoint *e, uint8_t *kind, uint32_t *request
 int mm_bridge_poll(mm_bridge_endpoint *e, uint32_t frame) { int rc; uint32_t size,request; uint8_t kind; const unsigned char *payload; unsigned char version[4]; if(!e || !e->connected)return 0; rc=e->io.read(e->io.user,e->frame,sizeof(e->frame),&size);if(rc==MM_BRIDGE_IO_NO_DATA)return 0;if(rc!=MM_BRIDGE_IO_OK||size<30||size>sizeof(e->frame)){mm_disconnect_notify(e);return -1;}if(mm_get32(e->frame+10)+30!=size||mm_frame_read(e,&kind,&request,&payload,&size)!=0){mm_disconnect_notify(e);return -2;}if(kind==MM_BRIDGE_KIND_HELLO){if(size<4||mm_get32(payload)!=MM_BRIDGE_VERSION){mm_disconnect_notify(e);return -3;}version[0]=0;version[1]=0;version[2]=0;version[3]=(unsigned char)MM_BRIDGE_VERSION;if(mm_frame_write(e,MM_BRIDGE_KIND_HELLO_ACK,request,version,4)!=0){mm_disconnect_notify(e);return -1;}e->negotiated=1;return 1;}if(kind==MM_BRIDGE_KIND_HELLO_ACK){if(size<4||mm_get32(payload)!=MM_BRIDGE_VERSION){mm_disconnect_notify(e);return -3;}e->negotiated=1;return 1;}if(kind==MM_BRIDGE_KIND_HEARTBEAT){if(mm_frame_write(e,MM_BRIDGE_KIND_HEARTBEAT_ACK,request,0,0)!=0){mm_disconnect_notify(e);return -1;}return 1;}if(kind==MM_BRIDGE_KIND_HEARTBEAT_ACK)return 1;if(kind==MM_BRIDGE_KIND_DISCONNECT){mm_disconnect_notify(e);return 1;}if(kind==MM_BRIDGE_KIND_DATA){if(!e->negotiated){mm_disconnect_notify(e);return -3;}if(e->io.message)e->io.message(kind,request,payload,size,e->io.user);return 1;}mm_disconnect_notify(e);(void)frame;return -3; }
 int mm_bridge_tick(mm_bridge_endpoint *e, uint32_t frame) { if(!e || !e->connected || !e->negotiated)return 0;if((uint32_t)(frame-e->last_heartbeat)<MM_BRIDGE_HEARTBEAT_FRAMES)return 0;if(mm_frame_write(e,MM_BRIDGE_KIND_HEARTBEAT,e->next_request++,0,0)!=0){mm_disconnect_notify(e);return -1;}e->last_heartbeat=frame;return 1; }
 void mm_bridge_disconnect(mm_bridge_endpoint *e) { if(!e)return;mm_disconnect_notify(e);memset(e,0,sizeof(*e)); }
+
+
+volatile mm_bridge_mailbox_state mm_bridge_mailbox = {
+    {'M','M','B','X'}, MM_BRIDGE_VERSION, 0, 0, {0}, {0}
+};
+
+volatile mm_bridge_mailbox_state *mm_bridge_mailbox_get(void) { return &mm_bridge_mailbox; }
+uint32_t mm_bridge_mailbox_address(void) { return (uint32_t)(unsigned long)&mm_bridge_mailbox; }
+void mm_bridge_mailbox_reset(void) {
+    mm_bridge_mailbox.magic[0]='M'; mm_bridge_mailbox.magic[1]='M'; mm_bridge_mailbox.magic[2]='B'; mm_bridge_mailbox.magic[3]='X';
+    mm_bridge_mailbox.version=MM_BRIDGE_VERSION; mm_bridge_mailbox.host_size=0; mm_bridge_mailbox.game_size=0;
+}
+static int mm_mailbox_read(void *user, unsigned char *buffer, uint32_t capacity, uint32_t *size) {
+    volatile mm_bridge_mailbox_state *state=(volatile mm_bridge_mailbox_state *)user; uint32_t n;
+    if (!state || !buffer || !size) return MM_BRIDGE_IO_ERROR;
+    n=state->host_size; if (!n) return MM_BRIDGE_IO_NO_DATA; if (n>capacity || n>MM_BRIDGE_MAILBOX_CAPACITY) return MM_BRIDGE_IO_ERROR;
+    memcpy(buffer,(const void *)state->host_payload,n); state->host_size=0; *size=n; return MM_BRIDGE_IO_OK;
+}
+static int mm_mailbox_write(void *user, const unsigned char *buffer, uint32_t size) {
+    volatile mm_bridge_mailbox_state *state=(volatile mm_bridge_mailbox_state *)user;
+    if (!state || (size && !buffer) || size>MM_BRIDGE_MAILBOX_CAPACITY || state->game_size) return MM_BRIDGE_IO_ERROR;
+    if (size) {
+        memcpy((void *)state->game_payload,buffer,size);
+    }
+    state->game_size=size;
+    return MM_BRIDGE_IO_OK;
+}
+void mm_bridge_mailbox_make_io(mm_bridge_io *io) {
+    if (!io) return;
+    memset(io,0,sizeof(*io));
+    io->read=mm_mailbox_read; io->write=mm_mailbox_write; io->user=(void *)&mm_bridge_mailbox;
+}

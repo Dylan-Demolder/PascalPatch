@@ -12,7 +12,7 @@ This audit records the evidence boundary for the current repositories. It is int
 | Runtime initialization | Directly observed | Standalone Dolphin OSREPORT logs hello initialization and runtime-ready subscription/dispatch |
 | Frame and input history | Directly observed | `docs/evidence/frame-input-observation.md`; frame probe callback matched current event and history frame numbers |
 | Host bridge | Complete for local host transport | Checksummed bounded stream and private Unix transport tests |
-| PPC bridge | State machine complete; physical adapter absent | `runtime/src/bridge.c` and `runtime/tests/test_bridge.c`; no Dolphin/EXI host-to-game adapter |
+| PPC bridge | Development Dolphin GDB mailbox validated; production adapter pending | `runtime/src/bridge.c`, bounded host GDB adapter, and `docs/evidence/dolphin-gdb-bridge.md`; live HELLO/HELLO_ACK exchange is proven, but general production transport and payload callbacks remain pending |
 | Launcher and bounded shutdown | Complete | Process-group hard-kill tests and smoke tooling; interactive emulator prompt recovery is not claimed |
 | Online/tournament safety | Fail-closed host policy complete; real Slippi smoke absent | Capability-derived policy tests; actual online login/tournament environment remains unverified |
 | Input display and training tools | Infrastructure only | Plugins compile and receive frame events; no visual overlay, frame advance, reset, or hit-event proof |

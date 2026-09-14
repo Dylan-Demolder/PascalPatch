@@ -14,6 +14,7 @@ from meleemod.plugin_composer import resolve_plugin_order, compose_static_manife
 from meleemod.launcher import launch
 from meleemod.bridge import Message, encode, decode
 from meleemod.bridge_transport import UnixBridgeServer
+from meleemod.dolphin_gdb import DolphinGdbClient, DolphinGdbMailbox, DolphinGdbError, MAX_TRANSFER, RUNTIME_FRAME_CAPACITY
 from meleemod.diagnostics import report, symbolize_native
 from meleemod.safety import validate_safety
 from meleemod.registry import install_local
@@ -180,6 +181,44 @@ class BridgeTransportTests(unittest.TestCase):
   try:
    send(left,Message(1,8,b"ping")); self.assertEqual(serve_once(right,lambda m: Message(2,m.request_id,b"pong")),Message(2,8,b"pong")); self.assertEqual(receive(left),Message(2,8,b"pong"))
   finally: left.close(); right.close()
+ def test_dolphin_gdb_memory_adapter_is_bounded(self):
+  import socket, threading
+  left,right=socket.socketpair(); commands=[]; errors=[]
+  def server():
+   try:
+    for response in (b"T05",b"00112233",b"OK"):
+     while right.recv(1) != b"$": pass
+     data=b"$"
+     while len(data) < 2 or data[-1:] != b"#": data += right.recv(1)
+     data += right.recv(2); commands.append(data)
+     packet=b"$"+response+b"#"+f"{sum(response)&255:02x}".encode()
+     right.sendall(b"+"+packet)
+     right.recv(1)
+   except Exception as exc: errors.append(exc)
+   finally: right.close()
+  thread=threading.Thread(target=server); thread.start()
+  client=DolphinGdbClient(left,timeout=2)
+  try:
+   self.assertEqual(client.stop_reason(),b"T05")
+   self.assertEqual(client.read_memory(0x804eec00,4),b"\x00\x11\x22\x33")
+   client.write_memory(0x804eec00,b"\x01\x02")
+   self.assertTrue(commands[1].startswith(b"$m804eec00,4#")); self.assertTrue(commands[2].startswith(b"$M804eec00,2:0102#"))
+   with self.assertRaises(ValueError): client.read_memory(0,MAX_TRANSFER+1)
+  finally:
+   client.close(); thread.join(2); self.assertEqual(errors,[])
+
+ def test_dolphin_gdb_mailbox_publishes_after_payload(self):
+  class Memory:
+   def __init__(self): self.raw=bytearray(16+2*RUNTIME_FRAME_CAPACITY); self.raw[:8]=b"MMBX\0\0\0\1"
+   def read_memory(self,address,size): return bytes(self.raw[address:address+size])
+   def write_memory(self,address,data): self.raw[address:address+len(data)]=data
+  memory=Memory(); mailbox=DolphinGdbMailbox(memory,0); mailbox.send(b"frame")
+  self.assertEqual(memory.raw[16:21],b"frame"); self.assertEqual(memory.raw[8:12],b"\0\0\0\5")
+  memory.raw[12:16]=(5).to_bytes(4,"big"); memory.raw[16+RUNTIME_FRAME_CAPACITY:21+RUNTIME_FRAME_CAPACITY]=b"reply"
+  self.assertEqual(mailbox.receive(),b"reply"); self.assertEqual(memory.raw[12:16],b"\0\0\0\0")
+  memory.raw[12:16]=(1).to_bytes(4,"big")
+  with self.assertRaises(DolphinGdbError): mailbox.send(b"again")
+
  def test_disconnect_is_bounded_error(self):
   import socket
   from meleemod.bridge_transport import BridgeTransportError, receive
