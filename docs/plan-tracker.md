@@ -21,7 +21,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 9 sample plugin | CONTRACT ONLY | Manifest and C example; in-game load pending |
 | Task 10 plugin composition | CONTRACT COMPLETE | Dependency order and static manifest; link step pending |
 | Task 11 bridge | NOT STARTED | Requires transport decision and runtime boot |
-| Task 12 input history | NOT STARTED | Requires game event hooks |
+| Task 12 input history | ABI primitive complete | Bounded ring buffer and reset/wrap tests; game sampling hook pending |
 | Task 13 input display | NOT STARTED | Requires overlay/render hook |
 | Task 14 training tools | NOT STARTED | Requires frame/state hooks |
 | Task 15 GUI | NOT STARTED | CLI/core must remain source of truth |

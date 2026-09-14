@@ -13,5 +13,8 @@ jobs:
             runtime/src/events.c runtime/src/runtime.c runtime/tests/test_events.c \
             -o /tmp/meleemod-runtime-test
           /tmp/meleemod-runtime-test
+          gcc -std=c99 -Wall -Wextra -Werror -Iruntime/include -Isdk/include \
+            runtime/src/input.c runtime/tests/test_input.c -o /tmp/meleemod-input-test
+          /tmp/meleemod-input-test
       - name: Check SDK sample syntax
         run: gcc -std=c99 -fsyntax-only -Iruntime/include -Isdk/include sdk/examples/hello-plugin/plugin.c

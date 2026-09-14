@@ -10,7 +10,7 @@
 | Profile isolation | MVP complete | `host/src/meleemod/store.py`, atomic promotion test |
 | Filesystem asset composition | MVP complete | Exact targets, traversal rejection, conflict test |
 | Dolphin discovery | MVP complete | Explicit executable validation; KDE `/usr/bin/dolphin` is rejected and installed Slippi AppImage is selected; launch helper records PID/exit/timeout |
-| Runtime event ABI | Host-compile complete | C event registration/dispatch/unsubscribe test |
+| Runtime event ABI | Host-compile complete | C event registration/dispatch/unsubscribe test and bounded input ring buffer |
 | Plugin dependency composition | Contract complete | Stable topological ordering, cycle detection and static manifest tests |
 | Character package security | Validator complete | Checksums and unsafe path/executable rejection |
 
