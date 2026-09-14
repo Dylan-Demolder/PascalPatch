@@ -28,7 +28,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 16 safety | MVP COMPLETE | Capability-based fail-closed decisions |
 | Task 17 diagnostics | PARTIAL | Structured validation/build errors; crash symbolization pending |
 | Task 18 registry | CONTRACT COMPLETE | Schema/hash validator; installer/update flow pending |
-| Task 19 CI | NOT STARTED | Local tests exist; workflow files pending |
+| Task 19 CI | COMPLETE for host/core checks | GitHub Actions workflows run dependency-free tests; game smoke remains self-hosted only |
 | Task 20 documentation/legal | MVP COMPLETE | README, architecture, legal notice, status |
 | Task 21 release candidate | NOT STARTED | Blocked by emulator and plugin/character integration |
 
