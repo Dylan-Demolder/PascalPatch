@@ -1,0 +1,17 @@
+{
+  "game_version": "GALE01-1.02",
+  "repository": "https://github.com/doldecomp/melee",
+  "commit": "2ae2f91719796c518638fabe846330e6ff14359d",
+  "expected_main_dol_sha1": "08e0bf20134dfcb260699671004527b2d6bb1a45",
+  "configure": [
+    "python",
+    "configure.py"
+  ],
+  "build": [
+    "ninja"
+  ],
+  "minimum_tools": {
+    "python": "3.11",
+    "ninja": "1.10"
+  }
+}

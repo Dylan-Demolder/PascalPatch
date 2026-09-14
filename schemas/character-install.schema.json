@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "meleemod/character-install/1",
+  "type": "object",
+  "required": [
+    "package",
+    "target_game_version",
+    "required_capabilities",
+    "compatibility"
+  ],
+  "properties": {
+    "package": {
+      "type": "string"
+    },
+    "target_game_version": {
+      "const": "GALE01-1.02"
+    },
+    "required_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "compatibility": {
+      "enum": [
+        "visual-only",
+        "offline-gameplay",
+        "training-compatible",
+        "unknown"
+      ]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "meleemod/profile/1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "game_version",
+    "base_game",
+    "plugins",
+    "mods",
+    "mode",
+    "online_safe"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{1,63}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "game_version": {
+      "const": "GALE01-1.02"
+    },
+    "base_game": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "mods": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "mode": {
+      "enum": [
+        "vanilla",
+        "tournament-safe",
+        "slippi",
+        "offline"
+      ]
+    },
+    "online_safe": {
+      "type": "boolean"
+    },
+    "allow_priority": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

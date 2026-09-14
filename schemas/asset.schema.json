@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "path",
+    "kind",
+    "sha256"
+  ],
+  "properties": {
+    "path": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "sha256": {
+      "type": "string"
+    }
+  }
+}

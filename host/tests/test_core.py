@@ -1,0 +1,45 @@
+import json, shutil, tempfile, unittest
+from pathlib import Path
+import sys
+sys.path.insert(0,str(Path(__file__).parents[1]/"src"))
+from meleemod.discovery import inspect_iso, inspect_game, EXPECTED_DOL_SHA1
+from meleemod.manifest import validate_profile, validate_plugin, validate_mod
+from meleemod.profile import load_profile
+from meleemod.store import BuildStore
+from meleemod.errors import ManifestError, CompositionError, DiscoveryError
+from meleemod.character_package import validate_package
+
+ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
+DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
+class CoreTests(unittest.TestCase):
+ def test_real_iso_revision_and_hash(self):
+  if not ISO.exists(): self.skipTest("local user ISO unavailable")
+  x=inspect_iso(ISO); self.assertEqual(x.main_dol_sha1,EXPECTED_DOL_SHA1); self.assertEqual(x.revision,2)
+ def test_profile_rejects_unknown_and_duplicate(self):
+  x={"id":"x-profile","name":"x","game_version":"GALE01-1.02","base_game":"x","plugins":["a","a"],"mods":[],"mode":"offline","online_safe":False,"extra":1}
+  errors=validate_profile(x); self.assertTrue(any(e.code=="unknown_field" for e in errors)); self.assertTrue(any(e.code=="duplicate" for e in errors))
+ def test_build_is_atomic_and_composes_exact_target(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); base=t/"base"; (base/"sys").mkdir(parents=True); shutil.copy2(DOL,base/"sys/main.dol"); (base/"files").mkdir(); (base/"files/original.bin").write_bytes(b"old")
+   modsrc=t/"mods/skin"; (modsrc/"files").mkdir(parents=True); (modsrc/"files/original.bin").write_bytes(b"new")
+   (t/"mods/skin/mod.json").write_text(json.dumps({"id":"skin","version":"1.0.0","type":"filesystem","source":".","targets":["files/original.bin"],"conflicts":[],"priority":0}))
+   (t/"plugins").mkdir(); (t/"profiles").mkdir()
+   # catalog source is relative to project root (t), so use mods/skin
+   (t/"mods/skin/mod.json").write_text(json.dumps({"id":"skin","version":"1.0.0","type":"filesystem","source":"mods/skin","targets":["files/original.bin"],"conflicts":[],"priority":0}))
+   prof={"id":"offline","name":"Offline","game_version":"GALE01-1.02","base_game":"../base","plugins":[],"mods":["skin"],"mode":"offline","online_safe":False}; (t/"profiles/offline.json").write_text(json.dumps(prof))
+   p=load_profile(t/"profiles/offline.json",t); r=BuildStore(t/"data").build(p); self.assertEqual((r.output/"files/original.bin").read_bytes(),b"new"); self.assertTrue((r.metadata).exists()); self.assertTrue((t/"data/builds/offline/current").exists())
+ def test_conflicting_targets_fail(self):
+  from meleemod.composer import compose_assets
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"base").mkdir(); (t/"a").mkdir(); (t/"b").mkdir(); (t/"a/x").write_bytes(b"a"); (t/"b/x").write_bytes(b"b")
+   mods=[{"id":"a","source":str(t/"a"),"targets":["x"],"priority":0},{"id":"b","source":str(t/"b"),"targets":["x"],"priority":0}]
+   with self.assertRaises(CompositionError): compose_assets(t/"base",mods,t/"out")
+ def test_character_package_checksums_and_traversal(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"assets").mkdir(); (t/"assets/model.bin").write_bytes(b"model")
+   char={"id":"clone","display_name":"Clone","version":"1.0.0","author":"test","license":"CC0","target_game_version":"GALE01-1.02","compatibility":"offline-gameplay"}
+   (t/"character.json").write_text(json.dumps(char)); (t/"moveset.json").write_text(json.dumps({"base_fighter":"mario","moves":[]}))
+   import hashlib; (t/"checksums.json").write_text(json.dumps({"assets/model.bin":hashlib.sha256(b"model").hexdigest()}))
+   self.assertEqual(validate_package(t)["id"],"clone")
+
+if __name__=="__main__": unittest.main()
