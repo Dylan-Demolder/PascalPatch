@@ -12,5 +12,6 @@
   "game_versions": [
     "GALE01-1.02"
   ],
-  "online_safe": false
+  "online_safe": false,
+  "shutdown": "plugin_shutdown"
 }
