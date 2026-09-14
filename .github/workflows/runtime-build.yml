@@ -17,4 +17,8 @@ jobs:
             runtime/src/input.c runtime/tests/test_input.c -o /tmp/meleemod-input-test
           /tmp/meleemod-input-test
       - name: Check SDK sample syntax
-        run: gcc -std=c99 -fsyntax-only -Iruntime/include -Isdk/include sdk/examples/hello-plugin/plugin.c
+        run: |
+          for f in sdk/examples/*/plugin.c; do
+            gcc -std=c99 -Wall -Wextra -Werror -fsyntax-only \
+              -Iruntime/include -Isdk/include "$f"
+          done
