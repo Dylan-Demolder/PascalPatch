@@ -18,6 +18,7 @@ version=b'001B'
 table_end=149084
 symbol_bytes=17
 public_symbol=ftLoadCommonData
+public_offset=60632
 ```
 
 This directly validates the HSD container parser against a real GALE01 fighter-data archive. It does not yet decode fighter object graphs, write a compatible replacement, or claim character conversion/playability.
