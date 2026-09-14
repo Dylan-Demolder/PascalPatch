@@ -30,7 +30,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 18 registry | SIGNED INDEX + BOUNDED REMOTE FILE/ZIP INSTALL COMPLETE | Dependency-free Ed25519 index verification, trust metadata, validity/revocation checks, key rotation, HTTPS bounded fetch/cache update, streamed hash verification, and safe ZIP extraction with atomic install and pre-promotion Character Studio package validation are tested; remote folders without an archive representation remain separate |
 | Task 19 CI | COMPLETE for host/core checks | GitHub Actions workflows run dependency-free tests; game smoke remains self-hosted only |
 | Task 20 documentation/legal | MVP COMPLETE | README, architecture, legal notice, status |
-| Task 21 release candidate | NOT STARTED | Runtime/plugin output observation and character integration remain blocked |
+| Task 21 release candidate | AUDIT COMPLETE / BLOCKED | Runtime/plugin output observations and release safety gates are documented; public-alpha release remains blocked by production bridge, visual/training, online smoke, conversion, playable round-trip, remote-folder, and interactive-recovery requirements |
 
 ## Character Studio
 
