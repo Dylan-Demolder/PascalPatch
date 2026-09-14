@@ -26,19 +26,22 @@
 - PPC plugin composition and runtime loading.
 - Production PPC-to-host transport and frame-time budget (development Dolphin GDB mailbox transport now completes a live HELLO/HELLO_ACK exchange; general Dolphin/EXI transport and overhead measurement remain pending).
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
-- Full interactive GUI recovery testing (Tk Validate/Build/Launch callbacks and bounded real-Dolphin launch cleanup pass when extracted Tk libraries are supplied; error-dialog and full recovery boundaries are documented; base host lacks `libtk8.6`).
-- Character model import, game asset conversion and playable character round trip (deterministic skeleton retargeting is now implemented).
+- Full interactive GUI recovery testing (Tk Validate/Build/Launch callbacks, bounded real-Dolphin launch cleanup, and callback-failure self-test pass when extracted Tk libraries are supplied; interactive recovery boundaries are documented; base host lacks `libtk8.6`).
+- Character model import, HSD/game asset conversion and playable character round trip (deterministic skeleton retargeting and bounded HSD container validation/writing are implemented; game conversion remains pending).
 - Validated character packages can now be staged into a non-game Offline workspace; no runtime asset conversion is claimed.
 - Character Studio visual move/attribute UI and approved move library (source-preserving core editor is complete).
-- First-party plugin visual/training behavior in Dolphin (frame/input callback infrastructure is observed; overlay rendering and training controls remain pending).
+- First-party plugin visual/training behavior in Dolphin (input-display callback and training heartbeat are directly observed; controller activity, overlay rendering, and training controls remain pending).
 
 Do not label pending features as supported.
 
 ## Latest validation
 
-- MeleeMod host tests: 27 passed.
-- Character Studio tests: 13 passed.
-- Strict C event/input tests and all SDK example syntax checks pass.
+- MeleeMod host tests: 34 passed.
+- Character Studio tests: 16 passed.
+- Strict C event/input/bridge tests and all SDK example syntax checks pass.
 - Standalone Dolphin 2606 clean/modified smoke runner reports both processes started and hard-stops them without leftovers.
 
 - Runtime lifecycle evidence: recomposed startup-probe ISO logged `startup-probe initialized` and `startup-probe runtime-ready observed` through Dolphin OSREPORT.
+
+- Registry validation: signed indexes, bounded HTTPS file/ZIP installation, symlink/traversal/executable rejection, and pre-promotion Character Studio package validation pass.
+- Character Studio HSD validation/writer tests pass; no fighter conversion or playable support is claimed.
