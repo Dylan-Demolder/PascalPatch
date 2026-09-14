@@ -18,6 +18,10 @@ A disposable worktree was used; the main Melee decompilation checkout was not ch
 
 A clean extracted layout and a modified extracted layout were tested with the installed Slippi AppImage using batch execution. Both aborted before a menu/game state could be observed. This is currently indistinguishable from an emulator/display/environment problem because the clean input fails the same way. No boot success is claimed.
 
+## Static plugin-link finding
+
+A second disposable attempt added `src/meleemod/runtime.c` as a separate object and called it from `gmmain.c`. The new object compiled, but the linker rejected the build because the generated DOL project configuration contains only units from the original split map. This confirms that static plugin composition must update the decompilation project/link configuration and cannot merely copy a `.c` file into `src`.
+
 ## Next evidence required
 
 - Run the clean and modified layouts in a known-good Dolphin/Slippi environment.
