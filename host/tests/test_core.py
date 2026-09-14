@@ -14,6 +14,7 @@ from meleemod.plugin_composer import resolve_plugin_order, compose_static_manife
 from meleemod.launcher import launch
 from meleemod.bridge import Message, encode, decode
 from meleemod.diagnostics import report, symbolize_native
+from meleemod.safety import validate_safety
 from meleemod.registry import install_local
 from meleemod.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
@@ -128,6 +129,10 @@ class CoreTests(unittest.TestCase):
  def test_character_package_staging_is_offline_and_non_game(self):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"pkg").mkdir(); (t/"pkg/assets").mkdir(); (t/"pkg/character.json").write_text(json.dumps({"id":"clone","display_name":"Clone","version":"1.0.0","author":"test","license":"CC0","target_game_version":"GALE01-1.02","compatibility":"offline-gameplay"})); (t/"pkg/moveset.json").write_text(json.dumps({"moves":[]})); (t/"pkg/assets/model.bin").write_bytes(b"model"); (t/"pkg/checksums.json").write_text(json.dumps({"assets/model.bin":hashlib.sha256(b"model").hexdigest()})); out=compose_validated_package(t/"pkg",t/"stage","offline"); self.assertTrue((out/"character.json").exists()); self.assertIn("\"game_integration\": false",(out/"staging.json").read_text())
+
+ def test_online_profile_rejects_gameplay_and_unknown_capabilities(self):
+  for capability in ("gameplay-changing","unknown"):
+   effective,errors=validate_safety({"mode":"slippi","online_safe":True},[{"id":"p","capabilities":[capability]}],[]); self.assertNotEqual(effective,"online-safe"); self.assertTrue(errors)
 
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):
