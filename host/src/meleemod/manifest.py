@@ -24,11 +24,12 @@ def _base(obj, path, required, errors, optional=()):
     if "version" in obj and (not isinstance(obj["version"],str) or not re.fullmatch(r"\d+\.\d+\.\d+",obj["version"])): errors.append(ValidationError(f"{path}.version","version","must use semantic version X.Y.Z"))
 
 def validate_plugin(obj, path="plugin"):
- e=[]; _base(obj,path,{"id","version","api_version","entrypoint","capabilities","dependencies","game_versions","online_safe"},e,optional=("conflicts","hooks","source","static_signature","shutdown",))
+ e=[]; _base(obj,path,{"id","version","api_version","entrypoint","capabilities","dependencies","game_versions","online_safe"},e,optional=("conflicts","hooks","source","static_signature","shutdown","frame_timing",))
  if isinstance(obj,dict):
   if not isinstance(obj.get("api_version"),int) or obj.get("api_version",0)<1: e.append(ValidationError(path+".api_version","api_version","must be a positive integer"))
   if not isinstance(obj.get("entrypoint"),str) or not obj.get("entrypoint"): e.append(ValidationError(path+".entrypoint","entrypoint","must be non-empty"))
   if "shutdown" in obj and (not isinstance(obj.get("shutdown"),str) or not obj.get("shutdown")): e.append(ValidationError(path+".shutdown","shutdown","must be a non-empty function name"))
+  if "frame_timing" in obj and not isinstance(obj.get("frame_timing"),bool): e.append(ValidationError(path+".frame_timing","frame_timing","must be boolean"))
   caps=obj.get("capabilities");
   if not isinstance(caps,list) or not caps or any(c not in MOD_CAPABILITIES and not isinstance(c,str) for c in caps): e.append(ValidationError(path+".capabilities","capabilities","must be a non-empty list of capability names"))
   if not isinstance(obj.get("dependencies"),list) or any(not isinstance(x,str) for x in obj.get("dependencies",[])): e.append(ValidationError(path+".dependencies","dependencies","must be a list of IDs"))

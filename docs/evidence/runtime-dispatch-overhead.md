@@ -22,3 +22,14 @@ A disposable `sdk/examples/overhead-probe` static ISO measured only the `mm_inpu
 Other bounded samples reported intervals from 40,540,500 to 49,752,033 raw ticks across 60 callbacks.
 
 The probe ran before the memory-card prompt and was hard-killed at the bounded timeout. This is direct PPC/Dolphin evidence for the measured input-read operation, not total event-dispatch or full-frame overhead.
+
+
+## Opt-in full generated frame-hook timing
+
+Static composition now supports the optional plugin manifest field `frame_timing: true`. An overhead-probe ISO with this field measured the complete generated `mm_meleemod_frame` body around `MM_EVENT_FRAME` dispatch. Standalone Dolphin emitted:
+
+```text
+[meleemod] frame-hook ticks 12473
+```
+
+Steady samples were approximately 12,473--12,519 raw ticks; the first sample was 52 ticks during initialization. This measures the generated hook body, input sampling, bridge polling, and plugin dispatch, not the entire Melee frame. Timing is opt-in and diagnostic-only.

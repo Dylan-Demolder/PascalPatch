@@ -82,6 +82,9 @@
         "first-frame",
         "startup"
       ]
+    },
+    "frame_timing": {
+      "type": "boolean"
     }
   }
 }
