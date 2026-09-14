@@ -39,7 +39,7 @@ This tracker separates implemented contracts from features that still need game/
 | Versioned package contracts | MVP COMPLETE | Character/moveset/asset schemas |
 | glTF/GLB import validation | MVP COMPLETE | Structural, URI and budget tests |
 | Skeleton mapping | Transform retargeting complete | Deterministic name mapping plus rest-pose translation/rotation/scale retargeting; runtime calibration pending |
-| Move editor/library | Core editor + Tk UI facade complete | Add/validate moves through CLI/controller; approved library pending |
+| Move editor/library | Contract + editor complete | Versioned provenance-aware approved-library validator plus add/validate editor; library content and game calibration pending |
 | Attribute editor | Core editor + Tk UI facade complete | Numeric edits through CLI/controller; game-unit calibration pending |
 | Preview/test scene | Authoring skeleton preview complete | Deterministic SVG preview is available; Melee renderer/runtime test scene remains pending |
 | Deterministic package export | MVP COMPLETE | Repeated export hashes match |
