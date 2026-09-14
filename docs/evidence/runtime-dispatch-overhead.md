@@ -16,7 +16,9 @@ The benchmark confirms bounded host-compiled dispatcher cost and callback execut
 A disposable `sdk/examples/overhead-probe` static ISO measured only the `mm_input_history_get(0)` call with the game's `OSGetTime` counter. Standalone Dolphin 2606 emitted repeated markers such as:
 
 ```text
-[meleemod] overhead-probe: input-read ticks 1
+[meleemod] overhead-probe: 60-frame interval ticks 40540500 input-read ticks 1
 ```
+
+Other bounded samples reported intervals from 40,540,500 to 49,752,033 raw ticks across 60 callbacks.
 
 The probe ran before the memory-card prompt and was hard-killed at the bounded timeout. This is direct PPC/Dolphin evidence for the measured input-read operation, not total event-dispatch or full-frame overhead.
