@@ -14,6 +14,8 @@ from meleemod.bridge import Message, encode, decode
 from meleemod.diagnostics import report, symbolize_native
 from meleemod.registry import install_local
 from meleemod.static_integration import make_bundle, apply_overlay
+sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
+from recompose_iso import recompose_iso
 
 ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
 DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
@@ -58,6 +60,10 @@ class CoreTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); fake=t/"emu"; fake.write_text("#!/bin/sh\necho booted\nexit 7\n"); fake.chmod(0o755); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=2); self.assertEqual(r.exit_code,7); self.assertIn("booted",(t/"run.log").read_text()); self.assertIn("exit_code: 7",(t/"run.log").read_text())
 
+ def test_launch_helper_hard_stops_on_timeout(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); fake=t/"emu"; fake.write_text("#!/bin/sh\ntrap '' TERM\nsleep 30\n"); fake.chmod(0o755); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=0.1); self.assertTrue(r.timed_out); self.assertIsNotNone(r.exit_code)
+
  def test_iso_build_uses_safe_reference_not_copy(self):
   if not ISO.exists(): self.skipTest("local user ISO unavailable")
   with tempfile.TemporaryDirectory() as td:
@@ -91,6 +97,17 @@ class CoreTests(unittest.TestCase):
  def test_symbolizer_rejects_bad_address_and_redacts_missing_elf(self):
   result=symbolize_native("/definitely/missing.dol",["0x10","not-an-address"])
   self.assertEqual(result[0]["error"],"ELF not found"); self.assertEqual(result[1]["error"],"ELF not found")
+
+ def test_iso_recomposer_shifts_fst_and_files_without_mutating_source(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); base=t/"base.iso"; out=t/"out.iso"; dol=t/"new.dol"; raw=bytearray(0x900); raw[0x420:0x424]=(0x100).to_bytes(4,"big"); raw[0x424:0x428]=(0x300).to_bytes(4,"big"); raw[0x428:0x42c]=(0x30).to_bytes(4,"big")
+   # root directory, one directory, and two files.
+   raw[0x300:0x30c]=bytes([1,0,0,0])+ (0).to_bytes(4,"big")+(4).to_bytes(4,"big")
+   raw[0x30c:0x318]=bytes([1,0,0,0])+ (0).to_bytes(4,"big")+(4).to_bytes(4,"big")
+   raw[0x318:0x324]=bytes([0,0,0,0])+ (0x500).to_bytes(4,"big")+(4).to_bytes(4,"big")
+   raw[0x324:0x330]=bytes([0,0,0,0])+ (0x600).to_bytes(4,"big")+(4).to_bytes(4,"big")
+   raw[0x500:0x504]=b"file"; raw[0x600:0x604]=b"data"; base.write_bytes(raw); dol.write_bytes(b"D"*0x280); recompose_iso(base,dol,out)
+   self.assertEqual(base.read_bytes(),bytes(raw)); self.assertEqual(out.read_bytes()[0x100:0x380],b"D"*0x280); self.assertEqual(out.read_bytes()[0x580:0x584],b"file"); self.assertEqual(int.from_bytes(out.read_bytes()[0x424:0x428],"big"),0x380)
 
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):

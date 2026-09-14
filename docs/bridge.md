@@ -10,3 +10,8 @@ The bridge wire frame is versioned (`MMB1`), bounded to 64 KiB, and protected by
 The transport is intentionally request/response and does not assume gameplay state. A future runtime endpoint can use the same frame format. Heartbeat messages should use a reserved message kind and monotonically increasing request IDs; a timeout or disconnect must tear down the session and leave gameplay unchanged.
 
 This is a host transport contract, not proof of an in-game network endpoint.
+
+
+## Bounded emulator shutdown
+
+The launcher hard-kills an emulator when its wait timeout expires. It does not send graceful termination first, because Dolphin can open a modal Confirm Stop dialog that blocks automation.

@@ -7,8 +7,8 @@ This tracker separates implemented contracts from features that still need game/
 | Task | Status | Evidence / next proof |
 |---|---|---|
 | Spike 001 reproducible build | VALIDATED on current Linux host | `spikes/001-reproducible-build/README.md`; rerun wrapper passes |
-| Spike 002 safe code change | BUILD VALIDATED / EMULATOR PARTIAL | Disposable static bundle builds and marker is present; emulator menu proof remains pending |
-| Spike 003 Dolphin/Slippi launch | PARTIAL | Executable behavior discovery works; menu boot not confirmed |
+| Spike 002 safe code change | BOOT VALIDATED / PLUGIN OBSERVATION PARTIAL | Clean, static-plugin, and recomposed runtime-plugin ISOs reach the same Melee memory-card prompt in standalone Dolphin 2606; plugin-specific output observation remains pending |
+| Spike 003 Dolphin/Slippi launch | BOOT VALIDATED | Standalone Dolphin 2606 reaches the user ISO memory-card prompt; Slippi Online/Playback remain unsuitable as original-title evidence |
 | Spike 004 host/runtime bridge | DEFERRED | No transport selected until runtime is booted |
 | Task 1 manifests | MVP COMPLETE | Versioned schemas and semantic validators |
 | Task 2 profile loading | MVP COMPLETE | Dependency and safety resolution tests |
@@ -19,7 +19,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 7 decomp build | MVP COMPLETE on known checkout | Pinned wrapper and expected hash |
 | Task 8 runtime ABI | PPC BUILD COMPLETE | PPC-safe runtime/event ABI is compiled and linked into a DOL; in-game lifecycle proof pending |
 | Task 9 sample plugin | PPC BUILD COMPLETE | Real hello-plugin compiles through SDK/runtime bundle and embeds its log string; in-game load pending |
-| Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation and DOL link succeed; generic runtime hooks pending |
+| Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation, deferred first-frame lifecycle, and DOL link succeed |
 | Task 11 bridge | Host transport complete | Versioned bounded checksum frames plus fragmented-socket adapter/tests; runtime endpoint pending |
 | Task 12 input history | Frame hook compiled | Bounded ring buffer and frame-event hook are compiled into the PPC bundle; controller sampling pending |
 | Task 13 input display | PPC build complete | First-party subscription/input-reader plugin compiles and links; overlay and emulator proof pending |
@@ -30,7 +30,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 18 registry | Local MVP complete | Validated local file/folder install with deterministic hash checks; remote signing/update flow pending |
 | Task 19 CI | COMPLETE for host/core checks | GitHub Actions workflows run dependency-free tests; game smoke remains self-hosted only |
 | Task 20 documentation/legal | MVP COMPLETE | README, architecture, legal notice, status |
-| Task 21 release candidate | NOT STARTED | Blocked by emulator and plugin/character integration |
+| Task 21 release candidate | NOT STARTED | Runtime/plugin output observation and character integration remain blocked |
 
 ## Character Studio
 

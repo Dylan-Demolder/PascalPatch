@@ -18,7 +18,8 @@
 ## Explicitly pending
 
 - Native crash symbolization is implemented as a bounded, shell-free `addr2line` adapter.
-- A real modified `main.dol` boot in Dolphin (Spike 002 is build-validated, including PPC ABI and frame hook; clean and deferred-plugin temporary ISOs remain alive in Slippi Playback, but menu/log observation remains PARTIAL).
+- A real modified `main.dol` boot in standalone Dolphin 2606: clean, static-plugin, and recomposed runtime-plugin ISOs reach the Melee memory-card prompt. Plugin-specific output observation remains pending.
+- Bounded emulator shutdown hard-kills after timeout to avoid Dolphin’s modal Confirm Stop dialog.
 - A bounded Slippi launch was attempted with the user ISO; it remained running until timeout, so menu/game boot is not yet confirmed.
 - Linking the runtime into the Melee DOL.
 - Generalizing static plugin source bundles into the full PPC runtime ABI and lifecycle.

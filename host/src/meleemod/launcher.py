@@ -12,9 +12,10 @@ def launch(executable,game,log,wait=False,timeout=None):
   if not wait: return LaunchResult(cmd,proc.pid,None,False,log)
   try: code=proc.wait(timeout=timeout); timed=False
   except subprocess.TimeoutExpired:
-   proc.terminate()
-   try: code=proc.wait(timeout=3)
-   except subprocess.TimeoutExpired: proc.kill(); code=proc.wait()
+   # Dolphin opens a modal Confirm Stop dialog on graceful termination. A
+   # bounded automation run must hard-stop it so no GUI prompt is left behind.
+   proc.kill()
+   code=proc.wait()
    timed=True
   with log.open("a",encoding="utf-8") as out: out.write(f"exit_code: {code}\n")
  return LaunchResult(cmd,proc.pid,code,timed,log)
