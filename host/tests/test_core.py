@@ -13,6 +13,7 @@ from meleemod.character_package import validate_package, installation_plan, comp
 from meleemod.plugin_composer import resolve_plugin_order, compose_static_manifest
 from meleemod.launcher import launch
 from meleemod.bridge import Message, encode, decode
+from meleemod.bridge_transport import UnixBridgeServer
 from meleemod.diagnostics import report, symbolize_native
 from meleemod.safety import validate_safety
 from meleemod.registry import install_local
@@ -152,6 +153,18 @@ class BridgeTransportTests(unittest.TestCase):
   try:
    with self.assertRaises(BridgeTransportError): receive(left)
   finally: left.close()
+
+ def test_unix_bridge_server_is_private_and_cleans_up(self):
+  import socket, threading
+  from meleemod.bridge_transport import receive, send
+  with tempfile.TemporaryDirectory() as td:
+   path=Path(td)/"bridge.sock"; result=[]; ready=threading.Event()
+   def serve():
+    with UnixBridgeServer(path,timeout=2) as server:
+     ready.set(); result.append(server.serve_once(lambda m: Message(2,m.request_id,b"ack")))
+   thread=threading.Thread(target=serve); thread.start(); self.assertTrue(ready.wait(2))
+   client=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); client.connect(str(path)); send(client,Message(1,3,b"hello")); self.assertEqual(receive(client),Message(2,3,b"ack")); client.close(); thread.join(2)
+   self.assertEqual(result,[Message(2,3,b"ack")]); self.assertFalse(path.exists())
 
 class GuiTests(unittest.TestCase):
  def test_controller_lists_invalid_profiles_without_tk(self):

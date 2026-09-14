@@ -34,3 +34,34 @@ def serve_once(sock: socket.socket, handler: Callable[[Message], Message | None]
     request=receive(sock); response=handler(request)
     if response is not None: send(sock,response)
     return response
+
+
+class UnixBridgeServer:
+    """Single-request, local-only bridge listener.
+
+    The socket is private to the current user and removed on close. The server
+    handles one bounded request at a time; callers can recreate it for the
+    next heartbeat or runtime session.
+    """
+    def __init__(self, path, timeout=3.0):
+        self.path=__import__("pathlib").Path(path).expanduser()
+        self.timeout=timeout; self._server=None
+    def __enter__(self):
+        self.path.parent.mkdir(parents=True,exist_ok=True)
+        try: self.path.unlink()
+        except FileNotFoundError: pass
+        self._server=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+        self._server.settimeout(self.timeout); self._server.bind(str(self.path)); self.path.chmod(0o600); self._server.listen(1)
+        return self
+    def serve_once(self, handler):
+        if self._server is None: raise BridgeTransportError("bridge server is not open")
+        try: conn,_=self._server.accept()
+        except socket.timeout as exc: raise BridgeTransportError("bridge accept timeout") from exc
+        with conn:
+            conn.settimeout(self.timeout); return serve_once(conn,handler)
+    def close(self):
+        if self._server is not None:
+            self._server.close(); self._server=None
+        try: self.path.unlink()
+        except FileNotFoundError: pass
+    def __exit__(self,exc_type,exc,tb): self.close()

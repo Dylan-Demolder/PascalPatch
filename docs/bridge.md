@@ -15,3 +15,6 @@ This is a host transport contract, not proof of an in-game network endpoint.
 ## Bounded emulator shutdown
 
 The launcher hard-kills an emulator when its wait timeout expires. It does not send graceful termination first, because Dolphin can open a modal Confirm Stop dialog that blocks automation.
+
+
+`UnixBridgeServer` provides a private `AF_UNIX` listener for local host/runtime integration. It binds mode `0600`, accepts one request with a bounded timeout, uses the same frame validation, and removes the socket on close. It is host-side transport infrastructure; a PPC runtime socket implementation is still required before claiming an in-game endpoint.
