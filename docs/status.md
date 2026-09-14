@@ -25,5 +25,6 @@
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
 - GUI.
 - Character model import, skeleton retargeting, game asset conversion and playable character round trip.
+- Character Studio move/attribute UI and approved move library.
 
 Do not label pending features as supported.
