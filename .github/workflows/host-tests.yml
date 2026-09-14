@@ -1,0 +1,22 @@
+name: host-tests
+on:
+  push:
+  pull_request:
+jobs:
+  host:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run host tests
+        shell: bash
+        run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
+      - name: Validate JSON schemas parse
+        shell: bash
+        run: python -c "import json, pathlib; [json.loads(p.read_text()) for p in pathlib.Path('schemas').glob('*.json')]"

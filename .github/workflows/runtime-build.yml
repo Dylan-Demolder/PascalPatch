@@ -1,0 +1,17 @@
+name: runtime-build
+on:
+  push:
+  pull_request:
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile host ABI tests
+        run: |
+          gcc -std=c99 -Wall -Wextra -Werror -Iruntime/include \
+            runtime/src/events.c runtime/src/runtime.c runtime/tests/test_events.c \
+            -o /tmp/meleemod-runtime-test
+          /tmp/meleemod-runtime-test
+      - name: Check SDK sample syntax
+        run: gcc -std=c99 -fsyntax-only -Iruntime/include -Isdk/include sdk/examples/hello-plugin/plugin.c

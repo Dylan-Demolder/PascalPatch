@@ -1,0 +1,15 @@
+name: integration-smoke
+on:
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Explain protected smoke test
+        run: |
+          echo "Emulator smoke tests require user-supplied GALE01 data."
+          echo "No copyrighted game files are stored in CI."
+          echo "Provide game data only in a controlled self-hosted runner."
+      - name: Run non-game integration tests
+        run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
