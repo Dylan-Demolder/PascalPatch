@@ -63,6 +63,9 @@
       "items": {
         "type": "string"
       }
+    },
+    "source": {
+      "type": "string"
     }
   }
 }

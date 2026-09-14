@@ -13,6 +13,7 @@ from meleemod.launcher import launch
 from meleemod.bridge import Message, encode, decode
 from meleemod.diagnostics import report
 from meleemod.registry import install_local
+from meleemod.static_integration import make_bundle, apply_overlay
 
 ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
 DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
@@ -80,5 +81,9 @@ class CoreTests(unittest.TestCase):
  def test_local_registry_install_verifies_hash(self):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); package=t/"plugin.bin"; package.write_bytes(b"plugin"); digest=hashlib.sha256(b"plugin").hexdigest(); entry={"id":"test-plugin","version":"1.0.0","source":str(package),"sha256":digest,"license":"MIT","compatibility":"online-safe","dependencies":[],"maintainer":"test"}; target=install_local(entry,t/"registry"); self.assertEqual((target/"package").read_bytes(),b"plugin")
+
+ def test_static_bundle_overlay_is_deterministic_and_has_hook(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    return 0;\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t); result=(t/"src/melee/gm/gmmain.c").read_text(); self.assertIn("mm_meleemod_static_init",result); self.assertTrue((t/"src/melee/gm/meleemod_static_bundle.c").exists())
 
 if __name__=="__main__": unittest.main()
