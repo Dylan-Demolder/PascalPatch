@@ -27,7 +27,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 15 GUI | MVP COMPLETE | Headless controller tests plus bounded Tk display launch; full interactive recovery test remains pending |
 | Task 16 safety | MVP COMPLETE | Capability-based fail-closed decisions |
 | Task 17 diagnostics | Host report + symbolizer complete | Redacted report and bounded shell-free addr2line adapter; runtime crash capture pending |
-| Task 18 registry | SIGNED INDEX + BOUNDED REMOTE FILE INSTALL COMPLETE | Dependency-free Ed25519 index verification, trust metadata, validity/revocation checks, key rotation, HTTPS bounded fetch/cache update, and streamed HTTPS file-package hash verification with atomic install are tested; archive/folder package extraction remains separate |
+| Task 18 registry | SIGNED INDEX + BOUNDED REMOTE FILE/ZIP INSTALL COMPLETE | Dependency-free Ed25519 index verification, trust metadata, validity/revocation checks, key rotation, HTTPS bounded fetch/cache update, streamed hash verification, and safe ZIP extraction with atomic install are tested; remote folders and package-specific semantic validation remain separate |
 | Task 19 CI | COMPLETE for host/core checks | GitHub Actions workflows run dependency-free tests; game smoke remains self-hosted only |
 | Task 20 documentation/legal | MVP COMPLETE | README, architecture, legal notice, status |
 | Task 21 release candidate | NOT STARTED | Runtime/plugin output observation and character integration remain blocked |

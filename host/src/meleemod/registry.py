@@ -1,5 +1,5 @@
 from __future__ import annotations
-import hashlib, json, os, shutil, tempfile
+import hashlib, json, os, shutil, tempfile, stat, zipfile
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from pathlib import Path
@@ -77,3 +77,37 @@ def install_remote(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, 
         if temporary:
             try: os.unlink(temporary)
             except FileNotFoundError: pass
+
+
+def install_remote_archive(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, max_extracted_bytes=256 * 1024 * 1024, opener=None):
+    """Verify an HTTPS ZIP package, validate every member, then extract atomically."""
+    with tempfile.TemporaryDirectory(prefix="meleemod-registry-archive-") as temporary:
+        downloaded=install_remote(entry,temporary,timeout=timeout,max_bytes=max_bytes,opener=opener)
+        archive=downloaded/"package"; root=Path(destination).expanduser().resolve()
+        try: zf=zipfile.ZipFile(archive)
+        except zipfile.BadZipFile as exc: raise ManifestError("remote registry package is not a ZIP archive") from exc
+        with zf:
+            infos=zf.infolist(); names=[info.filename for info in infos]
+            if len(names)!=len(set(names)): raise ManifestError("unsafe remote registry archive",[ValidationError("archive","duplicate_path","duplicate members are forbidden")])
+            total=0; safe=[]
+            for info in infos:
+                name=info.filename; path=Path(name)
+                mode=(info.external_attr >> 16) & 0xffff
+                if path.is_absolute() or ".." in path.parts or "\x00" in name or stat.S_ISLNK(mode) or (path.suffix.lower() in {".exe",".dll",".so",".dylib",".sh",".bat",".cmd",".elf"}):
+                    raise ManifestError("unsafe remote registry archive",[ValidationError(name,"unsafe_member","traversal, symlink, or executable member")])
+                if info.is_dir(): continue
+                total+=info.file_size
+                if total>max_extracted_bytes: raise ManifestError("remote registry archive exceeds extraction limit")
+                safe.append(info)
+            target=root/entry["id"]/entry["version"]; staging=target.parent/("."+target.name+".staging")
+            shutil.rmtree(staging,ignore_errors=True); staging.mkdir(parents=True)
+            try:
+                for info in safe:
+                    out=(staging/info.filename).resolve()
+                    if staging not in out.parents: raise ManifestError("unsafe remote registry archive",[ValidationError(info.filename,"traversal","member escapes staging")])
+                    out.parent.mkdir(parents=True,exist_ok=True)
+                    with zf.open(info) as source, out.open("wb") as dest: shutil.copyfileobj(source,dest,1024*1024)
+                target.parent.mkdir(parents=True,exist_ok=True); shutil.rmtree(target,ignore_errors=True); staging.rename(target)
+            except Exception:
+                shutil.rmtree(staging,ignore_errors=True); raise
+            return target

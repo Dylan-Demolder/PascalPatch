@@ -17,7 +17,7 @@ from meleemod.bridge_transport import UnixBridgeServer
 from meleemod.dolphin_gdb import DolphinGdbClient, DolphinGdbMailbox, DolphinGdbError, MAX_TRANSFER, RUNTIME_FRAME_CAPACITY
 from meleemod.diagnostics import report, symbolize_native
 from meleemod.safety import validate_safety
-from meleemod.registry import install_local, install_remote
+from meleemod.registry import install_local, install_remote, install_remote_archive
 from meleemod.registry_signing import public_key, key_id, make_trust, sign, sign_index, verify_index, sign_trust_update, verify_trust_update, fetch_index, fetch_https_index, update_https_index
 from meleemod.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
@@ -174,6 +174,27 @@ class CoreTests(unittest.TestCase):
    target=install_remote(entry,t/"registry",opener=lambda request,timeout: Response(payload)); self.assertEqual((target/"package").read_bytes(),payload)
    with self.assertRaises(ManifestError): install_remote(dict(entry,sha256="0"*64),t/"registry",opener=lambda request,timeout: Response(payload))
    with self.assertRaises(ManifestError): install_remote(dict(entry,source="http://registry.example/plugin"),t/"registry",opener=lambda request,timeout: Response(payload))
+
+ def test_remote_registry_archive_extraction_is_safe_and_bounded(self):
+  import io, zipfile
+  class Response:
+   def __init__(self,data): self.data=data; self.headers={"Content-Length":str(len(data))}
+   def __enter__(self): return self
+   def __exit__(self,*args): pass
+   def read(self,size): data,self.data=self.data,b""; return data
+  def archive(name):
+   stream=io.BytesIO()
+   with zipfile.ZipFile(stream,"w") as zf:
+    if name == "duplicate": zf.writestr("a.txt",b"a"); zf.writestr("a.txt",b"b")
+    else: zf.writestr(name,b"data")
+   return stream.getvalue()
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); safe=archive("assets/model.bin"); entry={"id":"remote-archive","version":"1.0.0","source":"https://registry.example/package.zip","sha256":hashlib.sha256(safe).hexdigest(),"license":"MIT","compatibility":"offline-only","dependencies":[],"maintainer":"test"}
+   target=install_remote_archive(entry,t/"registry",opener=lambda request,timeout: Response(safe)); self.assertEqual((target/"assets/model.bin").read_bytes(),b"data")
+   unsafe=archive("../escape.bin"); bad=dict(entry,sha256=hashlib.sha256(unsafe).hexdigest())
+   with self.assertRaises(ManifestError): install_remote_archive(bad,t/"unsafe",opener=lambda request,timeout: Response(unsafe))
+   duplicate=archive("duplicate"); dup=dict(entry,sha256=hashlib.sha256(duplicate).hexdigest())
+   with self.assertRaises(ManifestError): install_remote_archive(dup,t/"duplicate",opener=lambda request,timeout: Response(duplicate))
 
  def test_online_profile_rejects_gameplay_and_unknown_capabilities(self):
   for capability in ("gameplay-changing","unknown"):
