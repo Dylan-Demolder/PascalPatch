@@ -61,7 +61,7 @@ class GuiController:
         directory=self.store.root/"logs"/profile_id
         return sorted(directory.glob("*.log")) if directory.exists() else []
 
-def run(project_root, data_root=None, self_test=False):
+def run(project_root, data_root=None, self_test=False, self_test_launch=False):
     # Import Tk only when the actual GUI is requested.
     import tkinter as tk
     from tkinter import messagebox
@@ -98,6 +98,8 @@ def run(project_root, data_root=None, self_test=False):
             listbox.selection_set(0); listbox.activate(0)
             action(lambda p: json.dumps(controller.validate(p),indent=2))
             action(lambda p: str(controller.build(p).output))
+            if self_test_launch:
+                action(lambda p: str(controller.launch(p, allow_unsafe=allow.get(), wait=True, timeout=2)))
             app.after(100, app.destroy)
         app.after(100, automated)
     app.mainloop()

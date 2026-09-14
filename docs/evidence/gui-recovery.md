@@ -18,3 +18,8 @@ This proves basic error-dialog recovery. It does not prove every build/launch fa
 ## Deterministic Tk self-test
 
 The GUI now has a bounded `--self-test` mode for local verification. With a temporary valid vanilla profile, it selected the profile and invoked the same Validate and Build callbacks used by the buttons, then destroyed the Tk window. The run exited successfully and created a timestamped build plus `current/game/game.iso` under the configured data directory. This avoids relying on pixel coordinates. It does not invoke the Launch callback or start Dolphin.
+
+
+## Deterministic Launch callback self-test
+
+`--self-test-launch` extends the Tk self-test with a fake executable that passes the normal Dolphin discovery probe and exits immediately. The real Launch callback selected the built ISO, created a log, executed the discovered process, and recorded `exit_code: 0`. This validates GUI wiring and process/log handling only; it is not Dolphin runtime evidence.
