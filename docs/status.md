@@ -26,7 +26,7 @@
 - PPC plugin composition and runtime loading.
 - Runtime endpoint and frame-time measurements (host transport is implemented and socket-pair tested).
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
-- GUI polish and display-server smoke testing (headless controller is implemented and tested).
+- GUI display-server smoke testing (headless controller is implemented and tested; this host lacks `libtk8.6`).
 - Character model import, skeleton retargeting, game asset conversion and playable character round trip.
 - Validated character packages can now be staged into a non-game Offline workspace; no runtime asset conversion is claimed.
 - Character Studio visual move/attribute UI and approved move library (source-preserving core editor is complete).
