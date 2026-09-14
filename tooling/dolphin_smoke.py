@@ -3,7 +3,10 @@ import argparse, json, os, signal, subprocess
 from pathlib import Path
 
 def run_one(dolphin, game, timeout):
-    proc=subprocess.Popen([str(dolphin),"-b","-e",str(game)],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
+    try:
+        proc=subprocess.Popen([str(dolphin),"-b","-e",str(game)],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
+    except OSError as exc:
+        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":""}
     timed_out=False
     try: output,_=proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:

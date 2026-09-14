@@ -134,6 +134,9 @@ class CoreTests(unittest.TestCase):
   for capability in ("gameplay-changing","unknown"):
    effective,errors=validate_safety({"mode":"slippi","online_safe":True},[{"id":"p","capabilities":[capability]}],[]); self.assertNotEqual(effective,"online-safe"); self.assertTrue(errors)
 
+ def test_dolphin_smoke_reports_missing_executable(self):
+  result=run_one("/definitely/missing/dolphin", "game.iso", 0.1); self.assertFalse(result["started"]); self.assertIn("error",result)
+
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):
   import socket
