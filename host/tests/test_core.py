@@ -10,6 +10,7 @@ from meleemod.errors import ManifestError, CompositionError, DiscoveryError
 from meleemod.character_package import validate_package, installation_plan
 from meleemod.plugin_composer import resolve_plugin_order, compose_static_manifest
 from meleemod.launcher import launch
+from meleemod.bridge import Message, encode, decode
 
 ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
 DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
@@ -65,5 +66,10 @@ class CoreTests(unittest.TestCase):
    z=Path(td)/"bad.melee-character"
    with zipfile.ZipFile(z,"w") as out: out.writestr("character.json",b"{}"); out.writestr("character.json",b"{}")
    with self.assertRaises(ManifestError): validate_package(z)
+
+ def test_bridge_frame_round_trip_and_rejects_corruption(self):
+  raw=encode(Message(2,17,b"heartbeat")); self.assertEqual(decode(raw),Message(2,17,b"heartbeat")); bad=bytearray(raw); bad[-1]^=1
+  with self.assertRaises(ValueError): decode(bytes(bad))
+  with self.assertRaises(ValueError): encode(Message(1,1,b"x"*(64*1024+1)))
 
 if __name__=="__main__": unittest.main()
