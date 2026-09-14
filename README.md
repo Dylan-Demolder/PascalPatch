@@ -53,3 +53,18 @@ This repository contains tooling, schemas and original sample code only. Do not 
 ## Static code profiles
 
 A code profile must explicitly provide `decomp_repo`, `decomp_orig` and `plugin_source_root`. Plugins using the SDK context ABI also require `runtime_root`. Each selected plugin must declare a relative `.c` `source` and a C entrypoint. The host creates a disposable worktree and stages the generated DOL. Static code profiles can also recompose a staged ISO with `tooling/recompose_disc.py`; the source ISO is never modified. Filesystem asset mods still require an extracted game directory.
+
+
+## Bounded emulator smoke
+
+For clean/modified comparisons, use the user-data-only runner:
+
+```sh
+PYTHONPATH=host/src python tooling/dolphin_smoke.py \
+  --dolphin /path/to/dolphin-emu \
+  --clean "/path/to/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso" \
+  --modified /path/to/generated.iso \
+  --timeout 30
+```
+
+The runner kills the complete emulator process group on timeout. It does not leave a Confirm Stop dialog or orphan process.
