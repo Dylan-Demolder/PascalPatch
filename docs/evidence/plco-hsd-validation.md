@@ -37,3 +37,6 @@ The local decompilation's `Fighter_LoadCommonData` (`src/melee/ft/fighter.c`) lo
 ```
 
 This identifies the common-data table boundary without claiming that the entries are decoded fighter objects.
+
+
+The source maps the 23 entries as: `p_ftCommonData`, `Fighter_804D6550`, `Fighter_804D654C`, `Fighter_804D6548`, `ftPartsTable`, `Fighter_804D6540`, `Fighter_804D653C`, `Fighter_804D6538`, `Fighter_804D6534`, `Fighter_804D6530`, `Fighter_804D652C`, `Fighter_804D6528`, `Fighter_804D6524`, `Fighter_804D6520`, `Fighter_804D651C`, `Fighter_804D6518`, `Fighter_804D6514`, `Fighter_804D6510`, `Fighter_804D650C`, `Fighter_804D6508`, `Fighter_804D6504`, `gCrowdConfig`, and `Fighter_804D64FC`. This mapping is documented for research only; it is not a converter or runtime composition path.
