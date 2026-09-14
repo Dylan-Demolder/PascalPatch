@@ -44,7 +44,7 @@ This tracker separates implemented contracts from features that still need game/
 | Preview/test scene | Authoring skeleton preview complete | Deterministic SVG preview is available; Melee renderer/runtime test scene remains pending |
 | Deterministic package export | MVP COMPLETE | Repeated export hashes match |
 | MeleeMod package validation | MVP COMPLETE | Cross-project package validation passes |
-| Melee composition | Validated-only staging complete | Offline package can be staged outside game files; Melee asset/code conversion remains pending |
+| Melee composition | Validated-only staging complete | Offline package can be staged outside game files; source-backed HSD/`ftData` research is recorded in `docs/character-conversion-research.md`; asset/code conversion remains pending |
 | Playable round trip | NOT STARTED | Requires Dolphin/game integration |
 
 The next gating milestone is production bridge/payload validation and direct validation of the remaining GUI, conversion, and release requirements. Safety policy now fails closed for arbitrary future capabilities, but real Slippi smoke remains unverified. Development GDB mailbox handshake, plugin initialization, and frame/input callbacks are now directly observed before the memory-card prompt is dismissed.

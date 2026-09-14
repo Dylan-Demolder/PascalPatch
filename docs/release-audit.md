@@ -29,7 +29,7 @@ This audit records the evidence boundary for the current repositories. It is int
 | Moves and attributes | Contract/editor complete | Approved content and game-unit calibration require verified source values |
 | Preview | Deterministic SVG skeleton preview complete | Full Melee renderer/test scene absent |
 | Offline package staging | Complete | Writes validated-only staging metadata and never modifies game files |
-| Melee asset conversion | Not implemented | Fighter/archive/animation conversion and hooks need research and implementation |
+| Melee asset conversion | Not implemented; format research complete | Local decomp source confirms HSD relocation/symbol tables and fighter `ftData`/`PlCo.dat` dependencies; archive/object/animation conversion and hooks still need implementation |
 | Character-select/playable round trip | Not started | Requires conversion, runtime integration, and user-owned test assets |
 
 ## Release decision
