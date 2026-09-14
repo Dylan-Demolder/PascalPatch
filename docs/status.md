@@ -18,7 +18,7 @@
 ## Explicitly pending
 
 - Native crash symbolization is implemented as a bounded, shell-free `addr2line` adapter.
-- A real modified `main.dol` boot in standalone Dolphin 2606: clean, static-plugin, and recomposed runtime-plugin ISOs reach the Melee memory-card prompt. Plugin-specific output observation remains pending.
+- A real modified `main.dol` boot in standalone Dolphin 2606: clean, static-plugin, and recomposed runtime-plugin ISOs reach the Melee memory-card prompt. The initial memory-card prompt prevents first-frame plugin-output observation in the current automated input setup.
 - Bounded emulator shutdown kills the complete Dolphin process group after timeout to avoid a modal Confirm Stop dialog or orphan child process.
 - A bounded Slippi launch was attempted with the user ISO; it remained running until timeout, so menu/game boot is not yet confirmed.
 - Linking the runtime into the Melee DOL.

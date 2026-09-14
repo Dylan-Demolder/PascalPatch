@@ -42,7 +42,11 @@ This validates PPC compilation, static runtime inclusion, plugin-context initial
 
 The initial test used Slippi Online and was misleading because its front-end can show Login. Extracted directories are also not valid Dolphin GameCube launch targets; Dolphin treated them as NAND content.
 
-A temporary ISO was then created from the user ISO by replacing only the embedded DOL at `0x1e800`; the original ISO was not modified. The modified DOL fits the existing 32-byte padding before the FST.
+A temporary ISO was then created from the user ISO. Small static DOLs fit the existing 32-byte padding; larger runtime DOLs use the safe ISO recomposer, which shifts the FST and updates recorded file offsets. The original ISO was not modified. `dtk disc verify` accepts the recomposed ISO as a lossless GALE01 Rev.02 image.
+
+Standalone Dolphin Emulator 2606 was extracted from the Arch package (not Slippi). The exact user ISO and both a static-plugin ISO and recomposed runtime-plugin ISO reach the same Melee prompt: `The Memory Card in Slot A has no saved Game Data. Create Game Data?`.
+
+Verified generated DOL hashes include static deferred plugin `2ee9b3c64f3d73870b95eef3d50ec505f128ebce` and runtime hello plugin `3773dd04acb95f9ee551d9e0107ff7a5cc5bb46d`.
 
 Using the installed Slippi Playback build with `-b -e <ISO> -v Null`:
 
