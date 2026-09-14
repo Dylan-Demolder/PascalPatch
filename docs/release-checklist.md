@@ -12,11 +12,13 @@
 
 ## Blocking before public alpha
 
-- [ ] Known-good Dolphin boot of clean profile
-- [ ] Known-good boot of one modified DOL
-- [ ] Static PPC runtime linked into DOL
+The emulator boot gate is passed. The remaining blockers are plugin-specific runtime observation, safety enforcement in Slippi, character conversion/gameplay, and a full GUI recovery run.
+
+- [x] Known-good Dolphin boot of clean profile (standalone Dolphin 2606 reaches Melee memory-card prompt)
+- [x] Known-good boot of one modified DOL (static and recomposed runtime DOLs reach the same prompt)
+- [x] Static PPC runtime linked into DOL (Metrowerks PPC build and recomposed ISO verified)
 - [ ] Harmless plugin observed in-game
 - [ ] Safe-profile block verified in Slippi
 - [ ] Character package composed into an Offline profile
 - [ ] Character-select and playable-match round trip
-- [ ] GUI workflow and recovery test
+- [ ] GUI display workflow and recovery test (headless controller tests pass)

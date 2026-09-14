@@ -9,7 +9,7 @@ This tracker separates implemented contracts from features that still need game/
 | Spike 001 reproducible build | VALIDATED on current Linux host | `spikes/001-reproducible-build/README.md`; rerun wrapper passes |
 | Spike 002 safe code change | BOOT VALIDATED / PLUGIN OBSERVATION PARTIAL | Clean, static-plugin, and recomposed runtime-plugin ISOs reach the same Melee memory-card prompt in standalone Dolphin 2606; plugin-specific output observation remains pending |
 | Spike 003 Dolphin/Slippi launch | BOOT VALIDATED | Standalone Dolphin 2606 reaches the user ISO memory-card prompt; Slippi Online/Playback remain unsuitable as original-title evidence |
-| Spike 004 host/runtime bridge | DEFERRED | No transport selected until runtime is booted |
+| Spike 004 host/runtime bridge | HOST PARTIAL | Checksummed protocol and bounded host transport are tested; runtime endpoint remains pending |
 | Task 1 manifests | MVP COMPLETE | Versioned schemas and semantic validators |
 | Task 2 profile loading | MVP COMPLETE | Dependency and safety resolution tests |
 | Task 3 game/Dolphin discovery | MVP COMPLETE | ISO hash and emulator identity checks |
@@ -47,4 +47,4 @@ This tracker separates implemented contracts from features that still need game/
 | Melee composition | NOT STARTED | Requires runtime asset/code conversion |
 | Playable round trip | NOT STARTED | Requires Dolphin/game integration |
 
-The next gating milestone is a known-good emulator boot of both the clean and modified DOL.
+The next gating milestone is observing plugin initialization and frame/input callbacks after progressing past the initial memory-card prompt.
