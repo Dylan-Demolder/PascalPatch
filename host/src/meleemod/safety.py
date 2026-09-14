@@ -2,9 +2,10 @@ from __future__ import annotations
 from .errors import ManifestError, ValidationError
 
 ONLINE_MODES={"tournament-safe","slippi"}
+KNOWN_CAPABILITIES={"visual-only","gameplay-changing","unknown"}
 def effective_compatibility(profile,plugins,mods):
     caps={c for p in plugins for c in p.get("capabilities",[])} | {m.get("capability","visual-only") for m in mods}
-    if "unknown" in caps: return "unknown"
+    if any(c not in KNOWN_CAPABILITIES for c in caps) or "unknown" in caps: return "unknown"
     if "gameplay-changing" in caps: return "offline-only"
     return "online-safe"
 

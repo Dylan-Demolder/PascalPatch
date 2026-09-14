@@ -197,8 +197,9 @@ class CoreTests(unittest.TestCase):
    with self.assertRaises(ManifestError): install_remote_archive(dup,t/"duplicate",opener=lambda request,timeout: Response(duplicate))
 
  def test_online_profile_rejects_gameplay_and_unknown_capabilities(self):
-  for capability in ("gameplay-changing","unknown"):
+  for capability in ("gameplay-changing","unknown","future-capability"):
    effective,errors=validate_safety({"mode":"slippi","online_safe":True},[{"id":"p","capabilities":[capability]}],[]); self.assertNotEqual(effective,"online-safe"); self.assertTrue(errors)
+  effective,errors=validate_safety({"mode":"tournament-safe"},[],[{"id":"m","capability":"future-mod-capability"}]); self.assertEqual(effective,"unknown"); self.assertTrue(errors)
 
  def test_dolphin_smoke_reports_missing_executable(self):
   result=run_one("/definitely/missing/dolphin", "game.iso", 0.1); self.assertFalse(result["started"]); self.assertIn("error",result)

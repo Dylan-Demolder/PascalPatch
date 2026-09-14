@@ -25,7 +25,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 13 input display | PPC build complete | First-party subscription/input-reader plugin compiles and links; overlay and emulator proof pending |
 | Task 14 training tools | PPC build complete | Offline frame-heartbeat plugin compiles and links; frame advance/reset/hit events pending |
 | Task 15 GUI | MVP COMPLETE | Headless controller tests plus bounded Tk display launch; full interactive recovery test remains pending |
-| Task 16 safety | MVP COMPLETE | Capability-based fail-closed decisions |
+| Task 16 safety | MVP COMPLETE | Capability-based fail-closed decisions; unrecognized future capability names now classify as `unknown` and are rejected in Slippi/tournament modes with regression tests |
 | Task 17 diagnostics | Host report + symbolizer complete | Redacted report and bounded shell-free addr2line adapter; runtime crash capture pending |
 | Task 18 registry | SIGNED INDEX + BOUNDED REMOTE FILE/ZIP INSTALL COMPLETE | Dependency-free Ed25519 index verification, trust metadata, validity/revocation checks, key rotation, HTTPS bounded fetch/cache update, streamed hash verification, and safe ZIP extraction with atomic install are tested; remote folders and package-specific semantic validation remain separate |
 | Task 19 CI | COMPLETE for host/core checks | GitHub Actions workflows run dependency-free tests; game smoke remains self-hosted only |
@@ -47,4 +47,4 @@ This tracker separates implemented contracts from features that still need game/
 | Melee composition | Validated-only staging complete | Offline package can be staged outside game files; Melee asset/code conversion remains pending |
 | Playable round trip | NOT STARTED | Requires Dolphin/game integration |
 
-The next gating milestone is production bridge/payload validation and direct validation of the remaining safety, GUI, conversion, and release requirements. Development GDB mailbox handshake, plugin initialization, and frame/input callbacks are now directly observed before the memory-card prompt is dismissed.
+The next gating milestone is production bridge/payload validation and direct validation of the remaining GUI, conversion, and release requirements. Safety policy now fails closed for arbitrary future capabilities, but real Slippi smoke remains unverified. Development GDB mailbox handshake, plugin initialization, and frame/input callbacks are now directly observed before the memory-card prompt is dismissed.
