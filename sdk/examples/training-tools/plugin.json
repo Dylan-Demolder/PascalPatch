@@ -1,0 +1,16 @@
+{
+  "id": "training-tools",
+  "version": "0.1.0",
+  "api_version": 1,
+  "entrypoint": "plugin_init",
+  "source": "sdk/examples/training-tools/plugin.c",
+  "static_signature": "context",
+  "capabilities": [
+    "gameplay-changing"
+  ],
+  "dependencies": [],
+  "game_versions": [
+    "GALE01-1.02"
+  ],
+  "online_safe": false
+}

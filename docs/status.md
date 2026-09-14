@@ -27,5 +27,6 @@
 - GUI.
 - Character model import, skeleton retargeting, game asset conversion and playable character round trip.
 - Character Studio move/attribute UI and approved move library.
+- First-party plugin visual/training behavior in Dolphin.
 
 Do not label pending features as supported.

@@ -22,8 +22,8 @@ This tracker separates implemented contracts from features that still need game/
 | Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation and DOL link succeed; generic runtime hooks pending |
 | Task 11 bridge | Protocol contract complete | Versioned bounded checksum frames; transport/runtime integration pending |
 | Task 12 input history | Frame hook compiled | Bounded ring buffer and frame-event hook are compiled into the PPC bundle; controller sampling pending |
-| Task 13 input display | NOT STARTED | Requires overlay/render hook |
-| Task 14 training tools | NOT STARTED | Requires frame/state hooks |
+| Task 13 input display | PPC build complete | First-party subscription/input-reader plugin compiles and links; overlay and emulator proof pending |
+| Task 14 training tools | PPC build complete | Offline frame-heartbeat plugin compiles and links; frame advance/reset/hit events pending |
 | Task 15 GUI | NOT STARTED | CLI/core must remain source of truth |
 | Task 16 safety | MVP COMPLETE | Capability-based fail-closed decisions |
 | Task 17 diagnostics | Host report complete | Redacted profile/plugin/runtime report; native crash symbolization pending |
