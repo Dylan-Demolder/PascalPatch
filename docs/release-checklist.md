@@ -19,7 +19,7 @@ The emulator boot gate is passed. The remaining blockers are production bridge p
 - [x] Bounded smoke shutdown without a modal confirmation deadlock
 - [x] Static PPC runtime linked into DOL (Metrowerks PPC build and recomposed ISO verified)
 - [x] Harmless plugin observed in-game (hello initialization and frame/input callback markers)
-- [ ] Safe-profile block verified in Slippi
+- [x] Gameplay-changing profile blocked before Slippi process launch (installed Slippi path; online/login smoke remains unavailable)
 - [ ] Character package composed into an Offline profile
 - [ ] Character-select and playable-match round trip
 - [ ] GUI display workflow and full recovery test (invalid-profile dismissal and Tk Validate/Build/Launch self-tests are observed with a fake executable; bounded real-Dolphin launch/cleanup is observed and bounded callback-failure recovery is tested; interactive recovery remains)
