@@ -34,6 +34,8 @@ def make_bundle(plugins, source_root, runtime_root=None):
   body.append("static void mm_meleemod_runtime_init(void) { mm_runtime_init(); }")
  for ident,entry,source in chunks:
   body.extend([f"/* plugin: {ident} */",source])
+ if runtime:
+  body.extend(["static uint32_t mm_meleemod_frame_number=0;", "void mm_meleemod_frame(void) {", "    mm_event event;", "    event.type=MM_EVENT_FRAME; event.frame=mm_meleemod_frame_number++; event.payload=0; event.payload_size=0;", "    mm_dispatch(&event);", "}"])
  body.append("void mm_meleemod_static_init(void) {")
  if runtime: body.append("    mm_meleemod_runtime_init();")
  for ident,entry,source in chunks:
@@ -45,7 +47,7 @@ def make_bundle(plugins, source_root, runtime_root=None):
  return "\n".join(body)+"\n"
 
 def apply_overlay(worktree,plugins,source_root,runtime_root=None):
- tree=Path(worktree); gm=tree/"src/melee/gm/gmmain.c"; bundle=tree/"src/melee/gm/meleemod_static_bundle.c"
+ tree=Path(worktree); gm=tree/"src/melee/gm/gmmain.c"; bundle=tree/"src/melee/gm/meleemod_static_bundle.c"; runtime=None
  if not gm.is_file(): raise CompositionError(f"known hook source is missing: {gm}")
  text=gm.read_text(encoding="utf-8")
  if MARKER in text: raise CompositionError("generated static bundle marker already exists")
@@ -61,10 +63,20 @@ def apply_overlay(worktree,plugins,source_root,runtime_root=None):
  if needle not in text: raise CompositionError("known main hook signature not found")
  replacement=MARKER+"\n#include \"meleemod_static_bundle.c\"\n\n"+needle
  text=text.replace(needle,replacement,1)
- # CodeWarrior uses C89-style declarations, so call after the two existing locals.
- decl="    u32 _[2];"
- if decl not in text: raise CompositionError("known main declarations not found")
- text=text.replace(decl,decl+"\n    mm_meleemod_static_init();",1)
+ # Initialization must follow OSInit because the SDK logger uses OS services.
+ init_call="    mm_meleemod_static_init();"
+ os_init="    OSInit();"
+ if os_init not in text: raise CompositionError("OSInit hook not found")
+ text=text.replace(os_init,os_init+"\n"+init_call,1)
+ loop=tree/"src/melee/gm/gm_1A3F.c"
+ if runtime:
+  loop_text=loop.read_text(encoding="utf-8")
+  if MARKER in loop_text: raise CompositionError("generated frame marker already exists")
+  loop_text="extern void mm_meleemod_frame(void);\n"+loop_text
+  loop_needle="    while (true) {\n        u8 next_mode = "
+  if loop_needle not in loop_text: raise CompositionError("known game-loop hook signature not found")
+  loop_text=loop_text.replace(loop_needle,"    while (true) {\n        u8 next_mode;\n        mm_meleemod_frame();\n        next_mode =",1)
+  loop.write_text(loop_text,encoding="utf-8")
  gm.write_text(text,encoding="utf-8")
  return bundle
 

@@ -21,7 +21,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 9 sample plugin | PPC BUILD COMPLETE | Real hello-plugin compiles through SDK/runtime bundle and embeds its log string; in-game load pending |
 | Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation and DOL link succeed; generic runtime hooks pending |
 | Task 11 bridge | Protocol contract complete | Versioned bounded checksum frames; transport/runtime integration pending |
-| Task 12 input history | PPC ABI compiled | Bounded ring buffer is compiled into the PPC bundle and tested on host; game sampling hook pending |
+| Task 12 input history | Frame hook compiled | Bounded ring buffer and frame-event hook are compiled into the PPC bundle; controller sampling pending |
 | Task 13 input display | NOT STARTED | Requires overlay/render hook |
 | Task 14 training tools | NOT STARTED | Requires frame/state hooks |
 | Task 15 GUI | NOT STARTED | CLI/core must remain source of truth |

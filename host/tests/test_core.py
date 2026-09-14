@@ -84,6 +84,6 @@ class CoreTests(unittest.TestCase):
 
  def test_static_bundle_overlay_is_deterministic_and_has_hook(self):
   with tempfile.TemporaryDirectory() as td:
-   t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    return 0;\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t); result=(t/"src/melee/gm/gmmain.c").read_text(); self.assertIn("mm_meleemod_static_init",result); self.assertTrue((t/"src/melee/gm/meleemod_static_bundle.c").exists())
+   t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    OSInit();\n    return 0;\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t); result=(t/"src/melee/gm/gmmain.c").read_text(); self.assertIn("mm_meleemod_static_init",result); self.assertTrue((t/"src/melee/gm/meleemod_static_bundle.c").exists())
 
 if __name__=="__main__": unittest.main()

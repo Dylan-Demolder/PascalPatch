@@ -30,9 +30,10 @@ This validates static source composition, profile integration and link placement
 
 The real SDK hello-plugin was then composed with the PPC-safe runtime implementation. The generated source included the event runtime, `mm_runtime_init`, `mm_log`, the plugin context, and `plugin_init`. The Metrowerks GameCube compiler and linker completed successfully.
 
-- ABI DOL SHA-1: `4bf43f76944d4044290a0a1548e2971d4e80076a`
-- ABI DOL size: 4,425,472 bytes
+- ABI/frame-hook DOL SHA-1: `fec71eb3043db374c93163390109e0984b2f52e4`
+- ABI/frame-hook DOL size: 4,425,472 bytes
 - The output contains `hello-plugin initialized` and `[meleemod]` strings
+- The generated game-mode loop calls `mm_meleemod_frame()` before each mode step
 - Clean DOL remains `08e0bf20134dfcb260699671004527b2d6bb1a45`
 
 This validates PPC compilation, static runtime inclusion, plugin-context initialization and link placement. It still does not prove that Dolphin reaches the initialization path.
