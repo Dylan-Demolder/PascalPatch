@@ -12,7 +12,7 @@
 
 ## Blocking before public alpha
 
-The emulator boot gate is passed. The remaining blockers are plugin-specific runtime observation, safety enforcement in Slippi, character conversion/gameplay, and a full GUI recovery run.
+The emulator boot gate is passed. The remaining blockers are production bridge payloads, visual/training runtime behavior, safety enforcement in Slippi, character conversion/gameplay, remote folders, and full GUI recovery.
 
 - [x] Known-good Dolphin boot of clean profile (standalone Dolphin 2606 reaches Melee memory-card prompt)
 - [x] Known-good boot of one modified DOL (static and recomposed runtime DOLs reach the same prompt)

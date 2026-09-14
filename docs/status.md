@@ -26,7 +26,7 @@
 - PPC plugin composition and runtime loading.
 - Production PPC-to-host transport and frame-time budget (development Dolphin GDB mailbox transport now completes a live HELLO/HELLO_ACK exchange; general Dolphin/EXI transport and overhead measurement remain pending).
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
-- Full GUI recovery testing (headless controller and bounded Tk display launch pass when Tk libraries are supplied; base host lacks `libtk8.6`).
+- Full interactive GUI recovery testing (Tk Validate/Build/Launch callbacks and bounded real-Dolphin launch cleanup pass when extracted Tk libraries are supplied; error-dialog and full recovery boundaries are documented; base host lacks `libtk8.6`).
 - Character model import, game asset conversion and playable character round trip (deterministic skeleton retargeting is now implemented).
 - Validated character packages can now be staged into a non-game Offline workspace; no runtime asset conversion is claimed.
 - Character Studio visual move/attribute UI and approved move library (source-preserving core editor is complete).
