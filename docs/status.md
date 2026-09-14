@@ -13,7 +13,7 @@
 | Dolphin discovery | MVP complete | Explicit executable validation; KDE `/usr/bin/dolphin` is rejected and installed Slippi AppImage is selected; launch helper records PID/exit/timeout |
 | Runtime event ABI | PPC build complete | C tests plus Metrowerks PPC ABI/runtime link with hello-plugin; in-game lifecycle pending |
 | Plugin dependency composition | Contract complete | Stable topological ordering, cycle detection and static manifest tests |
-| Character package security | Validator complete | Checksums and unsafe path/executable rejection |
+| Character package security | Validator + offline staging | Checksums, unsafe path/executable rejection, and validated-only offline workspace staging |
 
 ## Explicitly pending
 
@@ -33,3 +33,10 @@
 - First-party plugin visual/training behavior in Dolphin.
 
 Do not label pending features as supported.
+
+## Latest validation
+
+- MeleeMod host tests: 23 passed.
+- Character Studio tests: 9 passed.
+- Strict C event/input tests and all SDK example syntax checks pass.
+- Standalone Dolphin 2606 clean/modified smoke runner reports both processes started and hard-stops them without leftovers.
