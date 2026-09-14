@@ -93,7 +93,7 @@ def install_remote_archive(entry, destination, timeout=5.0, max_bytes=64 * 1024 
             for info in infos:
                 name=info.filename; path=Path(name)
                 mode=(info.external_attr >> 16) & 0xffff
-                if path.is_absolute() or ".." in path.parts or "\x00" in name or stat.S_ISLNK(mode) or (path.suffix.lower() in {".exe",".dll",".so",".dylib",".sh",".bat",".cmd",".elf"}):
+                if path.is_absolute() or (len(name) >= 2 and name[1] == ":") or "\\" in name or ".." in path.parts or "\x00" in name or stat.S_ISLNK(mode) or (path.suffix.lower() in {".exe",".dll",".so",".dylib",".sh",".bat",".cmd",".elf"}):
                     raise ManifestError("unsafe remote registry archive",[ValidationError(name,"unsafe_member","traversal, symlink, or executable member")])
                 if info.is_dir(): continue
                 total+=info.file_size

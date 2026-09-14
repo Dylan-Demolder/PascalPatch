@@ -193,6 +193,8 @@ class CoreTests(unittest.TestCase):
    target=install_remote_archive(entry,t/"registry",opener=lambda request,timeout: Response(safe)); self.assertEqual((target/"assets/model.bin").read_bytes(),b"data")
    unsafe=archive("../escape.bin"); bad=dict(entry,sha256=hashlib.sha256(unsafe).hexdigest())
    with self.assertRaises(ManifestError): install_remote_archive(bad,t/"unsafe",opener=lambda request,timeout: Response(unsafe))
+   windows=archive("..\\escape.bin"); win=dict(entry,sha256=hashlib.sha256(windows).hexdigest())
+   with self.assertRaises(ManifestError): install_remote_archive(win,t/"windows",opener=lambda request,timeout: Response(windows))
    duplicate=archive("duplicate"); dup=dict(entry,sha256=hashlib.sha256(duplicate).hexdigest())
    with self.assertRaises(ManifestError): install_remote_archive(dup,t/"duplicate",opener=lambda request,timeout: Response(duplicate))
 

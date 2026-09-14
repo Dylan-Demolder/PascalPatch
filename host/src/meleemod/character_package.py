@@ -5,7 +5,8 @@ from .errors import ManifestError, ValidationError
 from .manifest import GAME_VERSION
 FORBIDDEN={".exe",".dll",".so",".dylib",".sh",".bat",".cmd",".elf"}
 def _safe(name):
- p=Path(name); return not p.is_absolute() and ".." not in p.parts and "\x00" not in name and p.suffix.lower() not in FORBIDDEN
+ p=Path(name); drive_prefix=len(name) >= 2 and name[1] == ":"
+ return not p.is_absolute() and not drive_prefix and "\\" not in name and ".." not in p.parts and "\x00" not in name and p.suffix.lower() not in FORBIDDEN
 def _read(path,name):
  if path.is_dir(): return (path/name).read_bytes()
  with zipfile.ZipFile(path) as z: return z.read(name)
