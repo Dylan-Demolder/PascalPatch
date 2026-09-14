@@ -22,8 +22,6 @@
 - Bounded emulator shutdown kills the complete Dolphin process group after timeout to avoid a modal Confirm Stop dialog or orphan child process.
 - A bounded Slippi launch was attempted with the user ISO; it remained running until timeout, so menu/game boot is not yet confirmed.
 - Runtime shutdown observation and overhead budget.
-- Generalizing static plugin source bundles into the full PPC runtime ABI and lifecycle.
-- PPC plugin composition and runtime loading.
 - Production PPC-to-host transport and frame-time budget (development Dolphin GDB mailbox transport now completes a live HELLO/HELLO_ACK exchange; general Dolphin/EXI transport and overhead measurement remain pending).
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
 - Full interactive GUI recovery testing (Tk Validate/Build/Launch callbacks, bounded real-Dolphin launch cleanup, and callback-failure self-test pass when extracted Tk libraries are supplied; interactive recovery boundaries are documented; base host lacks `libtk8.6`).
