@@ -61,7 +61,7 @@ class GuiController:
         directory=self.store.root/"logs"/profile_id
         return sorted(directory.glob("*.log")) if directory.exists() else []
 
-def run(project_root, data_root=None):
+def run(project_root, data_root=None, self_test=False):
     # Import Tk only when the actual GUI is requested.
     import tkinter as tk
     from tkinter import messagebox
@@ -90,4 +90,14 @@ def run(project_root, data_root=None):
     tk.Button(buttons,text="Launch",command=lambda: action(lambda p: str(controller.launch(p,allow_unsafe=allow.get())))).pack(side="left")
     tk.Button(buttons,text="Logs",command=lambda: action(lambda p: "\n".join(map(str,controller.logs(p))))).pack(side="left")
     tk.Checkbutton(buttons,text="Allow unsafe/offline",variable=allow).pack(side="right")
-    refresh(); app.mainloop()
+    refresh()
+    if self_test:
+        def automated():
+            if not listbox.size():
+                raise RuntimeError("GUI self-test requires at least one profile")
+            listbox.selection_set(0); listbox.activate(0)
+            action(lambda p: json.dumps(controller.validate(p),indent=2))
+            action(lambda p: str(controller.build(p).output))
+            app.after(100, app.destroy)
+        app.after(100, automated)
+    app.mainloop()
