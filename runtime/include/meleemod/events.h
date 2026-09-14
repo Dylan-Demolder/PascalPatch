@@ -12,7 +12,7 @@ typedef signed short int16_t;
 extern "C" {
 #endif
 #define MM_EVENT_QUEUE_CAPACITY 32u
-typedef enum { MM_EVENT_FRAME=1, MM_EVENT_MATCH_START=2, MM_EVENT_MATCH_END=3 } mm_event_type;
+typedef enum { MM_EVENT_FRAME=1, MM_EVENT_MATCH_START=2, MM_EVENT_MATCH_END=3, MM_EVENT_RUNTIME_READY=4 } mm_event_type;
 typedef struct { mm_event_type type; uint32_t frame; const void *payload; uint32_t payload_size; } mm_event;
 typedef void (*mm_event_callback)(const mm_event *event, void *user);
 typedef struct { uint32_t api_version; uint32_t event_count; } mm_game_context;

@@ -17,11 +17,11 @@ This tracker separates implemented contracts from features that still need game/
 | Task 5 asset mods | MVP COMPLETE | Exact target/conflict/traversal tests |
 | Task 6 CLI | MVP COMPLETE | Validate/build/launch/log commands; launch smoke proof pending |
 | Task 7 decomp build | MVP COMPLETE on known checkout | Pinned wrapper and expected hash |
-| Task 8 runtime ABI | PPC BUILD + STARTUP LIFECYCLE VALIDATED | Runtime initialization and startup plugin call execute in standalone Dolphin; frame/shutdown lifecycle remains pending |
-| Task 9 sample plugin | STARTUP LOAD VALIDATED | Real hello-plugin compiles, links, and logs from an in-game recomposed ISO using explicit startup phase; first-frame default path remains pending |
+| Task 8 runtime ABI | PPC BUILD + STARTUP/EVENT LIFECYCLE VALIDATED | Runtime initialization, startup plugin call, subscription, and `MM_EVENT_RUNTIME_READY` dispatch execute in standalone Dolphin; frame/shutdown lifecycle remains pending |
+| Task 9 sample plugin | STARTUP + EVENT LOAD VALIDATED | First-party hello/startup-probe plugins compile, link, initialize, subscribe, and log from a recomposed in-game ISO; first-frame default path remains pending |
 | Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation, deferred first-frame lifecycle, and DOL link succeed |
 | Task 11 bridge | Host transport complete | Versioned bounded checksum frames, stream adapter, private Unix listener, and cleanup tests; PPC runtime endpoint pending |
-| Task 12 input history | Frame hook compiled | Bounded ring buffer and frame-event hook are compiled into the PPC bundle; controller sampling pending |
+| Task 12 input history | Runtime-ready event observed / frame hook compiled | Bounded ring and frame hook are compiled; controller sampling and frame dispatch remain pending |
 | Task 13 input display | PPC build complete | First-party subscription/input-reader plugin compiles and links; overlay and emulator proof pending |
 | Task 14 training tools | PPC build complete | Offline frame-heartbeat plugin compiles and links; frame advance/reset/hit events pending |
 | Task 15 GUI | MVP COMPLETE | Headless controller tests plus bounded Tk display launch; full interactive recovery test remains pending |

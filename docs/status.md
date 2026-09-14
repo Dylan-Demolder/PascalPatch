@@ -40,3 +40,5 @@ Do not label pending features as supported.
 - Character Studio tests: 13 passed.
 - Strict C event/input tests and all SDK example syntax checks pass.
 - Standalone Dolphin 2606 clean/modified smoke runner reports both processes started and hard-stops them without leftovers.
+
+- Runtime lifecycle evidence: recomposed startup-probe ISO logged `startup-probe initialized` and `startup-probe runtime-ready observed` through Dolphin OSREPORT.

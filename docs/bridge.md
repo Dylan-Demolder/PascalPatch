@@ -18,3 +18,6 @@ The launcher hard-kills an emulator when its wait timeout expires. It does not s
 
 
 `UnixBridgeServer` provides a private `AF_UNIX` listener for local host/runtime integration. It binds mode `0600`, accepts one request with a bounded timeout, uses the same frame validation, and removes the socket on close. It is host-side transport infrastructure; a PPC runtime socket implementation is still required before claiming an in-game endpoint.
+
+
+The runtime ABI now emits `MM_EVENT_RUNTIME_READY` after runtime initialization and startup-phase plugin registration. This event has been observed in standalone Dolphin through the startup probe. Frame/input and shutdown events remain separate lifecycle work.
