@@ -23,3 +23,6 @@ The GUI now has a bounded `--self-test` mode for local verification. With a temp
 ## Deterministic Launch callback self-test
 
 `--self-test-launch` extends the Tk self-test with a fake executable that passes the normal Dolphin discovery probe and exits immediately. The real Launch callback selected the built ISO, created a log, executed the discovered process, and recorded `exit_code: 0`. This validates GUI wiring and process/log handling only; it is not Dolphin runtime evidence.
+
+
+The GUI CLI now accepts `--dolphin` to make emulator selection explicit. This removes ambiguous PATH discovery from controlled runs, but a bounded real-Dolphin GUI launch still needs a successful log-producing observation; the attempted run timed out before that evidence was obtained.
