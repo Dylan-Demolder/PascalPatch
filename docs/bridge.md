@@ -9,7 +9,7 @@ The bridge wire frame is versioned (`MMB1`), bounded to 64 KiB, and protected by
 
 The transport is intentionally request/response and does not assume gameplay state. A future runtime endpoint can use the same frame format. Heartbeat messages should use a reserved message kind and monotonically increasing request IDs; a timeout or disconnect must tear down the session and leave gameplay unchanged.
 
-This is a host transport contract, not proof of an in-game network endpoint.
+This is a host transport contract, not proof of a physical in-game transport endpoint. The PPC runtime now also contains `runtime/include/meleemod/bridge.h` and `runtime/src/bridge.c`: a transport-neutral bounded endpoint that validates the same `MMB1` framing and truncated SHA-256 checksum, negotiates `MM_BRIDGE_VERSION`, handles heartbeat/ack messages, dispatches bounded data callbacks, and resets on disconnect. Its read/write callbacks are deliberately supplied by a future platform adapter; the callback layer itself is covered by `runtime/tests/test_bridge.c`.
 
 
 ## Bounded emulator shutdown
@@ -17,7 +17,7 @@ This is a host transport contract, not proof of an in-game network endpoint.
 The launcher hard-kills an emulator when its wait timeout expires. It does not send graceful termination first, because Dolphin can open a modal Confirm Stop dialog that blocks automation.
 
 
-`UnixBridgeServer` provides a private `AF_UNIX` listener for local host/runtime integration. It binds mode `0600`, accepts one request with a bounded timeout, uses the same frame validation, and removes the socket on close. It is host-side transport infrastructure; a PPC runtime socket implementation is still required before claiming an in-game endpoint.
+`UnixBridgeServer` provides a private `AF_UNIX` listener for local host/runtime integration. It binds mode `0600`, accepts one request with a bounded timeout, uses the same frame validation, and removes the socket on close. The PPC endpoint is transport-neutral and cannot open this Unix socket; a Dolphin/EXI/other platform adapter is still required before claiming host-to-game communication.
 
 
-The runtime ABI emits `MM_EVENT_RUNTIME_READY` after runtime initialization and startup-phase plugin registration; standalone Dolphin logs confirm it. The real game frame hook now samples `HSD_PadCopyStatus[4]`, dispatches `MM_EVENT_FRAME`, and a first-party probe reads the resulting history. Shutdown remains separate lifecycle work.
+The runtime ABI emits `MM_EVENT_RUNTIME_READY` after runtime initialization and startup-phase plugin registration; standalone Dolphin logs confirm it. The real game frame hook now samples `HSD_PadCopyStatus[4]`, dispatches `MM_EVENT_FRAME`, and a first-party probe reads the resulting history. The PPC bridge state machine is compile/test validated but has no physical Dolphin transport adapter. Shutdown remains separate lifecycle work.

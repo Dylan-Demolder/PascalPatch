@@ -16,6 +16,10 @@ jobs:
           gcc -std=c99 -Wall -Wextra -Werror -Iruntime/include -Isdk/include \
             runtime/src/input.c runtime/tests/test_input.c -o /tmp/meleemod-input-test
           /tmp/meleemod-input-test
+          gcc -std=c99 -Wall -Wextra -Werror -Iruntime/include \
+            runtime/src/bridge.c runtime/tests/test_bridge.c \
+            -o /tmp/meleemod-bridge-test
+          /tmp/meleemod-bridge-test
       - name: Check SDK sample syntax
         run: |
           for f in sdk/examples/*/plugin.c; do
