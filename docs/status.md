@@ -16,10 +16,10 @@
 
 ## Explicitly pending
 
-- A real modified `main.dol` boot in Dolphin (Spike 002 is PARTIAL; the disposable build succeeds, but clean and modified emulator runs both abort in this environment).
+- A real modified `main.dol` boot in Dolphin (Spike 002 is build-validated but emulator execution remains PARTIAL; clean and modified runs do not yet expose a menu state).
 - A bounded Slippi launch was attempted with the user ISO; it remained running until timeout, so menu/game boot is not yet confirmed.
 - Linking the runtime into the Melee DOL.
-- Turning the static plugin manifest into actual PPC link inputs.
+- Generalizing static plugin source bundles into the full PPC runtime ABI and lifecycle.
 - PPC plugin composition and runtime loading.
 - Host/runtime transport and frame-time measurements.
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.

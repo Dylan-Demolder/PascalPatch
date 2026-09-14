@@ -7,7 +7,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task | Status | Evidence / next proof |
 |---|---|---|
 | Spike 001 reproducible build | VALIDATED on current Linux host | `spikes/001-reproducible-build/README.md`; rerun wrapper passes |
-| Spike 002 safe code change | PARTIAL | Disposable changed DOL builds; clean and modified emulator runs abort equally |
+| Spike 002 safe code change | BUILD VALIDATED / EMULATOR PARTIAL | Disposable static bundle builds and marker is present; emulator menu proof remains pending |
 | Spike 003 Dolphin/Slippi launch | PARTIAL | Executable behavior discovery works; menu boot not confirmed |
 | Spike 004 host/runtime bridge | DEFERRED | No transport selected until runtime is booted |
 | Task 1 manifests | MVP COMPLETE | Versioned schemas and semantic validators |
@@ -18,8 +18,8 @@ This tracker separates implemented contracts from features that still need game/
 | Task 6 CLI | MVP COMPLETE | Validate/build/launch/log commands; launch smoke proof pending |
 | Task 7 decomp build | MVP COMPLETE on known checkout | Pinned wrapper and expected hash |
 | Task 8 runtime ABI | HOST COMPLETE | C event ABI tests; PPC link proof pending |
-| Task 9 sample plugin | CONTRACT ONLY | Manifest and C example; in-game load pending |
-| Task 10 plugin composition | CONTRACT COMPLETE | Dependency order and static manifest; link step pending |
+| Task 9 sample plugin | STATIC BUILD COMPLETE | Static source bundle builds and embeds marker; in-game load pending |
+| Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation and DOL link succeed; generic runtime hooks pending |
 | Task 11 bridge | Protocol contract complete | Versioned bounded checksum frames; transport/runtime integration pending |
 | Task 12 input history | ABI primitive complete | Bounded ring buffer and reset/wrap tests; game sampling hook pending |
 | Task 13 input display | NOT STARTED | Requires overlay/render hook |
