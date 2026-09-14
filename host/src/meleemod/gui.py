@@ -83,7 +83,12 @@ def run(project_root, data_root=None, dolphin=None, self_test=False, self_test_l
         return listbox.get(listbox.curselection()[0]).split("  ",1)[0]
     def action(fn):
         try: write(fn(current()))
-        except Exception as exc: messagebox.showerror("MeleeMod",str(exc))
+        except Exception as exc:
+            if self_test:
+                write("ERROR: "+str(exc))
+                app.after(100, app.destroy)
+            else:
+                messagebox.showerror("MeleeMod",str(exc))
     buttons=tk.Frame(right); buttons.pack(fill="x",pady=(0,6));
     tk.Button(buttons,text="Validate",command=lambda: action(lambda p: json.dumps(controller.validate(p),indent=2))).pack(side="left")
     tk.Button(buttons,text="Build",command=lambda: action(lambda p: str(controller.build(p).output))).pack(side="left")

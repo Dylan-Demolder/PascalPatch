@@ -26,3 +26,8 @@ The GUI now has a bounded `--self-test` mode for local verification. With a temp
 
 
 The GUI CLI accepts `--dolphin` to make emulator selection explicit. Discovery now accepts both `Load the specified file` and `Loads the specified file`, matching the verified standalone Dolphin help output. A bounded real-Dolphin GUI self-test created a launch log and recorded `exit_code: -9` after the hard timeout; no Dolphin process remained. This proves GUI launch/process cleanup, not game progression.
+
+
+## Bounded callback-failure recovery
+
+In `--self-test` mode only, callback failures are written to the output pane and the window closes instead of opening a modal dialog. A run with a valid profile and an invalid explicit `--dolphin /tmp/does-not-exist` path exited successfully after Validate/Build and the expected discovery failure. Normal interactive mode still displays the error dialog.

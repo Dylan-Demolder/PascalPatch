@@ -22,4 +22,4 @@ The emulator boot gate is passed. The remaining blockers are production bridge p
 - [ ] Safe-profile block verified in Slippi
 - [ ] Character package composed into an Offline profile
 - [ ] Character-select and playable-match round trip
-- [ ] GUI display workflow and full recovery test (invalid-profile dismissal and Tk Validate/Build/Launch self-tests are observed with a fake executable; bounded real-Dolphin launch/cleanup is observed; interactive recovery remains)
+- [ ] GUI display workflow and full recovery test (invalid-profile dismissal and Tk Validate/Build/Launch self-tests are observed with a fake executable; bounded real-Dolphin launch/cleanup is observed and bounded callback-failure recovery is tested; interactive recovery remains)
