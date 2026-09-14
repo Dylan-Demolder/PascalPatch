@@ -60,6 +60,12 @@ class CoreTests(unittest.TestCase):
    self.assertEqual(validate_package(t)["id"],"clone"); self.assertEqual(installation_plan(t,"offline")["status"],"validated-only")
    with self.assertRaises(ManifestError): installation_plan(t,"slippi")
 
+ def test_opt_in_runtime_diagnostics_validate(self):
+  plugin={"id":"timing","version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":[],"game_versions":["GALE01-1.02"],"online_safe":True,"frame_timing":True,"shutdown_after_frames":120}
+  self.assertEqual(validate_plugin(plugin),[])
+  self.assertTrue(validate_plugin(dict(plugin,frame_timing="yes")))
+  self.assertTrue(validate_plugin(dict(plugin,shutdown_after_frames=0)))
+
  def test_plugin_order_and_cycle_rejection(self):
   def p(ident,deps): return {"id":ident,"version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":deps,"game_versions":["GALE01-1.02"],"online_safe":True}
   ordered=resolve_plugin_order([p("bb",["aa"]),p("aa",[])]); self.assertEqual([x["id"] for x in ordered],["aa","bb"]); self.assertEqual(compose_static_manifest(ordered)["link_status"],"deferred-until-runtime-integration")
