@@ -1,4 +1,6 @@
 import hashlib, json, shutil, tempfile, unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).parents[1]/"src"))
@@ -64,6 +66,14 @@ class CoreTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); fake=t/"emu"; fake.write_text("#!/bin/sh\ntrap '' TERM\nsleep 30\n"); fake.chmod(0o755); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=0.1); self.assertTrue(r.timed_out); self.assertIsNotNone(r.exit_code)
 
+ def test_iso_static_profile_recomposes_staged_output(self):
+  if not ISO.exists(): self.skipTest("local user ISO unavailable")
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); data={"id":"code-iso","name":"Code ISO","game_version":"GALE01-1.02","base_game":str(ISO),"plugins":[],"mods":[],"mode":"offline","online_safe":False,"decomp_repo":"repo","decomp_orig":"orig","plugin_source_root":"plugins","runtime_root":"runtime"}; plugin={"id":"p","version":"1.0.0","api_version":1,"entrypoint":"plugin_init","source":"p.c","static_signature":"context"}; profile=__import__("meleemod.profile",fromlist=["ResolvedProfile"]).ResolvedProfile(data,(plugin,),(),"offline-gameplay",t/"profile.json")
+   def fake_build(*args,**kwargs): Path(args[3]).write_bytes(b"dol"); return SimpleNamespace(sha1="deadbeef")
+   def fake_recompose(base,dol,output): Path(output).write_bytes(b"recomposed")
+   with patch("meleemod.store.build_in_worktree",side_effect=fake_build), patch("meleemod.store.recompose_iso",side_effect=fake_recompose): result=BuildStore(t/"data").build(profile)
+   self.assertFalse(result.output.is_symlink()); self.assertEqual(result.output.read_bytes(),b"recomposed"); self.assertEqual(json.loads(result.metadata.read_text())["plugin_composition"],"static-source-overlay+iso-recomposition")
  def test_iso_build_uses_safe_reference_not_copy(self):
   if not ISO.exists(): self.skipTest("local user ISO unavailable")
   with tempfile.TemporaryDirectory() as td:
