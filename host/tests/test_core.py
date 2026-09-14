@@ -11,7 +11,7 @@ from meleemod.character_package import validate_package, installation_plan
 from meleemod.plugin_composer import resolve_plugin_order, compose_static_manifest
 from meleemod.launcher import launch
 from meleemod.bridge import Message, encode, decode
-from meleemod.diagnostics import report
+from meleemod.diagnostics import report, symbolize_native
 from meleemod.registry import install_local
 from meleemod.static_integration import make_bundle, apply_overlay
 
@@ -87,6 +87,10 @@ class CoreTests(unittest.TestCase):
    t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    OSReport(\"#\\n\\n\");\n    return 0;\n}\n"); (t/"src/melee/gm/gm_1A3F.c").write_text("void loop(void) {\n    while (true) {\n        u8 next_mode = run();\n    }\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t,runtime_root=Path(__file__).parents[2]); result=(t/"src/melee/gm/gmmain.c").read_text(); loop=(t/"src/melee/gm/gm_1A3F.c").read_text(); bundle=(t/"src/melee/gm/meleemod_static_bundle.c").read_text(); self.assertIn("mm_meleemod_static_init",result); self.assertIn("mm_meleemod_frame();",loop); self.assertIn("mm_input_history_push",bundle); self.assertTrue((t/"src/melee/gm/meleemod_static_bundle.c").exists())
 
 
+
+ def test_symbolizer_rejects_bad_address_and_redacts_missing_elf(self):
+  result=symbolize_native("/definitely/missing.dol",["0x10","not-an-address"])
+  self.assertEqual(result[0]["error"],"ELF not found"); self.assertEqual(result[1]["error"],"ELF not found")
 
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):

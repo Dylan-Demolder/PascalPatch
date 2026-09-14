@@ -26,7 +26,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 14 training tools | PPC build complete | Offline frame-heartbeat plugin compiles and links; frame advance/reset/hit events pending |
 | Task 15 GUI | MVP COMPLETE | Headless-tested controller plus optional Tk launcher over core APIs |
 | Task 16 safety | MVP COMPLETE | Capability-based fail-closed decisions |
-| Task 17 diagnostics | Host report complete | Redacted profile/plugin/runtime report; native crash symbolization pending |
+| Task 17 diagnostics | Host report + symbolizer complete | Redacted report and bounded shell-free addr2line adapter; runtime crash capture pending |
 | Task 18 registry | Local MVP complete | Validated local file/folder install with deterministic hash checks; remote signing/update flow pending |
 | Task 19 CI | COMPLETE for host/core checks | GitHub Actions workflows run dependency-free tests; game smoke remains self-hosted only |
 | Task 20 documentation/legal | MVP COMPLETE | README, architecture, legal notice, status |
