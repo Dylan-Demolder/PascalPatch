@@ -31,3 +31,6 @@ A truthful Melee conversion requires, at minimum:
 7. character-select and playable-match evidence in an Offline profile.
 
 None of those steps can be inferred from the current glTF package contract. Until each has direct tests and user-owned runtime evidence, package staging must continue to report `game_integration: false` and must not claim playable-character support.
+
+
+`Fighter_LoadCommonData` in the local source resolves `ftLoadCommonData` as a `void **` and consumes 23 four-byte entries. The real archive inspection now confirms those 23 entries are in-range offsets. This is a common-data table, not a complete playable-fighter conversion target; its pointed-to structures still require typed decoding and safe composition.
