@@ -17,6 +17,7 @@ from meleemod.bridge_transport import UnixBridgeServer
 from meleemod.diagnostics import report, symbolize_native
 from meleemod.safety import validate_safety
 from meleemod.registry import install_local
+from meleemod.registry_signing import public_key, key_id, make_trust, sign, sign_index, verify_index, sign_trust_update, verify_trust_update, fetch_index, fetch_https_index, update_https_index
 from meleemod.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
 from meleemod.recompose_iso import recompose_iso
@@ -130,6 +131,35 @@ class CoreTests(unittest.TestCase):
  def test_character_package_staging_is_offline_and_non_game(self):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"pkg").mkdir(); (t/"pkg/assets").mkdir(); (t/"pkg/character.json").write_text(json.dumps({"id":"clone","display_name":"Clone","version":"1.0.0","author":"test","license":"CC0","target_game_version":"GALE01-1.02","compatibility":"offline-gameplay"})); (t/"pkg/moveset.json").write_text(json.dumps({"moves":[]})); (t/"pkg/assets/model.bin").write_bytes(b"model"); (t/"pkg/checksums.json").write_text(json.dumps({"assets/model.bin":hashlib.sha256(b"model").hexdigest()})); out=compose_validated_package(t/"pkg",t/"stage","offline"); self.assertTrue((out/"character.json").exists()); self.assertIn("\"game_integration\": false",(out/"staging.json").read_text())
+
+ def test_signed_registry_index_and_key_rotation(self):
+  root_seed=bytes.fromhex("01"*32); next_seed=bytes.fromhex("02"*32)
+  root_public=public_key(root_seed); next_public=public_key(next_seed)
+  root_id=key_id(root_public); next_id=key_id(next_public)
+  trust=make_trust({root_id:{"public_key":root_public.hex(),"status":"trusted"}})
+  entries=[{"id":"signed-plugin","version":"1.0.0","source":"https://example.invalid/plugin","sha256":"0"*64,"license":"MIT","compatibility":"offline-only","dependencies":[],"maintainer":"test"}]
+  signed=sign_index(entries,root_seed)
+  self.assertEqual(verify_index(signed,trust),entries)
+  raw=json.dumps(signed,sort_keys=True,separators=(",",":")).encode()
+  self.assertEqual(fetch_index(lambda limit: raw,trust),entries)
+  class Response:
+   headers={}
+   def __enter__(self): return self
+   def __exit__(self,*args): pass
+   def read(self,limit): return raw
+  with patch("urllib.request.urlopen",return_value=Response()):
+   self.assertEqual(fetch_https_index("https://registry.example/index.json",trust),entries)
+   cache=Path(tempfile.mkdtemp())/"index.json"
+   self.assertEqual(update_https_index("https://registry.example/index.json",cache,trust),cache)
+   self.assertEqual(json.loads(cache.read_text()),signed)
+  with self.assertRaises(ValueError): fetch_https_index("http://registry.example/index.json",trust)
+  tampered=dict(signed); tampered["entries"]=[{"id":"tampered"}]
+  with self.assertRaises(ValueError): verify_index(tampered,trust)
+  rotated=sign_trust_update({root_id:{"public_key":root_public.hex(),"status":"trusted"},next_id:{"public_key":next_public.hex(),"status":"trusted"}},root_seed)
+  new_trust=verify_trust_update(rotated,trust)
+  self.assertEqual(verify_index(sign_index(entries,next_seed),new_trust),entries)
+  revoked=make_trust({root_id:{"public_key":root_public.hex(),"status":"revoked"}})
+  with self.assertRaises(ValueError): verify_index(signed,revoked)
 
  def test_online_profile_rejects_gameplay_and_unknown_capabilities(self):
   for capability in ("gameplay-changing","unknown"):

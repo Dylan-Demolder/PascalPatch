@@ -18,7 +18,7 @@ This audit records the evidence boundary for the current repositories. It is int
 | Input display and training tools | Infrastructure only | Plugins compile and receive frame events; no visual overlay, frame advance, reset, or hit-event proof |
 | GUI | Headless controller and bounded Tk launch complete | Full interactive recovery remains unverified on the base host |
 | Diagnostics | Host reporting/symbolization complete | Runtime crash capture remains absent |
-| Registry | Local deterministic install complete | Signing, trust/key rotation, and remote update flow remain absent |
+| Registry | Signed indexes and local install complete; remote package flow pending | Dependency-free Ed25519 signatures, trust metadata, revocation/expiry checks, key rotation, HTTPS bounded fetch, and atomic cache update are tested; package download/install still needs a separately approved flow |
 
 ## Character Studio
 
