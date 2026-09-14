@@ -15,7 +15,7 @@ This audit records the evidence boundary for the current repositories. It is int
 | PPC bridge | Development Dolphin GDB mailbox validated; production adapter pending | `runtime/src/bridge.c`, bounded host GDB adapter, and `docs/evidence/dolphin-gdb-bridge.md`; live HELLO/HELLO_ACK exchange is proven, but general production transport and payload callbacks remain pending |
 | Launcher and bounded shutdown | Complete | Process-group hard-kill tests and smoke tooling; interactive emulator prompt recovery is not claimed |
 | Online/tournament safety | Fail-closed host policy complete; real Slippi smoke absent | Capability-derived policy tests now reject arbitrary unrecognized capability names as unknown; actual online login/tournament environment remains unverified |
-| Input display and training tools | Infrastructure only | Plugins compile and receive frame events; no visual overlay, frame advance, reset, or hit-event proof |
+| Input display and training tools | Frame callback infrastructure observed | Training-tools heartbeat is directly observed in Dolphin; no visual overlay, frame advance, reset, or hit-event proof |
 | GUI | Headless controller and bounded Tk launch complete | Full interactive recovery remains unverified on the base host |
 | Diagnostics | Host reporting/symbolization complete | Runtime crash capture remains absent |
 | Registry | Signed indexes, local install, and bounded remote file/ZIP install complete | Dependency-free Ed25519 signatures, trust metadata, revocation/expiry checks, key rotation, HTTPS bounded fetch/cache update, streamed hash verification, and safe ZIP extraction with atomic promotion are tested; remote folders and package-specific semantic validation remain separate |

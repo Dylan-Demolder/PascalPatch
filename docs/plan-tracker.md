@@ -23,7 +23,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 11 bridge | DEVELOPMENT DOLPHIN GDB MAILBOX COMPLETE / PRODUCTION ADAPTER PENDING | Bounded host GDB adapter and PPC mailbox validate `MMB1`, checksum, version negotiation, heartbeat, and disconnect behavior; live HELLO/HELLO_ACK exchange is recorded in `docs/evidence/dolphin-gdb-bridge.md`; general production transport remains pending |
 | Task 12 input history | FRAME SAMPLING + DISPATCH VALIDATED | Bounded ring receives frame samples from `HSD_PadCopyStatus[4]`; first-party frame probe read a current sample and matched its frame number in standalone Dolphin; values and interactive controller input are not claimed |
 | Task 13 input display | PPC build complete | First-party subscription/input-reader plugin compiles and links; overlay and emulator proof pending |
-| Task 14 training tools | PPC build complete | Offline frame-heartbeat plugin compiles and links; frame advance/reset/hit events pending |
+| Task 14 training tools | FRAME HEARTBEAT OBSERVED / CONTROLS PENDING | Offline training-tools plugin compiles, links, and emits repeated `MM_EVENT_FRAME` heartbeat markers in standalone Dolphin; frame advance/reset/hit events remain pending and are not claimed |
 | Task 15 GUI | MVP COMPLETE | Headless controller tests plus bounded Tk display launch; full interactive recovery test remains pending |
 | Task 16 safety | MVP COMPLETE | Capability-based fail-closed decisions; unrecognized future capability names now classify as `unknown` and are rejected in Slippi/tournament modes with regression tests |
 | Task 17 diagnostics | Host report + symbolizer complete | Redacted report and bounded shell-free addr2line adapter; runtime crash capture pending |
