@@ -17,7 +17,7 @@ from meleemod.bridge_transport import UnixBridgeServer
 from meleemod.dolphin_gdb import DolphinGdbClient, DolphinGdbMailbox, DolphinGdbError, MAX_TRANSFER, RUNTIME_FRAME_CAPACITY
 from meleemod.diagnostics import report, symbolize_native
 from meleemod.safety import validate_safety
-from meleemod.registry import install_local, install_remote, install_remote_archive
+from meleemod.registry import install_local, install_remote, install_remote_archive, install_remote_character_package
 from meleemod.registry_signing import public_key, key_id, make_trust, sign, sign_index, verify_index, sign_trust_update, verify_trust_update, fetch_index, fetch_https_index, update_https_index
 from meleemod.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
@@ -203,6 +203,11 @@ class CoreTests(unittest.TestCase):
    with self.assertRaises(ManifestError): install_remote_archive(bad,t/"unsafe",opener=lambda request,timeout: Response(unsafe))
    windows=archive("..\\escape.bin"); win=dict(entry,sha256=hashlib.sha256(windows).hexdigest())
    with self.assertRaises(ManifestError): install_remote_archive(win,t/"windows",opener=lambda request,timeout: Response(windows))
+   stream=io.BytesIO(); character={"id":"remote-character","display_name":"Remote","version":"1.0.0","author":"test","license":"MIT","target_game_version":"GALE01-1.02","compatibility":"visual-only"}; moves={"moves":[]}
+   with zipfile.ZipFile(stream,"w") as zf:
+    zf.writestr("character.json",json.dumps(character)); zf.writestr("moveset.json",json.dumps(moves)); zf.writestr("asset.bin",b"asset"); zf.writestr("checksums.json",json.dumps({"asset.bin":hashlib.sha256(b"asset").hexdigest()}))
+   package=stream.getvalue(); pe=dict(entry,id="remote-character",sha256=hashlib.sha256(package).hexdigest())
+   installed=install_remote_character_package(pe,t/"character",opener=lambda request,timeout: Response(package)); self.assertEqual((installed/"character.json").exists(),True)
    duplicate=archive("duplicate"); dup=dict(entry,sha256=hashlib.sha256(duplicate).hexdigest())
    with self.assertRaises(ManifestError): install_remote_archive(dup,t/"duplicate",opener=lambda request,timeout: Response(duplicate))
 

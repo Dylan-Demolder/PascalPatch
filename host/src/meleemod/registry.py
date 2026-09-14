@@ -88,7 +88,7 @@ def install_remote(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, 
             except FileNotFoundError: pass
 
 
-def install_remote_archive(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, max_extracted_bytes=256 * 1024 * 1024, opener=None):
+def install_remote_archive(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, max_extracted_bytes=256 * 1024 * 1024, opener=None, validator=None):
     """Verify an HTTPS ZIP package, validate every member, then extract atomically."""
     with tempfile.TemporaryDirectory(prefix="meleemod-registry-archive-") as temporary:
         downloaded=install_remote(entry,temporary,timeout=timeout,max_bytes=max_bytes,opener=opener)
@@ -116,7 +116,14 @@ def install_remote_archive(entry, destination, timeout=5.0, max_bytes=64 * 1024 
                     if staging not in out.parents: raise ManifestError("unsafe remote registry archive",[ValidationError(info.filename,"traversal","member escapes staging")])
                     out.parent.mkdir(parents=True,exist_ok=True)
                     with zf.open(info) as source, out.open("wb") as dest: shutil.copyfileobj(source,dest,1024*1024)
+                if validator is not None: validator(staging)
                 target.parent.mkdir(parents=True,exist_ok=True); shutil.rmtree(target,ignore_errors=True); staging.rename(target)
             except Exception:
                 shutil.rmtree(staging,ignore_errors=True); raise
             return target
+
+
+def install_remote_character_package(entry, destination, **kwargs):
+    """Install a remote ZIP only after Character Studio package validation."""
+    from .character_package import validate_package
+    return install_remote_archive(entry, destination, validator=validate_package, **kwargs)

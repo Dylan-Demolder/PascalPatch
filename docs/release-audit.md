@@ -18,7 +18,7 @@ This audit records the evidence boundary for the current repositories. It is int
 | Input display and training tools | Frame callback infrastructure observed | Training-tools heartbeat is directly observed in Dolphin; no visual overlay, frame advance, reset, or hit-event proof |
 | GUI | Headless controller, bounded Tk launch, and error-dialog recovery complete | Invalid-profile error recovery is directly observed with extracted Tk/Tcl libraries; full build/launch recovery remains unverified |
 | Diagnostics | Host reporting/symbolization complete | Runtime crash capture remains absent |
-| Registry | Signed indexes, local install, and bounded remote file/ZIP install complete | Dependency-free Ed25519 signatures, trust metadata, revocation/expiry checks, key rotation, HTTPS bounded fetch/cache update, streamed hash verification, and safe ZIP extraction with atomic promotion are tested; remote folders and package-specific semantic validation remain separate |
+| Registry | Signed indexes, local install, and bounded remote file/ZIP install complete | Dependency-free Ed25519 signatures, trust metadata, revocation/expiry checks, key rotation, HTTPS bounded fetch/cache update, streamed hash verification, and safe ZIP extraction with atomic promotion and pre-promotion Character Studio package validation are tested; remote folders without an archive representation remain separate |
 
 ## Character Studio
 
