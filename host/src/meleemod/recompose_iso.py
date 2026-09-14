@@ -44,7 +44,7 @@ def recompose_iso(base_iso, main_dol, output):
             if offset>=old_fst:
                 fst[pos+4:pos+8]=(offset+delta).to_bytes(4,"big")
         out.parent.mkdir(parents=True,exist_ok=True)
-        stage=Path(tempfile.mktemp(prefix=out.name+"-",dir=out.parent))
+        fd,stage_name=tempfile.mkstemp(prefix=out.name+"-",dir=out.parent); os.close(fd); stage=Path(stage_name)
         try:
             with stage.open("w+b") as dst:
                 dst.truncate(base.stat().st_size+delta)
