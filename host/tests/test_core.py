@@ -9,6 +9,7 @@ from meleemod.store import BuildStore
 from meleemod.errors import ManifestError, CompositionError, DiscoveryError
 from meleemod.character_package import validate_package
 from meleemod.plugin_composer import resolve_plugin_order, compose_static_manifest
+from meleemod.launcher import launch
 
 ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
 DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
@@ -47,5 +48,9 @@ class CoreTests(unittest.TestCase):
   def p(ident,deps): return {"id":ident,"version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":deps,"game_versions":["GALE01-1.02"],"online_safe":True}
   ordered=resolve_plugin_order([p("bb",["aa"]),p("aa",[])]); self.assertEqual([x["id"] for x in ordered],["aa","bb"]); self.assertEqual(compose_static_manifest(ordered)["link_status"],"deferred-until-runtime-integration")
   with self.assertRaises(Exception): resolve_plugin_order([p("aa",["bb"]),p("bb",["aa"])])
+
+ def test_launch_helper_records_exit(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); fake=t/"emu"; fake.write_text("#!/bin/sh\necho booted\nexit 7\n"); fake.chmod(0o755); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=2); self.assertEqual(r.exit_code,7); self.assertIn("booted",(t/"run.log").read_text()); self.assertIn("exit_code: 7",(t/"run.log").read_text())
 
 if __name__=="__main__": unittest.main()

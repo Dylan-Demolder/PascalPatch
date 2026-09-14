@@ -1,10 +1,11 @@
 from __future__ import annotations
-import argparse, json, subprocess, sys, datetime
+import argparse, json, sys, datetime
 from pathlib import Path
 from .profile import load_profile
 from .store import BuildStore
 from .discovery import find_dolphin
 from .errors import MeleeModError
+from .launcher import launch
 
 def _root(args): return Path(args.root).expanduser().resolve()
 def _profile(args): return _root(args)/"profiles"/(args.id+".json")
@@ -24,8 +25,7 @@ def cmd_launch(args):
  dolphin=find_dolphin(args.dolphin); logdir=BuildStore(args.data).root/"logs"/p.data["id"]; logdir.mkdir(parents=True,exist_ok=True); log=logdir/(datetime.datetime.now().strftime("%Y%m%dT%H%M%S")+".log")
  cmd=[str(dolphin),"-e",str(output)]
  if args.dry_run: print(json.dumps({"command":cmd,"log":str(log),"compatibility":p.compatibility},indent=2)); return 0
- with log.open("w") as f:
-  f.write("command: "+json.dumps(cmd)+"\n"); proc=subprocess.Popen(cmd,stdout=f,stderr=subprocess.STDOUT,text=True); print(f"launched {p.data['id']} with {dolphin}; log={log}; pid={proc.pid}")
+ result=launch(dolphin,output,log,wait=args.wait,timeout=args.timeout); print(f"launched {p.data['id']} with {dolphin}; log={log}; pid={result.pid}" + (f"; exit={result.exit_code}" if result.exit_code is not None else ""))
  return 0
 def cmd_logs(args):
  d=BuildStore(args.data).root/"logs"/args.id
@@ -36,7 +36,7 @@ def main(argv=None):
  profile=sub.add_parser("profile"); ps=profile.add_subparsers(dest="profile_command",required=True); x=ps.add_parser("list"); x.set_defaults(func=cmd_list); x=ps.add_parser("validate"); x.add_argument("id"); x.set_defaults(func=cmd_validate)
  for name,fn in [("build",cmd_build),("launch",cmd_launch)]:
   x=sub.add_parser(name); x.add_argument("id"); x.set_defaults(func=fn)
- x=sub.choices["launch"]; x.add_argument("--dolphin"); x.add_argument("--allow-unsafe",action="store_true"); x.add_argument("--no-build",action="store_true"); x.add_argument("--dry-run",action="store_true")
+ x=sub.choices["launch"]; x.add_argument("--dolphin"); x.add_argument("--allow-unsafe",action="store_true"); x.add_argument("--no-build",action="store_true"); x.add_argument("--dry-run",action="store_true"); x.add_argument("--wait",action="store_true"); x.add_argument("--timeout",type=float,default=None)
  x=sub.add_parser("logs"); x.add_argument("id"); x.set_defaults(func=cmd_logs)
  args=ap.parse_args(argv)
  try: return args.func(args)
