@@ -72,6 +72,12 @@
         "none",
         "context"
       ]
+    },
+    "init_phase": {
+      "enum": [
+        "first-frame",
+        "startup"
+      ]
     }
   }
 }

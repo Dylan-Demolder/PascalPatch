@@ -104,7 +104,7 @@ class CoreTests(unittest.TestCase):
 
  def test_static_bundle_overlay_is_deterministic_and_has_hook(self):
   with tempfile.TemporaryDirectory() as td:
-   t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    OSReport(\"#\\n\\n\");\n    return 0;\n}\n"); (t/"src/melee/gm/gm_1A3F.c").write_text("void loop(void) {\n    while (true) {\n        u8 next_mode = run();\n    }\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t,runtime_root=Path(__file__).parents[2]); result=(t/"src/melee/gm/gmmain.c").read_text(); loop=(t/"src/melee/gm/gm_1A3F.c").read_text(); bundle=(t/"src/melee/gm/meleemod_static_bundle.c").read_text(); self.assertIn("mm_meleemod_static_init",result); self.assertIn("mm_meleemod_frame();",loop); self.assertIn("mm_input_history_push",bundle); self.assertTrue((t/"src/melee/gm/meleemod_static_bundle.c").exists())
+   t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    OSReport(\"#\\n\\n\");\n    return 0;\n}\n"); (t/"src/melee/gm/gm_1A3F.c").write_text("void loop(void) {\n    while (true) {\n        u8 next_mode = run();\n    }\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t,runtime_root=Path(__file__).parents[2]); result=(t/"src/melee/gm/gmmain.c").read_text(); loop=(t/"src/melee/gm/gm_1A3F.c").read_text(); bundle=(t/"src/melee/gm/meleemod_static_bundle.c").read_text(); self.assertIn("mm_meleemod_static_init",result); self.assertIn("mm_meleemod_frame();",loop); self.assertIn("mm_input_history_push",bundle); self.assertIn("mm_meleemod_frame_init",bundle); self.assertTrue((t/"src/melee/gm/meleemod_static_bundle.c").exists())
 
 
 
@@ -137,6 +137,10 @@ class CoreTests(unittest.TestCase):
 
  def test_dolphin_smoke_reports_missing_executable(self):
   result=run_one("/definitely/missing/dolphin", "game.iso", 0.1); self.assertFalse(result["started"]); self.assertIn("error",result)
+
+ def test_static_startup_phase_is_explicit(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); bundle=make_bundle([{"id":"p","entrypoint":"plugin_init","source":"plugin.c","init_phase":"startup"}],t); self.assertIn("mm_meleemod_startup_init",bundle); self.assertIn("plugin_init();",bundle)
 
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):

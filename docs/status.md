@@ -18,7 +18,7 @@
 ## Explicitly pending
 
 - Native crash symbolization is implemented as a bounded, shell-free `addr2line` adapter.
-- A real modified `main.dol` boot in standalone Dolphin 2606: clean, static-plugin, and recomposed runtime-plugin ISOs reach the Melee memory-card prompt. The initial memory-card prompt prevents first-frame plugin-output observation in the current automated input setup.
+- A real modified `main.dol` boot in standalone Dolphin 2606: clean, static-plugin, and recomposed runtime-plugin ISOs reach the Melee memory-card prompt. An explicit startup-phase hello plugin also emits `[meleemod] hello-plugin initialized` through Dolphin's OSREPORT logger. First-frame/input observation remains pending.
 - Bounded emulator shutdown kills the complete Dolphin process group after timeout to avoid a modal Confirm Stop dialog or orphan child process.
 - A bounded Slippi launch was attempted with the user ISO; it remained running until timeout, so menu/game boot is not yet confirmed.
 - Linking the runtime into the Melee DOL.
@@ -36,7 +36,7 @@ Do not label pending features as supported.
 
 ## Latest validation
 
-- MeleeMod host tests: 26 passed.
+- MeleeMod host tests: 27 passed.
 - Character Studio tests: 13 passed.
 - Strict C event/input tests and all SDK example syntax checks pass.
 - Standalone Dolphin 2606 clean/modified smoke runner reports both processes started and hard-stops them without leftovers.

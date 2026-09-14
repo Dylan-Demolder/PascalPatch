@@ -7,7 +7,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task | Status | Evidence / next proof |
 |---|---|---|
 | Spike 001 reproducible build | VALIDATED on current Linux host | `spikes/001-reproducible-build/README.md`; rerun wrapper passes |
-| Spike 002 safe code change | BOOT VALIDATED / PLUGIN OBSERVATION PARTIAL | Clean, static-plugin, and recomposed runtime-plugin ISOs reach the same Melee memory-card prompt in standalone Dolphin 2606; plugin-specific output observation remains pending |
+| Spike 002 safe code change | BOOT + STARTUP PLUGIN VALIDATED / FRAME PARTIAL | Clean/static/runtime ISOs boot in standalone Dolphin; recomposed startup-phase hello plugin emits `[meleemod] hello-plugin initialized`; first-frame/input observation remains pending |
 | Spike 003 Dolphin/Slippi launch | BOOT VALIDATED | Standalone Dolphin 2606 reaches the user ISO memory-card prompt; Slippi Online/Playback remain unsuitable as original-title evidence |
 | Spike 004 host/runtime bridge | HOST PARTIAL | Checksummed protocol and bounded host transport are tested; runtime endpoint remains pending |
 | Task 1 manifests | MVP COMPLETE | Versioned schemas and semantic validators |
@@ -17,8 +17,8 @@ This tracker separates implemented contracts from features that still need game/
 | Task 5 asset mods | MVP COMPLETE | Exact target/conflict/traversal tests |
 | Task 6 CLI | MVP COMPLETE | Validate/build/launch/log commands; launch smoke proof pending |
 | Task 7 decomp build | MVP COMPLETE on known checkout | Pinned wrapper and expected hash |
-| Task 8 runtime ABI | PPC BUILD COMPLETE | PPC-safe runtime/event ABI is compiled and linked into a DOL; in-game lifecycle proof pending |
-| Task 9 sample plugin | PPC BUILD COMPLETE | Real hello-plugin compiles through SDK/runtime bundle and embeds its log string; in-game load pending |
+| Task 8 runtime ABI | PPC BUILD + STARTUP LIFECYCLE VALIDATED | Runtime initialization and startup plugin call execute in standalone Dolphin; frame/shutdown lifecycle remains pending |
+| Task 9 sample plugin | STARTUP LOAD VALIDATED | Real hello-plugin compiles, links, and logs from an in-game recomposed ISO using explicit startup phase; first-frame default path remains pending |
 | Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation, deferred first-frame lifecycle, and DOL link succeed |
 | Task 11 bridge | Host transport complete | Versioned bounded checksum frames, stream adapter, private Unix listener, and cleanup tests; PPC runtime endpoint pending |
 | Task 12 input history | Frame hook compiled | Bounded ring buffer and frame-event hook are compiled into the PPC bundle; controller sampling pending |
