@@ -17,8 +17,8 @@ This tracker separates implemented contracts from features that still need game/
 | Task 5 asset mods | MVP COMPLETE | Exact target/conflict/traversal tests |
 | Task 6 CLI | MVP COMPLETE | Validate/build/launch/log commands; launch smoke proof pending |
 | Task 7 decomp build | MVP COMPLETE on known checkout | Pinned wrapper and expected hash |
-| Task 8 runtime ABI | HOST COMPLETE | C event ABI tests; PPC link proof pending |
-| Task 9 sample plugin | STATIC BUILD COMPLETE | Static source bundle builds and embeds marker; in-game load pending |
+| Task 8 runtime ABI | PPC BUILD COMPLETE | PPC-safe runtime/event ABI is compiled and linked into a DOL; in-game lifecycle proof pending |
+| Task 9 sample plugin | PPC BUILD COMPLETE | Real hello-plugin compiles through SDK/runtime bundle and embeds its log string; in-game load pending |
 | Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation and DOL link succeed; generic runtime hooks pending |
 | Task 11 bridge | Protocol contract complete | Versioned bounded checksum frames; transport/runtime integration pending |
 | Task 12 input history | ABI primitive complete | Bounded ring buffer and reset/wrap tests; game sampling hook pending |

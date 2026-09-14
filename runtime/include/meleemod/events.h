@@ -1,6 +1,13 @@
 #ifndef MELEEMOD_EVENTS_H
 #define MELEEMOD_EVENTS_H
+#if defined(__MWERKS__)
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned long uint32_t;
+typedef signed short int16_t;
+#else
 #include <stdint.h>
+#endif
 #ifdef __cplusplus
 extern "C" {
 #endif

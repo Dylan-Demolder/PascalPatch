@@ -4,4 +4,4 @@ The first code-plugin path is source composition, not runtime relocatable loadin
 
 Each plugin manifest must provide a C-identifier `entrypoint` and a relative `.c` `source`. Plugin source must use the target GameCube ABI. This is an explicit build-time code execution boundary; install only code you trust.
 
-The adapter was validated with a harmless `OSReport` plugin. A generated marker was present in the output DOL. Runtime ABI callbacks, shutdown ordering and dynamic modules remain separate work.
+The adapter was validated with a harmless `OSReport` plugin. A generated marker was present in the output DOL. The real hello-plugin and PPC-safe runtime ABI also compile and link; its log string is present in the DOL. Runtime callback behavior in Dolphin, shutdown ordering and dynamic modules remain separate work.

@@ -24,7 +24,7 @@ def _base(obj, path, required, errors, optional=()):
     if "version" in obj and (not isinstance(obj["version"],str) or not re.fullmatch(r"\d+\.\d+\.\d+",obj["version"])): errors.append(ValidationError(f"{path}.version","version","must use semantic version X.Y.Z"))
 
 def validate_plugin(obj, path="plugin"):
- e=[]; _base(obj,path,{"id","version","api_version","entrypoint","capabilities","dependencies","game_versions","online_safe"},e,optional=("conflicts","hooks","source",))
+ e=[]; _base(obj,path,{"id","version","api_version","entrypoint","capabilities","dependencies","game_versions","online_safe"},e,optional=("conflicts","hooks","source","static_signature",))
  if isinstance(obj,dict):
   if not isinstance(obj.get("api_version"),int) or obj.get("api_version",0)<1: e.append(ValidationError(path+".api_version","api_version","must be a positive integer"))
   if not isinstance(obj.get("entrypoint"),str) or not obj.get("entrypoint"): e.append(ValidationError(path+".entrypoint","entrypoint","must be non-empty"))

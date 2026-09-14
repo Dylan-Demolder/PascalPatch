@@ -1,7 +1,6 @@
 #ifndef MELEEMOD_RUNTIME_H
 #define MELEEMOD_RUNTIME_H
-#include <stdint.h>
-#include "events.h"
+#include "meleemod/events.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

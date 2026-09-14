@@ -66,6 +66,12 @@
     },
     "source": {
       "type": "string"
+    },
+    "static_signature": {
+      "enum": [
+        "none",
+        "context"
+      ]
     }
   }
 }

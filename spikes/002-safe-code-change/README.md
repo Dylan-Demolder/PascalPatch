@@ -26,6 +26,17 @@ The host-side static integration adapter now generates a bundle source, includes
 
 This validates static source composition, profile integration and link placement. The integrated `BuildStore` path also produced an isolated build metadata record with `plugin_composition: static-source-overlay` and the same generated DOL hash. It does not yet validate in-game execution.
 
+## PPC ABI integration result
+
+The real SDK hello-plugin was then composed with the PPC-safe runtime implementation. The generated source included the event runtime, `mm_runtime_init`, `mm_log`, the plugin context, and `plugin_init`. The Metrowerks GameCube compiler and linker completed successfully.
+
+- ABI DOL SHA-1: `4bf43f76944d4044290a0a1548e2971d4e80076a`
+- ABI DOL size: 4,425,472 bytes
+- The output contains `hello-plugin initialized` and `[meleemod]` strings
+- Clean DOL remains `08e0bf20134dfcb260699671004527b2d6bb1a45`
+
+This validates PPC compilation, static runtime inclusion, plugin-context initialization and link placement. It still does not prove that Dolphin reaches the initialization path.
+
 ## Emulator result
 
 A clean extracted layout and a modified extracted layout were tested with the installed Slippi AppImage using batch execution. Both aborted before a menu/game state could be observed. This is currently indistinguishable from an emulator/display/environment problem because the clean input fails the same way. No boot success is claimed.
