@@ -66,3 +66,8 @@ A second disposable attempt added `src/meleemod/runtime.c` as a separate object 
 - Capture process exit status and emulator log.
 - Verify the startup report or another visible effect.
 - Only then promote this verdict to `VALIDATED`.
+
+
+### Runtime callback observation follow-up
+
+The standalone Dolphin window is observable and its `OSREPORT` logger confirms Melee boot. Automated X11 input was tested with the generated standard-controller mappings, keyboard-controller mode, both D-pad directions, and the configured A button. The memory-card creation prompt did not advance reliably in this environment, so first-frame plugin output remains unclaimed. All attempts used process-associated windows, hard timeouts, and process-group kills; no emulator process was left running.
