@@ -34,4 +34,4 @@ This audit records the evidence boundary for the current repositories. It is int
 
 ## Release decision
 
-The project is not complete and must not be marked release-ready. The hard blockers are production bridge transport/payload callbacks, visual/training runtime features, real Slippi safety smoke, remote folder/package-semantic validation, Melee asset conversion, playable round-trip testing, and full GUI recovery. `goal.complete()` must not be called until these rows are either implemented with direct evidence or explicitly removed from the project scope by the user.
+The project is not complete and must not be marked release-ready. The hard blockers are production bridge transport/payload callbacks, visual/training runtime features, real Slippi safety smoke, remote folder support, Melee asset conversion, playable round-trip testing, and full GUI recovery. `goal.complete()` must not be called until these rows are either implemented with direct evidence or explicitly removed from the project scope by the user.
