@@ -12,7 +12,7 @@ This matrix is the completion gate for the current scope. `Verified` requires co
 | Host bridge transport | Verified | Bounded checksummed Unix transport tests |
 | PPC bridge | Partial | Live Dolphin GDB mailbox HELLO/HELLO_ACK and state-machine tests; production payload transport remains absent |
 | Input history | Verified | Direct frame/input observation in Dolphin |
-| Input display overlay | Partial | Input-display callback observed; visual renderer and controller activity remain unverified |
+| Input display overlay | Partial | Input-display callback observed; SisLib renderer ownership research is recorded in `docs/input-overlay-research.md`; visual renderer and controller activity remain unverified |
 | Training tools | Partial | Frame heartbeat observed; frame advance, reset, and hit events remain unimplemented |
 | Safety policy | Verified for pre-launch block | Installed-Slippi-path gameplay-changing profile rejected before process launch; online/login smoke remains unavailable |
 | Registry trust and installation | Verified | Ed25519 trust/index tests, bounded HTTPS file/ZIP installation, safe extraction, package validation |
