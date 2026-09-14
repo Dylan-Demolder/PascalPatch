@@ -63,6 +63,7 @@ class CoreTests(unittest.TestCase):
  def test_opt_in_runtime_diagnostics_validate(self):
   plugin={"id":"timing","version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":[],"game_versions":["GALE01-1.02"],"online_safe":True,"frame_timing":True,"shutdown_after_frames":120}
   self.assertEqual(validate_plugin(plugin),[])
+  self.assertEqual(validate_plugin(dict(plugin,init_phase="startup")),[])
   self.assertTrue(validate_plugin(dict(plugin,frame_timing="yes")))
   self.assertTrue(validate_plugin(dict(plugin,shutdown_after_frames=0)))
 
