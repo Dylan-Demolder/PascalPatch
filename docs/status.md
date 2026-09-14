@@ -11,7 +11,7 @@
 | Static plugin profile builds | MVP complete | Disposable worktree overlay produces and stages a modified DOL; standalone Dolphin directly observes hello initialization and frame/input callback markers |
 | Filesystem asset composition | MVP complete | Exact targets, traversal rejection, conflict test |
 | Dolphin discovery | MVP complete | Explicit executable validation; KDE `/usr/bin/dolphin` is rejected and installed Slippi AppImage is selected; launch helper records PID/exit/timeout |
-| Runtime event ABI | PPC build + in-game frame lifecycle | C tests plus Metrowerks PPC ABI/runtime link; standalone Dolphin observes initialization, runtime-ready, frame dispatch, and input-history reads; shutdown remains pending |
+| Runtime event ABI | PPC build + in-game frame lifecycle | C tests plus Metrowerks PPC ABI/runtime link; standalone Dolphin observes initialization, runtime-ready, frame dispatch, and input-history reads; generated shutdown hook is directly observed with the opt-in diagnostic; normal process shutdown ordering remains pending |
 | Plugin dependency composition | Contract complete | Stable topological ordering, cycle detection and static manifest tests |
 | Character package security | Validator + offline staging | Checksums, unsafe path/executable rejection, and validated-only offline workspace staging |
 
@@ -22,7 +22,7 @@
 - Bounded emulator shutdown kills the complete Dolphin process group after timeout to avoid a modal Confirm Stop dialog or orphan child process.
 - A bounded Slippi launch was attempted with the user ISO; it remained running until timeout, so menu/game boot is not yet confirmed.
 - Runtime shutdown observation and overhead budget.
-- Production PPC-to-host transport and frame-time budget (development Dolphin GDB mailbox transport now completes a live HELLO/HELLO_ACK exchange; general Dolphin/EXI transport and overhead measurement remain pending).
+- Production PPC-to-host transport and frame-time budget (development Dolphin GDB mailbox transport now completes a live HELLO/HELLO_ACK exchange; general Dolphin/EXI transport and total game-frame budget remain pending).
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
 - Full interactive GUI recovery testing (Tk Validate/Build/Launch callbacks, bounded real-Dolphin launch cleanup, and callback-failure self-test pass when extracted Tk libraries are supplied; interactive recovery boundaries are documented; base host lacks `libtk8.6`).
 - Character model import, HSD/game asset conversion and playable character round trip (deterministic skeleton retargeting and bounded HSD container validation/writing are implemented; game conversion remains pending).
