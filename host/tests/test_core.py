@@ -11,6 +11,7 @@ from meleemod.character_package import validate_package, installation_plan
 from meleemod.plugin_composer import resolve_plugin_order, compose_static_manifest
 from meleemod.launcher import launch
 from meleemod.bridge import Message, encode, decode
+from meleemod.diagnostics import report
 
 ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
 DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
@@ -71,5 +72,8 @@ class CoreTests(unittest.TestCase):
   raw=encode(Message(2,17,b"heartbeat")); self.assertEqual(decode(raw),Message(2,17,b"heartbeat")); bad=bytearray(raw); bad[-1]^=1
   with self.assertRaises(ValueError): decode(bytes(bad))
   with self.assertRaises(ValueError): encode(Message(1,1,b"x"*(64*1024+1)))
+
+ def test_diagnostics_redact_user_game_path(self):
+  r=report("offline","abc",[{"id":"p","version":"1.0.0"}],1,"failed /home/dyland/secret.iso"); self.assertNotIn("/home/dyland",json.dumps(r)); self.assertIn("<GAME_DATA>",r["error"])
 
 if __name__=="__main__": unittest.main()
