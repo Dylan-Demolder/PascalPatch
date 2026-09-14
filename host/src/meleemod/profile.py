@@ -23,7 +23,7 @@ def load_profile(path, catalog_root=None):
  source=Path(path).resolve(); data=load_json(source); require_valid(data,"profile","profile")
  data=dict(data); data["base_game"]=str((source.parent / data["base_game"]).resolve()) if not Path(data["base_game"]).is_absolute() else data["base_game"]
  root=Path(catalog_root or source.parent).resolve()
- for k in ("decomp_repo","decomp_orig","plugin_source_root"):
+ for k in ("decomp_repo","decomp_orig","plugin_source_root","runtime_root"):
   if k in data and not Path(data[k]).is_absolute(): data[k]=str((root / data[k]).resolve())
  plugins=[]; mods=[]; errors=[]
  for i,ident in enumerate(data["plugins"]):

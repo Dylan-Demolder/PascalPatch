@@ -51,4 +51,4 @@ This repository contains tooling, schemas and original sample code only. Do not 
 
 ## Static code profiles
 
-A code profile must explicitly provide `decomp_repo`, `decomp_orig` and `plugin_source_root`. Each selected plugin must declare a relative `.c` `source` and a C entrypoint. The host creates a disposable worktree and stages the generated DOL. An extracted base directory is required; ISO-only code builds are rejected until disc-image recomposition is implemented.
+A code profile must explicitly provide `decomp_repo`, `decomp_orig` and `plugin_source_root`. Plugins using the SDK context ABI also require `runtime_root`. Each selected plugin must declare a relative `.c` `source` and a C entrypoint. The host creates a disposable worktree and stages the generated DOL. An extracted base directory is required; ISO-only code builds are rejected until disc-image recomposition is implemented.

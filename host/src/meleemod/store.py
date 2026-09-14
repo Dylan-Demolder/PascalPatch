@@ -33,9 +33,11 @@ class BuildStore:
     if profile.plugins:
      required=("decomp_repo","decomp_orig","plugin_source_root")
      missing=[k for k in required if not profile.data.get(k)]
-     if missing: raise CompositionError("static plugin build requires explicit decomp_repo, decomp_orig and plugin_source_root",[ValidationError("profile."+k,"required", "missing static build path") for k in missing])
+     needs_runtime=any(p.get("static_signature")=="context" for p in profile.plugins)
+     if needs_runtime and not profile.data.get("runtime_root"): missing.append("runtime_root")
+     if missing: raise CompositionError("static plugin build requires explicit decomp/runtime/source paths",[ValidationError("profile."+k,"required", "missing static build path") for k in missing])
      generated=stage/"generated-main.dol"
-     static=build_in_worktree(profile.data["decomp_repo"],profile.data["decomp_orig"],profile.plugins,generated,source_root=profile.data["plugin_source_root"])
+     static=build_in_worktree(profile.data["decomp_repo"],profile.data["decomp_orig"],profile.plugins,generated,source_root=profile.data["plugin_source_root"],runtime_root=profile.data.get("runtime_root"))
      report["static_plugin_dol_sha1"]=static.sha1
     composition=compose_assets(game,profile.mods,output, bool(profile.data.get("allow_priority",False))) if profile.mods else (shutil.copytree(game,output),{"mods":[],"replacements":[],"conflicts":[]})[1]
     if profile.plugins:
