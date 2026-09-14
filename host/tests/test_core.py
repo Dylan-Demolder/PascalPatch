@@ -18,6 +18,8 @@ from meleemod.registry import install_local
 from meleemod.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
 from meleemod.recompose_iso import recompose_iso
+sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
+from dolphin_smoke import run_one
 
 ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
 DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
@@ -118,6 +120,10 @@ class CoreTests(unittest.TestCase):
    raw[0x324:0x330]=bytes([0,0,0,0])+ (0x600).to_bytes(4,"big")+(4).to_bytes(4,"big")
    raw[0x500:0x504]=b"file"; raw[0x600:0x604]=b"data"; base.write_bytes(raw); dol.write_bytes(b"D"*0x280); recompose_iso(base,dol,out)
    self.assertEqual(base.read_bytes(),bytes(raw)); self.assertEqual(out.read_bytes()[0x100:0x380],b"D"*0x280); self.assertEqual(out.read_bytes()[0x580:0x584],b"file"); self.assertEqual(int.from_bytes(out.read_bytes()[0x424:0x428],"big"),0x380)
+
+ def test_dolphin_smoke_hard_timeout(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); fake=t/"dolphin"; fake.write_text("#!/bin/sh\nsleep 30\n"); fake.chmod(0o755); result=run_one(fake,t/"game.iso",0.05); self.assertTrue(result["timed_out"]); self.assertTrue(result["started"]); self.assertIsNotNone(result["exit_code"])
 
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):
