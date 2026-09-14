@@ -67,6 +67,9 @@ def build_in_worktree(repo,base_orig,plugins,output,source_root=None,python="pyt
   orig.symlink_to(base_orig,target_is_directory=True)
   apply_overlay(work,plugins,Path(source_root or Path.cwd()).resolve())
   configure=[python,"configure.py","--non-matching","--build-dir",builddir]
+  tool_paths=(("--dtk",repo/"build/tools/dtk"),("--compilers",repo/"build/compilers"),("--binutils",repo/"build/binutils"),("--wrapper",repo/"build/tools/wibo"),("--sjiswrap",repo/"build/tools/sjiswrap.exe"),("--objdiff",repo/"build/tools/objdiff-cli"))
+  for flag,path in tool_paths:
+   if path.exists(): configure.extend([flag,str(path)])
   c=subprocess.run(configure,cwd=work,text=True,capture_output=True)
   if c.returncode: raise CompositionError("static plugin configure failed",[ValidationError("configure","failed",(c.stdout+c.stderr)[-4000:])])
   b=subprocess.run([ninja],cwd=work,text=True,capture_output=True)
