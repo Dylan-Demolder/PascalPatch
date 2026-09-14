@@ -34,3 +34,18 @@ def validate_package(path):
   actual=hashlib.sha256(_read(p,name)).hexdigest()
   if actual!=expected: raise ManifestError("character asset checksum mismatch",[ValidationError(name,"checksum",f"expected {expected}, got {actual}")])
  return {"id":character["id"],"version":character["version"],"compatibility":character["compatibility"],"target_game_version":character["target_game_version"],"files":len(names)}
+
+
+def installation_plan(path, profile_mode):
+    """Validate a package and return a safe install decision.
+
+    Asset/code conversion is deliberately not guessed here. Gameplay packages
+    are accepted for planning only in Offline profiles until the runtime
+    composition backend exists.
+    """
+    info=validate_package(path)
+    if info["compatibility"] == "offline-gameplay" and profile_mode != "offline":
+        raise ManifestError("gameplay character packages require an Offline profile",[ValidationError("character.compatibility","offline_required","select mode=offline")])
+    if info["compatibility"] == "unknown":
+        raise ManifestError("unknown character compatibility",[ValidationError("character.compatibility","unknown_capability","package must declare a supported compatibility")])
+    return {"status":"validated-only","package":str(Path(path).resolve()),"profile_mode":profile_mode,"composition":"deferred-until-character-runtime-integration","metadata":info}
