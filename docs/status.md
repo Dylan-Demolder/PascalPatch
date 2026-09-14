@@ -9,13 +9,14 @@
 | Profile/mod schemas | MVP complete | `schemas/*.schema.json`, dependency-free semantic validator and tests |
 | Profile isolation | MVP complete | `host/src/meleemod/store.py`, atomic promotion test |
 | Filesystem asset composition | MVP complete | Exact targets, traversal rejection, conflict test |
-| Dolphin discovery | MVP complete | Explicit path and PATH discovery; real `/usr/bin/dolphin` found |
+| Dolphin discovery | MVP complete | Explicit executable validation; KDE `/usr/bin/dolphin` is rejected and installed Slippi AppImage is selected |
 | Runtime event ABI | Host-compile complete | C event registration/dispatch/unsubscribe test |
 | Character package security | Validator complete | Checksums and unsafe path/executable rejection |
 
 ## Explicitly pending
 
 - A real modified `main.dol` boot in Dolphin (Spike 002 is PARTIAL).
+- A bounded Slippi launch was attempted with the user ISO; it remained running until timeout, so menu/game boot is not yet confirmed.
 - Linking the runtime into the Melee DOL.
 - PPC plugin composition and runtime loading.
 - Host/runtime transport and frame-time measurements.

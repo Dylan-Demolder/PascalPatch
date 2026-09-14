@@ -22,7 +22,7 @@ def cmd_launch(args):
  p=resolve(args); output=BuildStore(args.data).build(p).output if not args.no_build else BuildStore(args.data).root/"builds"/p.data["id"]/"current"/"game"
  if p.compatibility != "online-safe" and not args.allow_unsafe: raise MeleeModError(f"profile is {p.compatibility}; pass --allow-unsafe to launch it")
  dolphin=find_dolphin(args.dolphin); logdir=BuildStore(args.data).root/"logs"/p.data["id"]; logdir.mkdir(parents=True,exist_ok=True); log=logdir/(datetime.datetime.now().strftime("%Y%m%dT%H%M%S")+".log")
- cmd=[str(dolphin),str(output)]
+ cmd=[str(dolphin),"-e",str(output)]
  if args.dry_run: print(json.dumps({"command":cmd,"log":str(log),"compatibility":p.compatibility},indent=2)); return 0
  with log.open("w") as f:
   f.write("command: "+json.dumps(cmd)+"\n"); proc=subprocess.Popen(cmd,stdout=f,stderr=subprocess.STDOUT,text=True); print(f"launched {p.data['id']} with {dolphin}; log={log}; pid={proc.pid}")

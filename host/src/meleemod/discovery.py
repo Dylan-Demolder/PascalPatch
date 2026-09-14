@@ -56,12 +56,25 @@ def inspect_game(path):
  p=Path(path).expanduser()
  return inspect_iso(p) if p.is_file() else inspect_directory(p)
 
+def _looks_like_emulator(path):
+ try:
+  import subprocess
+  r=subprocess.run([str(path),"--help"],capture_output=True,text=True,timeout=5)
+  text=(r.stdout+r.stderr).lower()
+  return "loads the specified file" in text and ("batch" in text or "video_backend" in text)
+ except (OSError,subprocess.SubprocessError):
+  return False
+
 def find_dolphin(explicit=None):
- if explicit:
-  p=Path(explicit).expanduser();
-  if p.is_file() and os.access(p,os.X_OK): return p.resolve()
-  raise DiscoveryError(f"Dolphin executable is not executable: {p}")
- candidates=[shutil.which(x) for x in ("dolphin","dolphin-emu","Slippi_Online-x86_64.AppImage","slippi-dolphin")]
- for c in candidates:
-  if c: return Path(c).resolve()
- raise DiscoveryError("Dolphin executable not found; provide --dolphin")
+ candidates=[]
+ if explicit: candidates=[Path(explicit).expanduser()]
+ else:
+  import glob
+  for name in ("dolphin-emu","dolphin"):
+   found=shutil.which(name)
+   if found: candidates.append(Path(found))
+  candidates.extend(Path(x) for x in glob.glob(str(Path.home()/".config/Slippi Launcher"/"**/Slippi*.AppImage"),recursive=True))
+ for p in candidates:
+  if p.is_file() and os.access(p,os.X_OK) and _looks_like_emulator(p): return p.resolve()
+ if explicit: raise DiscoveryError(f"not a Dolphin Emulator executable: {candidates[0] if candidates else explicit}")
+ raise DiscoveryError("Dolphin Emulator/Slippi executable not found; provide --dolphin")
