@@ -46,7 +46,7 @@ def validate_mod(obj,path="mod"):
  return e
 
 def validate_profile(obj,path="profile"):
- e=[]; _base(obj,path,{"id","name","game_version","base_game","plugins","mods","mode","online_safe"},e,optional=("allow_priority",))
+ e=[]; _base(obj,path,{"id","name","game_version","base_game","plugins","mods","mode","online_safe"},e,optional=("allow_priority","decomp_repo","decomp_orig","plugin_source_root",))
  if isinstance(obj,dict):
   if obj.get("game_version")!=GAME_VERSION: e.append(ValidationError(path+".game_version","game_version","must be GALE01-1.02"))
   if not isinstance(obj.get("base_game"),str) or not obj.get("base_game"): e.append(ValidationError(path+".base_game","base_game","must be a path"))
@@ -55,6 +55,8 @@ def validate_profile(obj,path="profile"):
    elif len(obj[k]) != len(set(obj[k])): e.append(ValidationError(f"{path}.{k}","duplicate","entries must be unique"))
   if obj.get("mode") not in {"vanilla","tournament-safe","slippi","offline"}: e.append(ValidationError(path+".mode","mode","unsupported profile mode"))
   if not isinstance(obj.get("online_safe"),bool): e.append(ValidationError(path+".online_safe","online_safe","must be boolean metadata"))
+  for k in ("decomp_repo","decomp_orig","plugin_source_root"):
+   if k in obj and (not isinstance(obj[k],str) or not obj[k]): e.append(ValidationError(path+"."+k,"path","must be a non-empty path"))
  return e
 
 def require_valid(obj,kind,path="manifest"):

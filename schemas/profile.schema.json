@@ -57,6 +57,18 @@
     "allow_priority": {
       "type": "boolean",
       "default": false
+    },
+    "decomp_repo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decomp_orig": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plugin_source_root": {
+      "type": "string",
+      "minLength": 1
     }
   }
 }

@@ -8,6 +8,7 @@
 | Reproducible decompilation build | Validated on current Linux host | `spikes/001-reproducible-build/README.md`; wrapper rerun passed in 33.62 s |
 | Profile/mod schemas | MVP complete | `schemas/*.schema.json`, dependency-free semantic validator and tests |
 | Profile isolation | MVP complete | `host/src/meleemod/store.py`, atomic promotion test |
+| Static plugin profile builds | MVP complete | Disposable worktree overlay produces and stages a modified DOL; emulator execution pending |
 | Filesystem asset composition | MVP complete | Exact targets, traversal rejection, conflict test |
 | Dolphin discovery | MVP complete | Explicit executable validation; KDE `/usr/bin/dolphin` is rejected and installed Slippi AppImage is selected; launch helper records PID/exit/timeout |
 | Runtime event ABI | Host-compile complete | C event registration/dispatch/unsubscribe test and bounded input ring buffer |

@@ -24,7 +24,7 @@ The host-side static integration adapter now generates a bundle source, includes
 - The generated DOL contains the plugin marker string `MELEEMOD STATIC PLUGIN`
 - No generated DOL or Nintendo data is stored in this repository
 
-This validates static source composition and link placement. It does not yet validate in-game execution.
+This validates static source composition, profile integration and link placement. The integrated `BuildStore` path also produced an isolated build metadata record with `plugin_composition: static-source-overlay` and the same generated DOL hash. It does not yet validate in-game execution.
 
 ## Emulator result
 
