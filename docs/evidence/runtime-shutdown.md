@@ -7,3 +7,14 @@ shutdown_seen=1
 ```
 
 This directly verifies that the generated shutdown path invokes the plugin shutdown hook once and is idempotent. It is host-fixture evidence, not proof that Dolphin reaches shutdown during process termination; the latter remains pending because bounded Dolphin termination uses a hard process-group kill.
+
+
+## Opt-in Dolphin shutdown-hook probe
+
+Static composition now supports `shutdown_after_frames` for disposable diagnostics. A timing probe profile set it to 120 frames. Standalone Dolphin emitted:
+
+```text
+[meleemod] overhead-probe: shutdown hook
+```
+
+The marker appeared during the bounded run before Dolphin was hard-killed. This directly observes the generated in-game plugin shutdown hook and complements the host idempotence fixture. It does not represent emulator process termination; normal profiles leave this diagnostic disabled.

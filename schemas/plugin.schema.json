@@ -85,6 +85,10 @@
     },
     "frame_timing": {
       "type": "boolean"
+    },
+    "shutdown_after_frames": {
+      "type": "integer",
+      "minimum": 1
     }
   }
 }

@@ -14,4 +14,4 @@ static void on_frame(const mm_event *event, void *user) {
     }
 }
 int plugin_init(const mm_plugin_context *context) { if (!context || context->api_version != MM_PLUGIN_ABI_VERSION) return -1; return mm_subscribe(MM_EVENT_FRAME,on_frame,0,&token); }
-void plugin_shutdown(void) { if (token) mm_unsubscribe(token); token=0; frames=0; last_time=0; }
+void plugin_shutdown(void) { OSReport("[meleemod] overhead-probe: shutdown hook\n"); if (token) mm_unsubscribe(token); token=0; frames=0; last_time=0; }
