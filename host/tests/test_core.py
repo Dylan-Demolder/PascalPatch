@@ -17,7 +17,7 @@ from meleemod.bridge_transport import UnixBridgeServer
 from meleemod.dolphin_gdb import DolphinGdbClient, DolphinGdbMailbox, DolphinGdbError, MAX_TRANSFER, RUNTIME_FRAME_CAPACITY
 from meleemod.diagnostics import report, symbolize_native
 from meleemod.safety import validate_safety
-from meleemod.registry import install_local
+from meleemod.registry import install_local, install_remote
 from meleemod.registry_signing import public_key, key_id, make_trust, sign, sign_index, verify_index, sign_trust_update, verify_trust_update, fetch_index, fetch_https_index, update_https_index
 from meleemod.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
@@ -161,6 +161,19 @@ class CoreTests(unittest.TestCase):
   self.assertEqual(verify_index(sign_index(entries,next_seed),new_trust),entries)
   revoked=make_trust({root_id:{"public_key":root_public.hex(),"status":"revoked"}})
   with self.assertRaises(ValueError): verify_index(signed,revoked)
+
+ def test_remote_registry_install_is_https_bounded_and_atomic(self):
+  class Response:
+   headers={"Content-Length":"6"}
+   def __init__(self,data): self.data=data
+   def __enter__(self): return self
+   def __exit__(self,*args): pass
+   def read(self,size): data,self.data=self.data,b""; return data
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); payload=b"plugin"; entry={"id":"remote-plugin","version":"1.0.0","source":"https://registry.example/plugin","sha256":hashlib.sha256(payload).hexdigest(),"license":"MIT","compatibility":"offline-only","dependencies":[],"maintainer":"test"}
+   target=install_remote(entry,t/"registry",opener=lambda request,timeout: Response(payload)); self.assertEqual((target/"package").read_bytes(),payload)
+   with self.assertRaises(ManifestError): install_remote(dict(entry,sha256="0"*64),t/"registry",opener=lambda request,timeout: Response(payload))
+   with self.assertRaises(ManifestError): install_remote(dict(entry,source="http://registry.example/plugin"),t/"registry",opener=lambda request,timeout: Response(payload))
 
  def test_online_profile_rejects_gameplay_and_unknown_capabilities(self):
   for capability in ("gameplay-changing","unknown"):

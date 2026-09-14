@@ -18,7 +18,7 @@ This audit records the evidence boundary for the current repositories. It is int
 | Input display and training tools | Infrastructure only | Plugins compile and receive frame events; no visual overlay, frame advance, reset, or hit-event proof |
 | GUI | Headless controller and bounded Tk launch complete | Full interactive recovery remains unverified on the base host |
 | Diagnostics | Host reporting/symbolization complete | Runtime crash capture remains absent |
-| Registry | Signed indexes and local install complete; remote package flow pending | Dependency-free Ed25519 signatures, trust metadata, revocation/expiry checks, key rotation, HTTPS bounded fetch, and atomic cache update are tested; package download/install still needs a separately approved flow |
+| Registry | Signed indexes, local install, and bounded remote file install complete | Dependency-free Ed25519 signatures, trust metadata, revocation/expiry checks, key rotation, HTTPS bounded fetch/cache update, and streamed hash-verified atomic file install are tested; archive/folder extraction remains separate |
 
 ## Character Studio
 
@@ -34,4 +34,4 @@ This audit records the evidence boundary for the current repositories. It is int
 
 ## Release decision
 
-The project is not complete and must not be marked release-ready. The hard blockers are the physical PPC bridge adapter, visual/training runtime features, real Slippi safety smoke, registry trust/update flow, Melee asset conversion, playable round-trip testing, and full GUI recovery. `goal.complete()` must not be called until these rows are either implemented with direct evidence or explicitly removed from the project scope by the user.
+The project is not complete and must not be marked release-ready. The hard blockers are production bridge transport/payload callbacks, visual/training runtime features, real Slippi safety smoke, remote archive/folder extraction, Melee asset conversion, playable round-trip testing, and full GUI recovery. `goal.complete()` must not be called until these rows are either implemented with direct evidence or explicitly removed from the project scope by the user.

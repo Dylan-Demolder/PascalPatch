@@ -24,7 +24,7 @@
 - Runtime shutdown observation and overhead budget.
 - Generalizing static plugin source bundles into the full PPC runtime ABI and lifecycle.
 - PPC plugin composition and runtime loading.
-- Physical PPC-to-host transport adapter and frame-time budget (host transport and the transport-neutral PPC bridge state machine are implemented and tested; no Dolphin/EXI adapter or overhead measurement is claimed).
+- Production PPC-to-host transport and frame-time budget (development Dolphin GDB mailbox transport now completes a live HELLO/HELLO_ACK exchange; general Dolphin/EXI transport and overhead measurement remain pending).
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
 - Full GUI recovery testing (headless controller and bounded Tk display launch pass when Tk libraries are supplied; base host lacks `libtk8.6`).
 - Character model import, game asset conversion and playable character round trip (deterministic skeleton retargeting is now implemented).

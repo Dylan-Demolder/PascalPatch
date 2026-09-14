@@ -1,5 +1,7 @@
 from __future__ import annotations
-import hashlib, json
+import hashlib, json, os, shutil, tempfile
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 from pathlib import Path
 from .errors import ManifestError, ValidationError
 from .manifest import ID_RE
@@ -41,3 +43,37 @@ def install_local(entry, destination):
     else: shutil.copy2(source,staging/"package")
     target.parent.mkdir(parents=True,exist_ok=True); shutil.rmtree(target,ignore_errors=True); staging.rename(target)
     return target
+
+
+def install_remote(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, opener=None):
+    """Download one HTTPS registry file, verify it while streaming, and promote atomically."""
+    errors=validate_entry(entry)
+    if errors: raise ManifestError("invalid registry entry",errors)
+    parsed=urlparse(entry["source"])
+    if parsed.scheme != "https" or not parsed.netloc: raise ManifestError("remote registry sources require HTTPS")
+    opener=opener or urlopen
+    root=Path(destination).expanduser().resolve(); root.mkdir(parents=True,exist_ok=True)
+    temporary=None
+    try:
+        request=Request(entry["source"],headers={"Accept":"application/octet-stream","User-Agent":"meleemod-registry/1"})
+        with opener(request,timeout=timeout) as response:
+            declared=response.headers.get("Content-Length")
+            if declared is not None and int(declared)>max_bytes: raise ManifestError("remote registry package exceeds size limit")
+            fd,temporary=tempfile.mkstemp(prefix=".download-",dir=root); digest=hashlib.sha256(); total=0
+            with os.fdopen(fd,"wb") as output:
+                while True:
+                    chunk=response.read(min(1024*1024,max_bytes-total+1))
+                    if not chunk: break
+                    total+=len(chunk)
+                    if total>max_bytes: raise ManifestError("remote registry package exceeds size limit")
+                    digest.update(chunk); output.write(chunk)
+                output.flush(); os.fsync(output.fileno())
+        if digest.hexdigest()!=entry["sha256"]: raise ManifestError("registry package hash mismatch",[ValidationError("sha256","mismatch",digest.hexdigest())])
+        target=root/entry["id"]/entry["version"]; staging=target.parent/("."+target.name+".staging")
+        shutil.rmtree(staging,ignore_errors=True); staging.mkdir(parents=True)
+        shutil.copyfile(temporary,staging/"package"); target.parent.mkdir(parents=True,exist_ok=True); shutil.rmtree(target,ignore_errors=True); staging.rename(target)
+        return target
+    finally:
+        if temporary:
+            try: os.unlink(temporary)
+            except FileNotFoundError: pass
