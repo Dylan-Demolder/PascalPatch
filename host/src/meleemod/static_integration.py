@@ -35,7 +35,7 @@ def make_bundle(plugins, source_root, runtime_root=None):
  for ident,entry,source in chunks:
   body.extend([f"/* plugin: {ident} */",source])
  if runtime:
-  body.extend(["static uint32_t mm_meleemod_frame_number=0;", "void mm_meleemod_frame(void) {", "    mm_event event;", "    event.type=MM_EVENT_FRAME; event.frame=mm_meleemod_frame_number++; event.payload=0; event.payload_size=0;", "    mm_dispatch(&event);", "}"])
+  body.extend(["extern HSD_PadStatus HSD_PadCopyStatus[4];", "static uint32_t mm_meleemod_frame_number=0;", "void mm_meleemod_frame(void) {", "    int i;", "    mm_event event;", "    mm_input_sample sample;", "    event.type=MM_EVENT_FRAME; event.frame=mm_meleemod_frame_number++; event.payload=0; event.payload_size=0;", "    for (i=0; i<4; i++) {", "        sample.frame=event.frame; sample.port=(uint8_t)i;", "        sample.buttons=(uint16_t)HSD_PadCopyStatus[i].button;", "        sample.stick_x=(int16_t)HSD_PadCopyStatus[i].stickX; sample.stick_y=(int16_t)HSD_PadCopyStatus[i].stickY;", "        sample.trigger_l=HSD_PadCopyStatus[i].analogL; sample.trigger_r=HSD_PadCopyStatus[i].analogR;", "        mm_input_history_push(&sample);", "    }", "    mm_dispatch(&event);", "}"])
  body.append("void mm_meleemod_static_init(void) {")
  if runtime: body.append("    mm_meleemod_runtime_init();")
  for ident,entry,source in chunks:
