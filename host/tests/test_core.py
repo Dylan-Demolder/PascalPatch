@@ -54,4 +54,9 @@ class CoreTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); fake=t/"emu"; fake.write_text("#!/bin/sh\necho booted\nexit 7\n"); fake.chmod(0o755); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=2); self.assertEqual(r.exit_code,7); self.assertIn("booted",(t/"run.log").read_text()); self.assertIn("exit_code: 7",(t/"run.log").read_text())
 
+ def test_iso_build_uses_safe_reference_not_copy(self):
+  if not ISO.exists(): self.skipTest("local user ISO unavailable")
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"profiles").mkdir(); (t/"profiles/v.json").write_text(json.dumps({"id":"vv","name":"Vanilla","game_version":"GALE01-1.02","base_game":str(ISO),"plugins":[],"mods":[],"mode":"vanilla","online_safe":True})); p=load_profile(t/"profiles/v.json",t); r=BuildStore(t/"data").build(p); self.assertTrue(r.output.is_symlink()); self.assertEqual(r.output.resolve(),ISO.resolve())
+
 if __name__=="__main__": unittest.main()

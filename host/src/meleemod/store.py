@@ -39,6 +39,6 @@ class BuildStore:
    (output.parent/"build.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
    final=target_root/stamp; os.replace(output.parent,final)
    current=target_root/"current"; tmp=target_root/(".current-"+stamp); tmp.symlink_to(final, target_is_directory=True); os.replace(tmp,current)
-   return BuildResult(pid,final/"game" if (final/"game").exists() else final/"game.iso",final/"build.json",profile.compatibility)
+   return BuildResult(pid,final/"game/game.iso" if info.kind=="iso" else final/"game",final/"build.json",profile.compatibility)
   except Exception:
    shutil.rmtree(stage,ignore_errors=True); raise
