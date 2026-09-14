@@ -13,7 +13,7 @@ This tracker separates implemented contracts from features that still need game/
 | Task 1 manifests | MVP COMPLETE | Versioned schemas and semantic validators |
 | Task 2 profile loading | MVP COMPLETE | Dependency and safety resolution tests |
 | Task 3 game/Dolphin discovery | MVP COMPLETE | ISO hash and emulator identity checks |
-| Task 4 isolated atomic builds | MVP COMPLETE | Staging/current build test |
+| Task 4 isolated atomic builds | MVP COMPLETE | Staging/current build test, including staged ISO recomposition |
 | Task 5 asset mods | MVP COMPLETE | Exact target/conflict/traversal tests |
 | Task 6 CLI | MVP COMPLETE | Validate/build/launch/log commands; launch smoke proof pending |
 | Task 7 decomp build | MVP COMPLETE on known checkout | Pinned wrapper and expected hash |

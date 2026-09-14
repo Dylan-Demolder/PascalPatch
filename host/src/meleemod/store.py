@@ -7,6 +7,7 @@ from .discovery import inspect_game, find_dolphin
 from .errors import CompositionError, ValidationError
 from .profile import ResolvedProfile
 from .static_integration import build_in_worktree
+from .recompose_iso import recompose_iso
 
 @dataclass(frozen=True)
 class BuildResult:
@@ -47,8 +48,21 @@ class BuildStore:
      report["plugin_composition"]="static-source-overlay"
     report["composition"]=composition; launch=output
    else:
-    if profile.mods or profile.plugins: raise CompositionError("asset and static code mods require an extracted game directory; extract the ISO first with tooling/extract_disc.py")
-    output.mkdir(); (output/"game.iso").symlink_to(game); report["composition"]={"mods":[],"replacements":[],"conflicts":[]}; launch=output/"game.iso"
+    if profile.mods: raise CompositionError("filesystem asset mods require an extracted game directory; extract the ISO first with tooling/extract_disc.py")
+    output.mkdir()
+    if profile.plugins:
+     required=("decomp_repo","decomp_orig","plugin_source_root")
+     missing=[k for k in required if not profile.data.get(k)]
+     needs_runtime=any(p.get("static_signature")=="context" for p in profile.plugins)
+     if needs_runtime and not profile.data.get("runtime_root"): missing.append("runtime_root")
+     if missing: raise CompositionError("static plugin ISO build requires explicit decomp/runtime/source paths",[ValidationError("profile."+k,"required","missing static build path") for k in missing])
+     generated=stage/"generated-main.dol"
+     static=build_in_worktree(profile.data["decomp_repo"],profile.data["decomp_orig"],profile.plugins,generated,source_root=profile.data["plugin_source_root"],runtime_root=profile.data.get("runtime_root"))
+     recompose_iso(game,generated,output/"game.iso")
+     report["static_plugin_dol_sha1"]=static.sha1; report["plugin_composition"]="static-source-overlay+iso-recomposition"
+    else:
+     (output/"game.iso").symlink_to(game)
+    report["composition"]={"mods":[],"replacements":[],"conflicts":[]}; launch=output/"game.iso"
    report["output_hash"]=_tree_hash(output) if output.is_dir() else hashlib.sha256(output.read_bytes()).hexdigest()
    (output.parent/"build.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
    final=target_root/stamp; os.replace(output.parent,final)

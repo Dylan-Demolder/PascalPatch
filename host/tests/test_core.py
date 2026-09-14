@@ -15,7 +15,7 @@ from meleemod.diagnostics import report, symbolize_native
 from meleemod.registry import install_local
 from meleemod.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
-from recompose_iso import recompose_iso
+from meleemod.recompose_iso import recompose_iso
 
 ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
 DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
