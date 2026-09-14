@@ -11,3 +11,5 @@ PYTHONPATH=host/src python tooling/dolphin_smoke.py \
 ```
 
 The runner reports process results only. Menu/title and plugin behavior require a separate GUI/log observer.
+
+The manual `.github/workflows/integration-smoke.yml` workflow is self-hosted and accepts all game/emulator paths as inputs. It never uploads or stores game data.
