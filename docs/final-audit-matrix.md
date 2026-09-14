@@ -17,7 +17,7 @@ This matrix is the completion gate for the current scope. `Verified` requires co
 | Safety policy | Verified for pre-launch block | Installed-Slippi-path gameplay-changing profile rejected before process launch; online/login smoke remains unavailable |
 | Registry trust and installation | Verified | Ed25519 trust/index tests, bounded HTTPS file/ZIP installation, safe extraction, package validation |
 | Character package Offline staging | Verified for authoring scope | Atomic staging evidence with `game_integration: false` |
-| HSD container layer | Verified against real archive | Bounded validator and deterministic writer tests pass; the validator also accepts user-provided `PlCo.dat` metadata, while object-graph conversion remains pending |
+| HSD container layer | Verified against real archive | Read-only `inspect-hsd` CLI, bounded validator, symbol/public-root/relocation checks, and deterministic writer tests pass against user-provided `PlCo.dat`; object-graph conversion remains pending |
 | Melee fighter conversion | Blocked | Requires HSD object/animation/`ftData`/`PlCo.dat` conversion and user-owned assets |
 | Playable character round trip | Blocked | Requires conversion, hooks, character-select, and playable-match evidence |
 | Character Studio preview | Partial | Deterministic SVG skeleton preview; full Melee renderer scene absent |
