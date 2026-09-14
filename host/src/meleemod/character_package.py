@@ -1,5 +1,5 @@
 from __future__ import annotations
-import hashlib, json, os, stat, zipfile
+import hashlib, json, os, stat, zipfile, shutil, tempfile
 from pathlib import Path
 from .errors import ManifestError, ValidationError
 from .manifest import GAME_VERSION
@@ -57,3 +57,25 @@ def installation_plan(path, profile_mode):
     if info["compatibility"] == "unknown":
         raise ManifestError("unknown character compatibility",[ValidationError("character.compatibility","unknown_capability","package must declare a supported compatibility")])
     return {"status":"validated-only","package":str(Path(path).resolve()),"profile_mode":profile_mode,"composition":"deferred-until-character-runtime-integration","metadata":info}
+
+
+def compose_validated_package(path, destination, profile_mode):
+    """Stage a validated package outside the game filesystem.
+
+    This deliberately performs no Melee asset conversion. It is useful for an
+    Offline authoring workspace while keeping the playable-character boundary
+    explicit and fail-closed.
+    """
+    info=installation_plan(path,profile_mode)
+    source=Path(path).resolve(); destination=Path(destination).expanduser().resolve()
+    if destination.exists(): raise ManifestError("character staging destination exists",[ValidationError(str(destination),"exists","refusing to merge into an existing destination")])
+    names=_names(source); destination.parent.mkdir(parents=True,exist_ok=True); stage=Path(tempfile.mkdtemp(prefix=destination.name+"-",dir=destination.parent))
+    try:
+        target=stage/info["metadata"]["id"]; target.mkdir(parents=True)
+        for name in names:
+            if name=="checksums.json": continue
+            data=_read(source,name); out=target/name; out.parent.mkdir(parents=True,exist_ok=True); out.write_bytes(data)
+        (target/"staging.json").write_text(json.dumps({"status":"validated-only","profile_mode":profile_mode,"source_package":str(source),"game_integration":False},indent=2,sort_keys=True)+"\n",encoding="utf-8")
+        os.replace(target,destination)
+    finally: shutil.rmtree(stage,ignore_errors=True)
+    return destination

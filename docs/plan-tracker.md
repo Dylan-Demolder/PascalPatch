@@ -44,7 +44,7 @@ This tracker separates implemented contracts from features that still need game/
 | Preview/test scene | NOT STARTED | Requires renderer and runtime data |
 | Deterministic package export | MVP COMPLETE | Repeated export hashes match |
 | MeleeMod package validation | MVP COMPLETE | Cross-project package validation passes |
-| Melee composition | NOT STARTED | Requires runtime asset/code conversion |
+| Melee composition | Validated-only staging complete | Offline package can be staged outside game files; Melee asset/code conversion remains pending |
 | Playable round trip | NOT STARTED | Requires Dolphin/game integration |
 
 The next gating milestone is observing plugin initialization and frame/input callbacks after progressing past the initial memory-card prompt.

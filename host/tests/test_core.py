@@ -9,7 +9,7 @@ from meleemod.manifest import validate_profile, validate_plugin, validate_mod
 from meleemod.profile import load_profile
 from meleemod.store import BuildStore
 from meleemod.errors import ManifestError, CompositionError, DiscoveryError
-from meleemod.character_package import validate_package, installation_plan
+from meleemod.character_package import validate_package, installation_plan, compose_validated_package
 from meleemod.plugin_composer import resolve_plugin_order, compose_static_manifest
 from meleemod.launcher import launch
 from meleemod.bridge import Message, encode, decode
@@ -124,6 +124,10 @@ class CoreTests(unittest.TestCase):
  def test_dolphin_smoke_hard_timeout(self):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); fake=t/"dolphin"; fake.write_text("#!/bin/sh\nsleep 30\n"); fake.chmod(0o755); result=run_one(fake,t/"game.iso",0.05); self.assertTrue(result["timed_out"]); self.assertTrue(result["started"]); self.assertIsNotNone(result["exit_code"])
+
+ def test_character_package_staging_is_offline_and_non_game(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"pkg").mkdir(); (t/"pkg/assets").mkdir(); (t/"pkg/character.json").write_text(json.dumps({"id":"clone","display_name":"Clone","version":"1.0.0","author":"test","license":"CC0","target_game_version":"GALE01-1.02","compatibility":"offline-gameplay"})); (t/"pkg/moveset.json").write_text(json.dumps({"moves":[]})); (t/"pkg/assets/model.bin").write_bytes(b"model"); (t/"pkg/checksums.json").write_text(json.dumps({"assets/model.bin":hashlib.sha256(b"model").hexdigest()})); out=compose_validated_package(t/"pkg",t/"stage","offline"); self.assertTrue((out/"character.json").exists()); self.assertIn("\"game_integration\": false",(out/"staging.json").read_text())
 
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):
