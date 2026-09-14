@@ -40,7 +40,17 @@ This validates PPC compilation, static runtime inclusion, plugin-context initial
 
 ## Emulator result
 
-A clean extracted layout and a modified extracted layout were tested with the installed Slippi AppImage using batch execution. Both aborted before a menu/game state could be observed. This is currently indistinguishable from an emulator/display/environment problem because the clean input fails the same way. No boot success is claimed.
+The initial test used Slippi Online and was misleading because its front-end can show Login. Extracted directories are also not valid Dolphin GameCube launch targets; Dolphin treated them as NAND content.
+
+A temporary ISO was then created from the user ISO by replacing only the embedded DOL at `0x1e800`; the original ISO was not modified. The modified DOL fits the existing 32-byte padding before the FST.
+
+Using the installed Slippi Playback build with `-b -e <ISO> -v Null`:
+
+- Clean user ISO: process remained alive until the 12-second timeout (`124`).
+- Fresh deferred-init static plugin ISO: process also remained alive until timeout (`124`) and did not segfault.
+- The previous early-initialization version segfaulted; moving plugin initialization to the first game-loop frame fixed that crash.
+
+This demonstrates that the deferred static plugin build does not immediately crash the emulator. A visible menu/title state and plugin log still require a GUI-capable, log-capturing Dolphin test.
 
 ## Static plugin-link finding
 
