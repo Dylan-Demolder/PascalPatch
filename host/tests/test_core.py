@@ -59,4 +59,11 @@ class CoreTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"profiles").mkdir(); (t/"profiles/v.json").write_text(json.dumps({"id":"vv","name":"Vanilla","game_version":"GALE01-1.02","base_game":str(ISO),"plugins":[],"mods":[],"mode":"vanilla","online_safe":True})); p=load_profile(t/"profiles/v.json",t); r=BuildStore(t/"data").build(p); self.assertTrue(r.output.is_symlink()); self.assertEqual(r.output.resolve(),ISO.resolve())
 
+ def test_character_zip_rejects_duplicate_members(self):
+  with tempfile.TemporaryDirectory() as td:
+   import zipfile
+   z=Path(td)/"bad.melee-character"
+   with zipfile.ZipFile(z,"w") as out: out.writestr("character.json",b"{}"); out.writestr("character.json",b"{}")
+   with self.assertRaises(ManifestError): validate_package(z)
+
 if __name__=="__main__": unittest.main()

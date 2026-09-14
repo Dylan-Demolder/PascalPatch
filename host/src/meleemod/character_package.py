@@ -10,8 +10,16 @@ def _read(path,name):
  if path.is_dir(): return (path/name).read_bytes()
  with zipfile.ZipFile(path) as z: return z.read(name)
 def _names(path):
- if path.is_dir(): return [str(x.relative_to(path)) for x in path.rglob("*") if x.is_file()]
- with zipfile.ZipFile(path) as z: return z.namelist()
+ if path.is_dir():
+  out=[]
+  for x in path.rglob("*"):
+   if x.is_symlink(): raise ManifestError("unsafe character package",[ValidationError(str(x),"symlink","symlinks are forbidden")])
+   if x.is_file(): out.append(str(x.relative_to(path)))
+  return out
+ with zipfile.ZipFile(path) as z:
+  names=z.namelist()
+  if len(names)!=len(set(names)): raise ManifestError("unsafe character package",[ValidationError("archive","duplicate_path","duplicate archive members are forbidden")])
+  return names
 def validate_package(path):
  p=Path(path).resolve(); names=_names(p)
  bad=[n for n in names if not _safe(n)]
