@@ -27,7 +27,7 @@
 - Runtime endpoint and frame-time measurements (host transport is implemented and socket-pair tested).
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
 - Full GUI recovery testing (headless controller and bounded Tk display launch pass when Tk libraries are supplied; base host lacks `libtk8.6`).
-- Character model import, skeleton retargeting, game asset conversion and playable character round trip.
+- Character model import, game asset conversion and playable character round trip (deterministic skeleton retargeting is now implemented).
 - Validated character packages can now be staged into a non-game Offline workspace; no runtime asset conversion is claimed.
 - Character Studio visual move/attribute UI and approved move library (source-preserving core editor is complete).
 - First-party plugin visual/training behavior in Dolphin.
@@ -37,6 +37,6 @@ Do not label pending features as supported.
 ## Latest validation
 
 - MeleeMod host tests: 26 passed.
-- Character Studio tests: 9 passed.
+- Character Studio tests: 11 passed.
 - Strict C event/input tests and all SDK example syntax checks pass.
 - Standalone Dolphin 2606 clean/modified smoke runner reports both processes started and hard-stops them without leftovers.
