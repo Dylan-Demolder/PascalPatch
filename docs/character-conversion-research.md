@@ -14,7 +14,7 @@ This note records source-backed facts from the local `doldecomp/melee` checkout.
 
 `src/sysdolphin/baselib/archive.c` verifies the file size, lays out the data and relocation tables, locates public/external symbol tables, and applies relocations. A valid HSD archive therefore needs more than a model byte stream. Relocation targets and symbol offsets must agree with the runtime object graph.
 
-`src/melee/ft/types.h` and `src/melee/ft/fighter.h` show that fighter loading consumes structured `ftData` records and the `gFtDataList` table. The source comments identify `PlCo.dat` as a fighter-data table. These structures connect model parts, attributes, animations, action/state callbacks, and fighter kinds; they are not equivalent to a glTF skeleton or a moveset JSON file.
+The real user-provided `orig/GALE01/files/PlCo.dat` now passes the bounded HSD container validator; its object graph is not decoded yet. `src/melee/ft/types.h` and `src/melee/ft/fighter.h` show that fighter loading consumes structured `ftData` records and the `gFtDataList` table. The source comments identify `PlCo.dat` as a fighter-data table. These structures connect model parts, attributes, animations, action/state callbacks, and fighter kinds; they are not equivalent to a glTF skeleton or a moveset JSON file.
 
 ## Consequence for Character Studio
 
