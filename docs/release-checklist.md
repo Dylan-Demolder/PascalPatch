@@ -22,4 +22,4 @@ The emulator boot gate is passed. The remaining blockers are plugin-specific run
 - [ ] Safe-profile block verified in Slippi
 - [ ] Character package composed into an Offline profile
 - [ ] Character-select and playable-match round trip
-- [ ] GUI display workflow and full recovery test (invalid-profile dismissal and Tk Validate/Build/Launch self-tests are observed with a fake executable; real-Dolphin launch/recovery remains)
+- [ ] GUI display workflow and full recovery test (invalid-profile dismissal and Tk Validate/Build/Launch self-tests are observed with a fake executable; bounded real-Dolphin launch/cleanup is observed; interactive recovery remains)

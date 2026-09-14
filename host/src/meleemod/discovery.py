@@ -61,7 +61,7 @@ def _looks_like_emulator(path):
   import subprocess
   r=subprocess.run([str(path),"--help"],capture_output=True,text=True,timeout=5)
   text=(r.stdout+r.stderr).lower()
-  return "loads the specified file" in text and ("batch" in text or "video_backend" in text)
+  return ("load the specified file" in text or "loads the specified file" in text) and ("batch" in text or "video_backend" in text)
  except (OSError,subprocess.SubprocessError):
   return False
 

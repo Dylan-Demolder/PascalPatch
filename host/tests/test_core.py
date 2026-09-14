@@ -12,6 +12,7 @@ from meleemod.errors import ManifestError, CompositionError, DiscoveryError
 from meleemod.character_package import validate_package, installation_plan, compose_validated_package
 from meleemod.plugin_composer import resolve_plugin_order, compose_static_manifest
 from meleemod.launcher import launch
+from meleemod.discovery import find_dolphin
 from meleemod.bridge import Message, encode, decode
 from meleemod.bridge_transport import UnixBridgeServer
 from meleemod.dolphin_gdb import DolphinGdbClient, DolphinGdbMailbox, DolphinGdbError, MAX_TRANSFER, RUNTIME_FRAME_CAPACITY
@@ -63,6 +64,11 @@ class CoreTests(unittest.TestCase):
   def p(ident,deps): return {"id":ident,"version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":deps,"game_versions":["GALE01-1.02"],"online_safe":True}
   ordered=resolve_plugin_order([p("bb",["aa"]),p("aa",[])]); self.assertEqual([x["id"] for x in ordered],["aa","bb"]); self.assertEqual(compose_static_manifest(ordered)["link_status"],"deferred-until-runtime-integration")
   with self.assertRaises(Exception): resolve_plugin_order([p("aa",["bb"]),p("bb",["aa"])])
+
+ def test_dolphin_discovery_accepts_real_help_wording(self):
+  with tempfile.TemporaryDirectory() as td:
+   fake=Path(td)/"dolphin-emu"; fake.write_text("#!/bin/sh\nif [ \"$1\" = \"--help\" ]; then echo 'Load the specified file'; echo '--batch'; fi\n"); fake.chmod(0o755)
+   self.assertEqual(find_dolphin(fake),fake.resolve())
 
  def test_launch_helper_records_exit(self):
   with tempfile.TemporaryDirectory() as td:
