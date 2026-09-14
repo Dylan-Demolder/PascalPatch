@@ -7,9 +7,9 @@ This tracker separates implemented contracts from features that still need game/
 | Task | Status | Evidence / next proof |
 |---|---|---|
 | Spike 001 reproducible build | VALIDATED on current Linux host | `spikes/001-reproducible-build/README.md`; rerun wrapper passes |
-| Spike 002 safe code change | BOOT + STARTUP PLUGIN VALIDATED / FRAME PARTIAL | Clean/static/runtime ISOs boot in standalone Dolphin; recomposed startup-phase hello plugin emits `[meleemod] hello-plugin initialized`; first-frame/input observation remains pending |
+| Spike 002 safe code change | BOOT + STARTUP + FRAME/INPUT VALIDATED | Clean/static/runtime ISOs boot in standalone Dolphin; recomposed first-frame plugin emits initialization and repeated frame/input callback markers; bounded smoke remains required for each release profile |
 | Spike 003 Dolphin/Slippi launch | BOOT VALIDATED | Standalone Dolphin 2606 reaches the user ISO memory-card prompt; Slippi Online/Playback remain unsuitable as original-title evidence |
-| Spike 004 host/runtime bridge | HOST PARTIAL | Checksummed protocol and bounded host transport are tested; runtime endpoint remains pending |
+| Spike 004 host/runtime bridge | HOST COMPLETE / PPC ENDPOINT PENDING | Checksummed protocol and bounded host transport are tested; no in-game endpoint is claimed until a supported PPC transport is implemented |
 | Task 1 manifests | MVP COMPLETE | Versioned schemas and semantic validators |
 | Task 2 profile loading | MVP COMPLETE | Dependency and safety resolution tests |
 | Task 3 game/Dolphin discovery | MVP COMPLETE | ISO hash and emulator identity checks |
@@ -17,11 +17,11 @@ This tracker separates implemented contracts from features that still need game/
 | Task 5 asset mods | MVP COMPLETE | Exact target/conflict/traversal tests |
 | Task 6 CLI | MVP COMPLETE | Validate/build/launch/log commands; launch smoke proof pending |
 | Task 7 decomp build | MVP COMPLETE on known checkout | Pinned wrapper and expected hash |
-| Task 8 runtime ABI | PPC BUILD + STARTUP/EVENT LIFECYCLE VALIDATED | Runtime initialization, startup plugin call, subscription, and `MM_EVENT_RUNTIME_READY` dispatch execute in standalone Dolphin; frame/shutdown lifecycle remains pending |
-| Task 9 sample plugin | STARTUP + EVENT LOAD VALIDATED | First-party hello/startup-probe plugins compile, link, initialize, subscribe, and log from a recomposed in-game ISO; first-frame default path remains pending |
+| Task 8 runtime ABI | PPC BUILD + STARTUP/FRAME/EVENT LIFECYCLE VALIDATED | Runtime initialization, first-frame plugin call, frame subscription, input-history read, and `MM_EVENT_RUNTIME_READY` dispatch execute in standalone Dolphin; shutdown lifecycle remains pending |
+| Task 9 sample plugin | STARTUP + FRAME/EVENT LOAD VALIDATED | First-party hello/startup-probe/frame-probe plugins compile, link, initialize, subscribe, and log from recomposed in-game ISOs; frame/input callback evidence is recorded in `docs/evidence/frame-input-observation.md` |
 | Task 10 plugin composition | STATIC MVP COMPLETE | Disposable worktree overlay, bundle generation, deferred first-frame lifecycle, and DOL link succeed |
 | Task 11 bridge | Host transport complete | Versioned bounded checksum frames, stream adapter, private Unix listener, and cleanup tests; PPC runtime endpoint pending |
-| Task 12 input history | Runtime-ready event observed / frame hook compiled | Bounded ring and frame hook are compiled; controller sampling and frame dispatch remain pending |
+| Task 12 input history | FRAME SAMPLING + DISPATCH VALIDATED | Bounded ring receives frame samples from `HSD_PadCopyStatus[4]`; first-party frame probe read a current sample and matched its frame number in standalone Dolphin; values and interactive controller input are not claimed |
 | Task 13 input display | PPC build complete | First-party subscription/input-reader plugin compiles and links; overlay and emulator proof pending |
 | Task 14 training tools | PPC build complete | Offline frame-heartbeat plugin compiles and links; frame advance/reset/hit events pending |
 | Task 15 GUI | MVP COMPLETE | Headless controller tests plus bounded Tk display launch; full interactive recovery test remains pending |
@@ -47,4 +47,4 @@ This tracker separates implemented contracts from features that still need game/
 | Melee composition | Validated-only staging complete | Offline package can be staged outside game files; Melee asset/code conversion remains pending |
 | Playable round trip | NOT STARTED | Requires Dolphin/game integration |
 
-The next gating milestone is observing plugin initialization and frame/input callbacks after progressing past the initial memory-card prompt.
+The next gating milestone is a PPC-to-host bridge decision and direct validation of the remaining safety, GUI, conversion, and release requirements. Plugin initialization and frame/input callbacks are now directly observed before the memory-card prompt is dismissed.

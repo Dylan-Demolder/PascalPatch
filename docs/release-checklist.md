@@ -18,7 +18,7 @@ The emulator boot gate is passed. The remaining blockers are plugin-specific run
 - [x] Known-good boot of one modified DOL (static and recomposed runtime DOLs reach the same prompt)
 - [x] Bounded smoke shutdown without a modal confirmation deadlock
 - [x] Static PPC runtime linked into DOL (Metrowerks PPC build and recomposed ISO verified)
-- [ ] Harmless plugin observed in-game
+- [x] Harmless plugin observed in-game (hello initialization and frame/input callback markers)
 - [ ] Safe-profile block verified in Slippi
 - [ ] Character package composed into an Offline profile
 - [ ] Character-select and playable-match round trip

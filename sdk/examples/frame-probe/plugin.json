@@ -1,0 +1,16 @@
+{
+  "id": "frame-probe",
+  "version": "1.0.0",
+  "api_version": 1,
+  "entrypoint": "plugin_init",
+  "source": "sdk/examples/frame-probe/plugin.c",
+  "static_signature": "context",
+  "capabilities": [
+    "visual-only"
+  ],
+  "dependencies": [],
+  "game_versions": [
+    "GALE01-1.02"
+  ],
+  "online_safe": true
+}

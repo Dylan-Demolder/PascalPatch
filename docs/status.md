@@ -8,29 +8,29 @@
 | Reproducible decompilation build | Validated on current Linux host | `spikes/001-reproducible-build/README.md`; wrapper rerun passed in 33.62 s |
 | Profile/mod schemas | MVP complete | `schemas/*.schema.json`, dependency-free semantic validator and tests |
 | Profile isolation | MVP complete | `host/src/meleemod/store.py`, atomic promotion test |
-| Static plugin profile builds | MVP complete | Disposable worktree overlay produces and stages a modified DOL; emulator execution pending |
+| Static plugin profile builds | MVP complete | Disposable worktree overlay produces and stages a modified DOL; standalone Dolphin directly observes hello initialization and frame/input callback markers |
 | Filesystem asset composition | MVP complete | Exact targets, traversal rejection, conflict test |
 | Dolphin discovery | MVP complete | Explicit executable validation; KDE `/usr/bin/dolphin` is rejected and installed Slippi AppImage is selected; launch helper records PID/exit/timeout |
-| Runtime event ABI | PPC build complete | C tests plus Metrowerks PPC ABI/runtime link with hello-plugin; in-game lifecycle pending |
+| Runtime event ABI | PPC build + in-game frame lifecycle | C tests plus Metrowerks PPC ABI/runtime link; standalone Dolphin observes initialization, runtime-ready, frame dispatch, and input-history reads; shutdown remains pending |
 | Plugin dependency composition | Contract complete | Stable topological ordering, cycle detection and static manifest tests |
 | Character package security | Validator + offline staging | Checksums, unsafe path/executable rejection, and validated-only offline workspace staging |
 
 ## Explicitly pending
 
 - Native crash symbolization is implemented as a bounded, shell-free `addr2line` adapter.
-- A real modified `main.dol` boot in standalone Dolphin 2606: clean, static-plugin, and recomposed runtime-plugin ISOs reach the Melee memory-card prompt. An explicit startup-phase hello plugin also emits `[meleemod] hello-plugin initialized` through Dolphin's OSREPORT logger. First-frame/input observation remains pending.
+- A real modified `main.dol` boot in standalone Dolphin 2606: clean, static-plugin, and recomposed runtime-plugin ISOs reach the Melee memory-card prompt. Startup and first-frame hello/frame-probe plugins emit initialization and repeated frame/input callback markers through Dolphin's OSREPORT logger. See `docs/evidence/frame-input-observation.md`.
 - Bounded emulator shutdown kills the complete Dolphin process group after timeout to avoid a modal Confirm Stop dialog or orphan child process.
 - A bounded Slippi launch was attempted with the user ISO; it remained running until timeout, so menu/game boot is not yet confirmed.
-- Linking the runtime into the Melee DOL.
+- Runtime shutdown observation and overhead budget.
 - Generalizing static plugin source bundles into the full PPC runtime ABI and lifecycle.
 - PPC plugin composition and runtime loading.
-- Runtime endpoint and frame-time measurements (host transport is implemented and socket-pair tested).
+- Runtime endpoint and frame-time measurements (host transport is implemented and socket-pair tested; the in-game frame/input callback is now observed, but a PPC-to-host endpoint and overhead budget are still pending).
 - Real Dolphin/Slippi launch smoke tests and exit/log behavior.
 - Full GUI recovery testing (headless controller and bounded Tk display launch pass when Tk libraries are supplied; base host lacks `libtk8.6`).
 - Character model import, game asset conversion and playable character round trip (deterministic skeleton retargeting is now implemented).
 - Validated character packages can now be staged into a non-game Offline workspace; no runtime asset conversion is claimed.
 - Character Studio visual move/attribute UI and approved move library (source-preserving core editor is complete).
-- First-party plugin visual/training behavior in Dolphin.
+- First-party plugin visual/training behavior in Dolphin (frame/input callback infrastructure is observed; overlay rendering and training controls remain pending).
 
 Do not label pending features as supported.
 

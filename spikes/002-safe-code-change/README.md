@@ -1,6 +1,6 @@
 # Spike 002 — One safe code change
 
-**Verdict: PARTIAL.**
+**Verdict: VALIDATED for static composition, startup initialization, frame dispatch, and input-history observation; shutdown and gameplay features remain outside this spike.**
 
 A disposable worktree was used; the main Melee decompilation checkout was not changed.
 
@@ -33,10 +33,10 @@ The real SDK hello-plugin was then composed with the PPC-safe runtime implementa
 - ABI/frame-hook DOL SHA-1: `fec71eb3043db374c93163390109e0984b2f52e4`
 - ABI/frame-hook DOL size: 4,425,472 bytes
 - The output contains `hello-plugin initialized` and `[meleemod]` strings
-- The generated game-mode loop calls `mm_meleemod_frame()` before each mode step
+- The generated real per-scene frame loop (`gm_801A4D34` in `src/melee/gm/gm_1A45.c`) calls `mm_meleemod_frame()` immediately after `lb_800195D0()`
 - Clean DOL remains `08e0bf20134dfcb260699671004527b2d6bb1a45`
 
-This validates PPC compilation, static runtime inclusion, plugin-context initialization and link placement. It still does not prove that Dolphin reaches the initialization path.
+This validates PPC compilation, static runtime inclusion, plugin-context initialization and link placement. The later first-frame hello/frame-probe run directly observed initialization, frame dispatch, and input-history reads in standalone Dolphin; see `docs/evidence/frame-input-observation.md`.
 
 ## Emulator result
 
@@ -70,4 +70,4 @@ A second disposable attempt added `src/meleemod/runtime.c` as a separate object 
 
 ### Runtime callback observation follow-up
 
-The standalone Dolphin window is observable and its `OSREPORT` logger confirms Melee boot. Automated X11 input was tested with the generated standard-controller mappings, keyboard-controller mode, both D-pad directions, and the configured A button. The memory-card creation prompt did not advance reliably in this environment, so first-frame plugin output remains unclaimed. All attempts used process-associated windows, hard timeouts, and process-group kills; no emulator process was left running.
+Standalone Dolphin 2606 was run with OSREPORT logging and a bounded hard process-group timeout. A recomposed first-frame hello build logged `hello-plugin initialized`. A separate `frame-probe` build logged repeated `frame-probe frame/input observed` markers; the probe only logs when `MM_EVENT_FRAME` and a non-null current input-history sample have matching frame numbers. This directly validates the frame hook, deferred initialization, event dispatch, and history read. The run did not require dismissing the memory-card prompt because the real per-scene loop is reached earlier. The run did not prove interactive button input, overlay rendering, training controls, or shutdown ordering. No emulator process or modal confirmation dialog was left running.

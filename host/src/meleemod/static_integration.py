@@ -80,14 +80,14 @@ def apply_overlay(worktree,plugins,source_root,runtime_root=None):
  banner_end='    OSReport("#\\n\\n");'
  if banner_end not in text: raise CompositionError("startup banner hook not found")
  text=text.replace(banner_end,banner_end+"\n"+init_call,1)
- loop=tree/"src/melee/gm/gm_1A3F.c"
+ loop=tree/"src/melee/gm/gm_1A45.c"
  if plugins:
   loop_text=loop.read_text(encoding="utf-8")
   if MARKER in loop_text: raise CompositionError("generated frame marker already exists")
   loop_text="extern void mm_meleemod_frame(void);\n"+loop_text
-  loop_needle="    while (true) {\n        u8 next_mode = "
-  if loop_needle not in loop_text: raise CompositionError("known game-loop hook signature not found")
-  loop_text=loop_text.replace(loop_needle,"    while (true) {\n        u8 next_mode;\n        mm_meleemod_frame();\n        next_mode =",1)
+  loop_needle="        lb_800195D0();\n\n        if (HSD_PadGetResetSwitch())"
+  if loop_needle not in loop_text: raise CompositionError("known per-frame hook signature not found")
+  loop_text=loop_text.replace(loop_needle,"        lb_800195D0();\n        mm_meleemod_frame();\n\n        if (HSD_PadGetResetSwitch())",1)
   loop.write_text(loop_text,encoding="utf-8")
  gm.write_text(text,encoding="utf-8")
  return bundle
