@@ -67,6 +67,17 @@ class CoreTests(unittest.TestCase):
   self.assertTrue(validate_plugin(dict(plugin,frame_timing="yes")))
   self.assertTrue(validate_plugin(dict(plugin,shutdown_after_frames=0)))
 
+ def test_catalog_loader_accepts_startup_plugin(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"plugins/demo-test").mkdir(parents=True); (t/"profiles").mkdir(); (t/"base.iso").write_bytes(b"owned")
+   plugin={"id":"demo-test","version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":[],"game_versions":["GALE01-1.02"],"online_safe":True,"init_phase":"startup"}
+   (t/"plugins/demo-test/plugin.json").write_text(json.dumps(plugin))
+   profile={"id":"demo-profile","name":"Demo","game_version":"GALE01-1.02","base_game":"../base.iso","plugins":["demo-test"],"mods":[],"mode":"offline","online_safe":False}
+   (t/"profiles/demo-profile.json").write_text(json.dumps(profile))
+   loaded=load_profile(t/"profiles/demo-profile.json",t)
+   self.assertEqual(loaded.plugins[0]["id"],"demo-test")
+   self.assertEqual(loaded.plugins[0]["init_phase"],"startup")
+
  def test_plugin_order_and_cycle_rejection(self):
   def p(ident,deps): return {"id":ident,"version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":deps,"game_versions":["GALE01-1.02"],"online_safe":True}
   ordered=resolve_plugin_order([p("bb",["aa"]),p("aa",[])]); self.assertEqual([x["id"] for x in ordered],["aa","bb"]); self.assertEqual(compose_static_manifest(ordered)["link_status"],"deferred-until-runtime-integration")

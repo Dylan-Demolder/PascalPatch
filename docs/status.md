@@ -34,7 +34,7 @@ Do not label pending features as supported.
 
 ## Latest validation
 
-- MeleeMod host tests: 35 passed.
+- MeleeMod host tests: 36 passed.
 - Character Studio tests: 17 passed.
 - Strict C event/input/bridge tests and all SDK example syntax checks pass.
 - Standalone Dolphin 2606 clean/modified smoke runner reports both processes started and hard-stops them without leftovers.
