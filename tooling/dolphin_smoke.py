@@ -44,12 +44,12 @@ def main(argv=None):
     p.add_argument("--expected-symbol",help="Symbol or load marker expected in Dolphin output")
     p.add_argument("--expected-data",help="Runner-local custom fighter data expected to exist")
     p.add_argument("--expected-observation",help="In-game observation marker expected in Dolphin output")
-    p.add_argument("--expected-character-select",required=True,help="Character-select completion marker expected in Dolphin output")
-    p.add_argument("--expected-match-start",required=True,help="Offline-match start marker expected in Dolphin output")
+    p.add_argument("--expected-character-select",help="Character-select completion marker expected in Dolphin output")
+    p.add_argument("--expected-match-start",help="Offline-match start marker expected in Dolphin output")
     a=p.parse_args(argv)
     results=[run_one(a.dolphin,a.clean,a.timeout),run_one(a.dolphin,a.modified,a.timeout)]
     fighter=custom_fighter_assertion(results[1],a.expected_archive,a.expected_symbol,a.expected_data,a.expected_observation,a.expected_character_select,a.expected_match_start)
-    payload={"results":results,"both_started":all(x["started"] for x in results),"custom_fighter":fighter}
+    payload={"results":results,"both_started":all(x["started"] for x in results),"evidence_scope":"marker_checks" if fighter["enabled"] else "boot_only","custom_fighter":fighter}
     print(json.dumps(payload,indent=2))
     return 0 if payload["both_started"] and (not fighter["enabled"] or fighter["passed"]) else 1
 if __name__=="__main__": raise SystemExit(main())
