@@ -34,7 +34,7 @@ on:
         type: string
 jobs:
   smoke:
-    runs-on: [self-hosted, cachyos-x8664-meleemod-smoke]
+    runs-on: [self-hosted, meleemod-smoke]
     steps:
       - uses: actions/checkout@v4
       - name: Resolve emulator and game data
