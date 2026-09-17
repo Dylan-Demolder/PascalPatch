@@ -45,6 +45,16 @@ on:
         description: Runner-local extracted orig/GALE01 directory
         required: true
         type: string
+      expected_character_select:
+        description: Character-select completion marker emitted by the runtime
+        required: false
+        default: CHARACTER_SELECT_COMPLETE
+        type: string
+      expected_match_start:
+        description: Offline-match start marker emitted by the runtime
+        required: false
+        default: OFFLINE_MATCH_STARTED
+        type: string
 
 jobs:
   smoke:
@@ -107,6 +117,8 @@ jobs:
           BUILD_DATA: ${{ steps.build.outputs.data }}
           EXPECTED_OBSERVATION_IN: ${{ inputs.expected_observation }}
           BUILD_OBSERVATION: ${{ steps.build.outputs.observation }}
+          EXPECTED_CHARACTER_SELECT: ${{ inputs.expected_character_select }}
+          EXPECTED_MATCH_START: ${{ inputs.expected_match_start }}
 
 
         run: |
@@ -130,15 +142,13 @@ jobs:
           EXPECTED_OBSERVATION="${EXPECTED_OBSERVATION_IN:-$BUILD_OBSERVATION}"
           ARGS+=(--expected-archive "$ARCHIVE" --expected-data "$DATA")
           ARGS+=(--expected-symbol "$EXPECTED_SYMBOL" --expected-observation "$EXPECTED_OBSERVATION")
+          ARGS+=(--expected-character-select "$EXPECTED_CHARACTER_SELECT" --expected-match-start "$EXPECTED_MATCH_START")
 
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
             --timeout 30 | tee /tmp/smoke.json
-          # PAS-24 gate: the modified ISO must boot AND the build must have
-          # proven the clone-slot overlay (archive/data artifacts present).
-          # Symbol/observation log markers stay disabled until the decomp
-          # OSReport hook runs on the runner; the in-ISO byte proof is
-          # emitted by the build step above.
+          # PAS-31 gate: the modified ISO must boot and emit loader,
+          # character-select, and offline-match markers from the linked DOL.
           python -c "import json; p=json.load(open('/tmp/smoke.json')); assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists'), c; print('PAS-24 gate passed:', c['checks'])"
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
