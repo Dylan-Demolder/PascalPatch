@@ -39,8 +39,10 @@ jobs:
           [ -n "$dolphin" ] || dolphin="$(command -v dolphin 2>/dev/null || true)"
           [ -n "$dolphin" ] || dolphin="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1)"
           [ -n "$dolphin" ] || dolphin="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu*' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+          [ -x "$dolphin" ] || dolphin="/usr/bin/dolphin-emu"
           [ -x "$dolphin" ] || { echo "Dolphin executable not found" >&2; exit 2; }
           [ -f "$iso" ] || iso="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
+          [ -f "$iso" ] || iso="$HOME/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso"
           [ -f "$iso" ] || { echo "Melee ISO not found" >&2; exit 2; }
           echo "resolved dolphin=$dolphin"; ls -la "$dolphin"
           echo "resolved iso=$iso"; ls -la "$iso"
@@ -60,7 +62,9 @@ jobs:
           dolphin_pid=$!
           finish() { kill "$dolphin_pid" 2>/dev/null || true; wait "$dolphin_pid" 2>/dev/null || true; }
           trap finish EXIT
+          sleep 5
           window="$(xdotool search --sync --onlyvisible --class dolphin-emu | head -1)"
+
           xdotool windowactivate --sync "$window"
           sleep 3
           xdotool key ctrl+F11
@@ -76,12 +80,17 @@ jobs:
           xdotool key ctrl+F11
           sleep 2
           xdotool key ctrl+s
-          sleep 2
+          sleep 3
           xdotool key ctrl+a
           xdotool type --delay 20 "$dtm"
           xdotool key Return
-          sleep 3
-          test -s "$dtm"
+          sleep 8
+          if ! test -s "$dtm"; then
+            printf '%s\n' 'DTM was not created; bounded Dolphin log tail:'
+            tail -n 80 "$log" || true
+            ls -la "$RUNNER_TEMP" || true
+            exit 1
+          fi
           printf '%s\n' 'Recorded DTM:'
           ls -l "$dtm"
           printf '%s\n' 'Bounded Dolphin log tail:'
