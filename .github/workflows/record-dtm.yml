@@ -1,0 +1,93 @@
+name: record-dtm
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: Runner-local Melee ISO
+        required: false
+        type: string
+      dolphin:
+        description: Runner-local Dolphin executable
+        required: false
+        type: string
+      seconds:
+        description: Maximum recording duration
+        required: false
+        default: "120"
+        type: string
+jobs:
+  record:
+    runs-on: [self-hosted, meleemod-smoke]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure X11 input control
+        shell: bash
+        run: tools/ensure-xdotool.sh
+      - name: Resolve runner inputs
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${DISPLAY:-}" || { echo "DISPLAY is required" >&2; exit 2; }
+          command -v xdotool >/dev/null || { echo "xdotool is required" >&2; exit 2; }
+          dolphin="${{ inputs.dolphin }}"
+          iso="${{ inputs.iso }}"
+          echo "runner=$(hostname) user=$(whoami) home=$HOME display=${DISPLAY:-<unset>} pwd=$(pwd)"
+          echo "provided dolphin=$dolphin"; ls -la "$dolphin" 2>&1 || true
+          echo "provided iso=$iso"; ls -la "$iso" 2>&1 || true
+          [ -x "$dolphin" ] || dolphin="$(command -v dolphin-emu 2>/dev/null || true)"
+          [ -n "$dolphin" ] || dolphin="$(command -v dolphin 2>/dev/null || true)"
+          [ -n "$dolphin" ] || dolphin="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1)"
+          [ -n "$dolphin" ] || dolphin="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu*' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+          [ -x "$dolphin" ] || { echo "Dolphin executable not found" >&2; exit 2; }
+          [ -f "$iso" ] || iso="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
+          [ -f "$iso" ] || { echo "Melee ISO not found" >&2; exit 2; }
+          echo "resolved dolphin=$dolphin"; ls -la "$dolphin"
+          echo "resolved iso=$iso"; ls -la "$iso"
+          printf 'dolphin=%s\niso=%s\n' "$dolphin" "$iso" >> "$GITHUB_OUTPUT"
+      - name: Record menu-to-match movie
+        shell: bash
+        env:
+          DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
+          ISO: ${{ steps.resolve.outputs.iso }}
+          MAX_SECONDS: ${{ inputs.seconds }}
+        run: |
+          set -euo pipefail
+          dtm="$RUNNER_TEMP/pas44-menu-to-match.dtm"
+          log="$RUNNER_TEMP/pas44-dolphin.log"
+          rm -f "$dtm" "$log"
+          "$DOLPHIN" -e "$ISO" >"$log" 2>&1 &
+          dolphin_pid=$!
+          finish() { kill "$dolphin_pid" 2>/dev/null || true; wait "$dolphin_pid" 2>/dev/null || true; }
+          trap finish EXIT
+          window="$(xdotool search --sync --onlyvisible --class dolphin-emu | head -1)"
+          xdotool windowactivate --sync "$window"
+          sleep 3
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key ctrl+s
+          sleep 2
+          xdotool key ctrl+a
+          xdotool type --delay 20 "$dtm"
+          xdotool key Return
+          sleep 3
+          test -s "$dtm"
+          printf '%s\n' 'Recorded DTM:'
+          ls -l "$dtm"
+          printf '%s\n' 'Bounded Dolphin log tail:'
+          tail -n 80 "$log"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pas44-dtm
+          path: ${{ runner.temp }}/pas44-menu-to-match.dtm
+          if-no-files-found: error

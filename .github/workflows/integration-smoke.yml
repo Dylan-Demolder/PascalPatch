@@ -20,6 +20,15 @@ on:
         description: Absolute path to the modified ISO (blank = reuse clean)
         required: false
         type: string
+      movie:
+        description: Runner-local Dolphin TAS movie/DTM file
+        required: false
+        type: string
+      record_movie:
+        description: Record a legitimate DTM on the self-hosted runner
+        required: false
+        default: false
+        type: boolean
       expected_archive:
         description: Runner-local custom fighter archive expected after conversion
         required: false
@@ -33,10 +42,105 @@ on:
         required: false
         type: string
       expected_observation:
-        description: Optional in-game observation marker emitted by the runtime
+        description: In-game observation marker emitted by the linked OSReport hook
         required: false
+        default: CUSTOM_FIGHTER_VISIBLE
         type: string
+      decomp_repo:
+        description: Runner-local pinned doldecomp/melee checkout
+        required: true
+        type: string
+      decomp_orig:
+        description: Runner-local extracted orig/GALE01 directory
+        required: true
+        type: string
+      expected_character_select:
+        description: Character-select completion marker emitted by the runtime
+        required: false
+        default: CHARACTER_SELECT_COMPLETE
+        type: string
+      expected_match_start:
+        description: Offline-match start marker emitted by the runtime
+        required: false
+        default: OFFLINE_MATCH_STARTED
+        type: string
+      expected_input_automation_ready:
+        description: Input automation readiness marker emitted after menu navigation
+        required: false
+        default: INPUT_AUTOMATION_READY
+        type: string
+
 jobs:
+  record:
+    if: inputs.record_movie == true
+    runs-on: [self-hosted, meleemod-smoke]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure X11 input control
+        shell: bash
+        run: tools/ensure-xdotool.sh
+      - name: Record legitimate DTM
+        shell: bash
+        env:
+          DOLPHIN: ${{ inputs.dolphin }}
+          ISO: ${{ inputs.clean_iso }}
+          MAX_SECONDS: "120"
+        run: |
+          set -euo pipefail
+          test -n "${DISPLAY:-}" || { echo "DISPLAY is required" >&2; exit 2; }
+          command -v xdotool >/dev/null || { echo "xdotool is required" >&2; exit 2; }
+          [ -x "$DOLPHIN" ] || DOLPHIN="$(command -v dolphin-emu || true)"
+          [ -x "$DOLPHIN" ] || { echo "Dolphin executable not found" >&2; exit 2; }
+          [ -f "$ISO" ] || ISO="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
+          [ -f "$ISO" ] || { echo "Melee ISO not found" >&2; exit 2; }
+          DTM="$RUNNER_TEMP/pas44-menu-to-match.dtm"
+          LOG="$RUNNER_TEMP/pas44-dolphin.log"
+          rm -f "$DTM" "$LOG"
+          "$DOLPHIN" -e "$ISO" >"$LOG" 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true' EXIT
+          sleep 5
+          WINDOW=""
+          for _ in $(seq 1 30); do
+            WINDOW="$(xdotool search --onlyvisible --name 'Dolphin' 2>/dev/null | head -1 || true)"
+            [ -n "$WINDOW" ] || WINDOW="$(xdotool search --onlyvisible --class dolphin 2>/dev/null | head -1 || true)"
+            [ -n "$WINDOW" ] && break
+            sleep 1
+          done
+          if [ -z "$WINDOW" ]; then
+            ps -ef | grep -i '[d]olphin' || true
+            tail -n 80 "$LOG" || true
+            echo "Dolphin window not found" >&2
+            exit 1
+          fi
+          xdotool windowactivate --sync "$WINDOW"
+          sleep 3
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key ctrl+s
+          sleep 2
+          xdotool key ctrl+a
+          xdotool type --delay 20 "$DTM"
+          xdotool key Return
+          sleep 3
+          test -s "$DTM"
+          tail -n 80 "$LOG"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pas44-dtm
+          path: ${{ runner.temp }}/pas44-menu-to-match.dtm
+          if-no-files-found: error
+
   smoke:
     runs-on: [self-hosted, meleemod-smoke]
     steps:
@@ -59,27 +163,29 @@ jobs:
           echo "resolved dolphin=$D"; ls -la "$D" 2>&1
           echo "resolved clean=$C";   ls -la "$C" 2>&1
           { echo "dolphin=$D"; echo "clean=$C"; } >> "$GITHUB_OUTPUT"
-      - name: Build modified ISO on the runner
+      - name: Build linked DOL and modified ISO on the runner
         id: build
         shell: bash
         env:
           CLEAN_ISO: ${{ steps.resolve.outputs.clean }}
+          DECOMP_REPO: ${{ inputs.decomp_repo }}
+          DECOMP_ORIG: ${{ inputs.decomp_orig }}
+          OBSERVATION: ${{ inputs.expected_observation }}
         run: |
-          set +e
+          set -euo pipefail
           FIXTURE="$GITHUB_WORKSPACE/tooling/fixtures/pas23"
           OUT="${RUNNER_TEMP:-/tmp}/pas23-modified.iso"
-          echo "fixture=$FIXTURE"; ls -la "$FIXTURE" "$FIXTURE/project" 2>&1
           PYTHONPATH=host/src python tooling/build_pas24_modified_iso.py \
-            --clean "$CLEAN_ISO" --fixture "$FIXTURE" --output "$OUT" 2>&1
-          if [ -f "$OUT" ]; then
-            echo "modified=$OUT" >> "$GITHUB_OUTPUT"
-            echo "built modified ISO: $OUT"; ls -la "$OUT"
-          else
-            echo "modified=" >> "$GITHUB_OUTPUT"
-            echo "build failed; smoke will reuse the clean ISO"
-          fi
+            --clean "$CLEAN_ISO" --fixture "$FIXTURE" --output "$OUT" \
+            --decomp-repo "$DECOMP_REPO" --orig "$DECOMP_ORIG" \
+            --observation "$OBSERVATION" | tee "${RUNNER_TEMP:-/tmp}/pas24-build.json"
+          test -s "$OUT"
+          echo "modified=$OUT" >> "$GITHUB_OUTPUT"
           echo "archive=$FIXTURE/leesin-hsd-2e.melee-character" >> "$GITHUB_OUTPUT"
           echo "data=$FIXTURE/leesin-patched.hsd" >> "$GITHUB_OUTPUT"
+          echo "symbol=ftDataLeesinhsd2e" >> "$GITHUB_OUTPUT"
+          echo "observation=$OBSERVATION" >> "$GITHUB_OUTPUT"
+
       - name: Run bounded clean/modified Dolphin smoke
         shell: bash
         env:
@@ -89,13 +195,22 @@ jobs:
           BUILD_MODIFIED: ${{ steps.build.outputs.modified }}
           EXPECTED_ARCHIVE_IN: ${{ inputs.expected_archive }}
           BUILD_ARCHIVE: ${{ steps.build.outputs.archive }}
-          EXPECTED_SYMBOL: ${{ inputs.expected_symbol }}
+          EXPECTED_SYMBOL_IN: ${{ inputs.expected_symbol }}
+          BUILD_SYMBOL: ${{ steps.build.outputs.symbol }}
           EXPECTED_DATA_IN: ${{ inputs.expected_data }}
           BUILD_DATA: ${{ steps.build.outputs.data }}
-          EXPECTED_OBSERVATION: ${{ inputs.expected_observation }}
+          EXPECTED_OBSERVATION_IN: ${{ inputs.expected_observation }}
+          BUILD_OBSERVATION: ${{ steps.build.outputs.observation }}
+          EXPECTED_CHARACTER_SELECT: ${{ inputs.expected_character_select }}
+          EXPECTED_MATCH_START: ${{ inputs.expected_match_start }}
+          MOVIE: ${{ inputs.movie }}
+          EXPECTED_INPUT_AUTOMATION_READY: ${{ inputs.expected_input_automation_ready }}
+
         run: |
-          set +e
+          set -euo pipefail
           MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
+
+
           MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
           if [ -z "$MODIFIED_ISO_IN" ] && [ -z "$BUILD_MODIFIED" ]; then
             echo "PAS-24 build produced no modified ISO; refusing clean-vs-clean smoke" >&2
@@ -108,18 +223,22 @@ jobs:
           echo "--- archive:";  ls -la "$ARCHIVE" 2>&1
           echo "--- data:";     ls -la "$DATA" 2>&1
           ARGS=(--dolphin "$DOLPHIN" --clean "$CLEAN_ISO" --modified "$MODIFIED_ISO")
-          [ -n "$ARCHIVE" ] && ARGS+=(--expected-archive "$ARCHIVE")
-          [ -n "$EXPECTED_SYMBOL" ] && ARGS+=(--expected-symbol "$EXPECTED_SYMBOL")
-          [ -n "$DATA" ] && ARGS+=(--expected-data "$DATA")
-          [ -n "$EXPECTED_OBSERVATION" ] && ARGS+=(--expected-observation "$EXPECTED_OBSERVATION")
+          EXPECTED_SYMBOL="${EXPECTED_SYMBOL_IN:-$BUILD_SYMBOL}"
+          EXPECTED_OBSERVATION="${EXPECTED_OBSERVATION_IN:-$BUILD_OBSERVATION}"
+          ARGS+=(--expected-archive "$ARCHIVE" --expected-data "$DATA")
+          ARGS+=(--expected-symbol "$EXPECTED_SYMBOL" --expected-observation "$EXPECTED_OBSERVATION")
+          ARGS+=(--expected-character-select "$EXPECTED_CHARACTER_SELECT" --expected-match-start "$EXPECTED_MATCH_START")
+          ARGS+=(--expected-input-automation-ready "$EXPECTED_INPUT_AUTOMATION_READY")
+          if [ -n "$MOVIE" ]; then
+            test -f "$MOVIE"
+            ARGS+=(--movie "$MOVIE")
+          fi
+
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
             --timeout 30 | tee /tmp/smoke.json
-          # PAS-24 gate: the modified ISO must boot AND the build must have
-          # proven the clone-slot overlay (archive/data artifacts present).
-          # Symbol/observation log markers stay disabled until the decomp
-          # OSReport hook runs on the runner; the in-ISO byte proof is
-          # emitted by the build step above.
-          python -c "import json; p=json.load(open('/tmp/smoke.json')); assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists'), c; print('PAS-24 gate passed:', c['checks'])"
+          # PAS-31 gate: the modified ISO must boot and emit loader,
+          # character-select, and offline-match markers from the linked DOL.
+          python -c "import json; p=json.load(open('/tmp/smoke.json')); assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('input_automation_ready'), c; print('PAS-24 gate passed:', c['checks'])"
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
