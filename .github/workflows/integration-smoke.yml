@@ -14,9 +14,25 @@ on:
         description: Absolute path to the generated modified ISO
         required: true
         type: string
+      expected_archive:
+        description: Runner-local custom fighter archive expected after conversion
+        required: false
+        type: string
+      expected_symbol:
+        description: Custom fighter load symbol or log marker
+        required: false
+        type: string
+      expected_data:
+        description: Runner-local custom fighter data file expected after conversion
+        required: false
+        type: string
+      expected_observation:
+        description: Optional in-game observation marker emitted by the runtime
+        required: false
+        type: string
 jobs:
   smoke:
-    runs-on: self-hosted
+    runs-on: [self-hosted, cachyos-x8664-meleemod-smoke]
     steps:
       - uses: actions/checkout@v4
       - name: Run bounded clean/modified Dolphin smoke
@@ -25,11 +41,19 @@ jobs:
           DOLPHIN: ${{ inputs.dolphin }}
           CLEAN_ISO: ${{ inputs.clean_iso }}
           MODIFIED_ISO: ${{ inputs.modified_iso }}
+          EXPECTED_ARCHIVE: ${{ inputs.expected_archive }}
+          EXPECTED_SYMBOL: ${{ inputs.expected_symbol }}
+          EXPECTED_DATA: ${{ inputs.expected_data }}
+          EXPECTED_OBSERVATION: ${{ inputs.expected_observation }}
         run: |
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             --dolphin "$DOLPHIN" \
             --clean "$CLEAN_ISO" \
             --modified "$MODIFIED_ISO" \
+            --expected-archive "$EXPECTED_ARCHIVE" \
+            --expected-symbol "$EXPECTED_SYMBOL" \
+            --expected-data "$EXPECTED_DATA" \
+            --expected-observation "$EXPECTED_OBSERVATION" \
             --timeout 30
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
