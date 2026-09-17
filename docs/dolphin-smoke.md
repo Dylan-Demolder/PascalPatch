@@ -7,6 +7,8 @@ PYTHONPATH=host/src python tooling/dolphin_smoke.py \
   --dolphin /path/to/dolphin-emu \
   --clean /path/to/user/GALE01.iso \
   --modified /path/to/generated.iso \
+  --movie /path/to/menu-to-match.dtm \
+  --expected-input-automation-ready INPUT_AUTOMATION_READY \
   --timeout 20
 ```
 

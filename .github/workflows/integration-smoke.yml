@@ -20,6 +20,10 @@ on:
         description: Absolute path to the modified ISO (blank = reuse clean)
         required: false
         type: string
+      movie:
+        description: Runner-local Dolphin TAS movie/DTM file
+        required: false
+        type: string
       expected_archive:
         description: Runner-local custom fighter archive expected after conversion
         required: false
@@ -54,6 +58,11 @@ on:
         description: Offline-match start marker emitted by the runtime
         required: false
         default: OFFLINE_MATCH_STARTED
+        type: string
+      expected_input_automation_ready:
+        description: Input automation readiness marker emitted after menu navigation
+        required: false
+        default: INPUT_AUTOMATION_READY
         type: string
 
 jobs:
@@ -119,7 +128,8 @@ jobs:
           BUILD_OBSERVATION: ${{ steps.build.outputs.observation }}
           EXPECTED_CHARACTER_SELECT: ${{ inputs.expected_character_select }}
           EXPECTED_MATCH_START: ${{ inputs.expected_match_start }}
-
+          MOVIE: ${{ inputs.movie }}
+          EXPECTED_INPUT_AUTOMATION_READY: ${{ inputs.expected_input_automation_ready }}
 
         run: |
           set -euo pipefail
@@ -143,12 +153,17 @@ jobs:
           ARGS+=(--expected-archive "$ARCHIVE" --expected-data "$DATA")
           ARGS+=(--expected-symbol "$EXPECTED_SYMBOL" --expected-observation "$EXPECTED_OBSERVATION")
           ARGS+=(--expected-character-select "$EXPECTED_CHARACTER_SELECT" --expected-match-start "$EXPECTED_MATCH_START")
+          ARGS+=(--expected-input-automation-ready "$EXPECTED_INPUT_AUTOMATION_READY")
+          if [ -n "$MOVIE" ]; then
+            test -f "$MOVIE"
+            ARGS+=(--movie "$MOVIE")
+          fi
 
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
             --timeout 30 | tee /tmp/smoke.json
           # PAS-31 gate: the modified ISO must boot and emit loader,
           # character-select, and offline-match markers from the linked DOL.
-          python -c "import json; p=json.load(open('/tmp/smoke.json')); assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists'), c; print('PAS-24 gate passed:', c['checks'])"
+          python -c "import json; p=json.load(open('/tmp/smoke.json')); assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('input_automation_ready'), c; print('PAS-24 gate passed:', c['checks'])"
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
