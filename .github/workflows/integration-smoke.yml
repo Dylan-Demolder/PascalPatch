@@ -76,6 +76,9 @@ jobs:
     runs-on: [self-hosted, meleemod-smoke]
     steps:
       - uses: actions/checkout@v4
+      - name: Ensure X11 input control
+        shell: bash
+        run: tools/ensure-xdotool.sh
       - name: Record legitimate DTM
         shell: bash
         env:
