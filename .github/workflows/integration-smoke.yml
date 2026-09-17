@@ -1,6 +1,8 @@
 name: integration-smoke
 # Manual, user-data-only Dolphin smoke, pinned to the self-hosted runner label.
-# Dispatched by the PAS-12 verification run. No game data is stored by the repo.
+# Self-contained: builds the modified ISO on the runner from the runner's own
+# clean ISO plus the synthetic fixture in tooling/fixtures/pas23/. Dispatch
+# with no inputs. No game data is stored by the repo.
 on:
   workflow_dispatch:
     inputs:
@@ -55,28 +57,57 @@ jobs:
           echo "resolved dolphin=$D"; ls -la "$D" 2>&1
           echo "resolved clean=$C";   ls -la "$C" 2>&1
           { echo "dolphin=$D"; echo "clean=$C"; } >> "$GITHUB_OUTPUT"
+      - name: Build modified ISO on the runner
+        id: build
+        shell: bash
+        env:
+          CLEAN_ISO: ${{ steps.resolve.outputs.clean }}
+        run: |
+          set +e
+          FIXTURE="$GITHUB_WORKSPACE/tooling/fixtures/pas23"
+          OUT="${RUNNER_TEMP:-/tmp}/pas23-modified.iso"
+          echo "fixture=$FIXTURE"; ls -la "$FIXTURE" "$FIXTURE/project" 2>&1
+          PYTHONPATH=host/src python tooling/build_pas23_modified_iso.py \
+            --clean "$CLEAN_ISO" --fixture "$FIXTURE" --output "$OUT" 2>&1
+          if [ -f "$OUT" ]; then
+            echo "modified=$OUT" >> "$GITHUB_OUTPUT"
+            echo "built modified ISO: $OUT"; ls -la "$OUT"
+          else
+            echo "modified=" >> "$GITHUB_OUTPUT"
+            echo "build failed; smoke will reuse the clean ISO"
+          fi
+          echo "archive=$FIXTURE/leesin-hsd-2e.melee-character" >> "$GITHUB_OUTPUT"
+          echo "data=$FIXTURE/leesin-patched.hsd" >> "$GITHUB_OUTPUT"
       - name: Run bounded clean/modified Dolphin smoke
         shell: bash
         env:
           DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
           CLEAN_ISO: ${{ steps.resolve.outputs.clean }}
           MODIFIED_ISO_IN: ${{ inputs.modified_iso }}
-          EXPECTED_ARCHIVE: ${{ inputs.expected_archive }}
+          BUILD_MODIFIED: ${{ steps.build.outputs.modified }}
+          EXPECTED_ARCHIVE_IN: ${{ inputs.expected_archive }}
+          BUILD_ARCHIVE: ${{ steps.build.outputs.archive }}
           EXPECTED_SYMBOL: ${{ inputs.expected_symbol }}
-          EXPECTED_DATA: ${{ inputs.expected_data }}
+          EXPECTED_DATA_IN: ${{ inputs.expected_data }}
+          BUILD_DATA: ${{ steps.build.outputs.data }}
           EXPECTED_OBSERVATION: ${{ inputs.expected_observation }}
         run: |
           set +e
-          MODIFIED_ISO="${MODIFIED_ISO_IN:-$CLEAN_ISO}"
+          MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
+          MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
+          ARCHIVE="${EXPECTED_ARCHIVE_IN:-$BUILD_ARCHIVE}"
+          DATA="${EXPECTED_DATA_IN:-$BUILD_DATA}"
           echo "smoke: dolphin=$DOLPHIN clean=$CLEAN_ISO modified=$MODIFIED_ISO"
+          echo "--- modified:"; ls -la "$MODIFIED_ISO" 2>&1
+          echo "--- archive:";  ls -la "$ARCHIVE" 2>&1
+          echo "--- data:";     ls -la "$DATA" 2>&1
+          ARGS=(--dolphin "$DOLPHIN" --clean "$CLEAN_ISO" --modified "$MODIFIED_ISO")
+          [ -n "$ARCHIVE" ] && ARGS+=(--expected-archive "$ARCHIVE")
+          [ -n "$EXPECTED_SYMBOL" ] && ARGS+=(--expected-symbol "$EXPECTED_SYMBOL")
+          [ -n "$DATA" ] && ARGS+=(--expected-data "$DATA")
+          [ -n "$EXPECTED_OBSERVATION" ] && ARGS+=(--expected-observation "$EXPECTED_OBSERVATION")
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
-            --dolphin "$DOLPHIN" \
-            --clean "$CLEAN_ISO" \
-            --modified "$MODIFIED_ISO" \
-            --expected-archive "$EXPECTED_ARCHIVE" \
-            --expected-symbol "$EXPECTED_SYMBOL" \
-            --expected-data "$EXPECTED_DATA" \
-            --expected-observation "$EXPECTED_OBSERVATION" \
+            "${ARGS[@]}" \
             --timeout 30 | tee /tmp/smoke.json
           grep -q '"both_started": true' /tmp/smoke.json
       - name: Run non-game integration tests
