@@ -93,11 +93,11 @@ def main(argv=None):
             return 2
     fighter_bytes = data.read_bytes()
     plugin_dir = out.parent / "pas24-fighter-loader"
-    plugin = write_fighter_loader_plugin(symbol, plugin_dir, a.observation)
+    plugin = write_fighter_loader_plugin(symbol, plugin_dir, x.observation)
     built_dol = out.parent / (out.name + ".pas24.built.dol")
     try:
         build = build_in_worktree(
-            a.decomp_repo, a.orig, [{"id": "pas24_fighter_loader",
+            x.decomp_repo, x.orig, [{"id": "pas24_fighter_loader",
                                      "entrypoint": "meleemod_fighter_loader_init",
                                      "source": plugin.name,
                                      "static_signature": "none",
@@ -140,7 +140,7 @@ def main(argv=None):
                       "dol_size": built_dol_size,
                       "dol_build_sha1": build.sha1, "dol_hook_linked": True,
                       "base_fighter": base_fighter, "slot_iso_path": slot_path,
-                      "fighter_symbol": symbol, "observation": a.observation,
+                      "fighter_symbol": symbol, "observation": x.observation,
                       "fighter_sha256": hashlib.sha256(fighter_bytes).hexdigest(),
                       "overlay_verified": True,
                       "loader_plugin": str(plugin)}, indent=2))
