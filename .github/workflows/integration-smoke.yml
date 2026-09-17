@@ -1,8 +1,10 @@
 name: integration-smoke
 # Manual, user-data-only Dolphin smoke, pinned to the self-hosted runner label.
 # Self-contained: builds the modified ISO on the runner from the runner's own
-# clean ISO plus the synthetic fixture in tooling/fixtures/pas23/. Dispatch
-# with no inputs. No game data is stored by the repo.
+# clean ISO plus the synthetic fixture in tooling/fixtures/pas23/. PAS-24
+# overlays the Studio-composed fighter archive onto its clone-slot file so
+# the game image references the custom bytes. Dispatch with no inputs.
+# No game data is stored by the repo.
 on:
   workflow_dispatch:
     inputs:
@@ -67,7 +69,7 @@ jobs:
           FIXTURE="$GITHUB_WORKSPACE/tooling/fixtures/pas23"
           OUT="${RUNNER_TEMP:-/tmp}/pas23-modified.iso"
           echo "fixture=$FIXTURE"; ls -la "$FIXTURE" "$FIXTURE/project" 2>&1
-          PYTHONPATH=host/src python tooling/build_pas23_modified_iso.py \
+          PYTHONPATH=host/src python tooling/build_pas24_modified_iso.py \
             --clean "$CLEAN_ISO" --fixture "$FIXTURE" --output "$OUT" 2>&1
           if [ -f "$OUT" ]; then
             echo "modified=$OUT" >> "$GITHUB_OUTPUT"
@@ -95,6 +97,10 @@ jobs:
           set +e
           MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
           MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
+          if [ -z "$MODIFIED_ISO_IN" ] && [ -z "$BUILD_MODIFIED" ]; then
+            echo "PAS-24 build produced no modified ISO; refusing clean-vs-clean smoke" >&2
+            exit 1
+          fi
           ARCHIVE="${EXPECTED_ARCHIVE_IN:-$BUILD_ARCHIVE}"
           DATA="${EXPECTED_DATA_IN:-$BUILD_DATA}"
           echo "smoke: dolphin=$DOLPHIN clean=$CLEAN_ISO modified=$MODIFIED_ISO"
@@ -109,6 +115,11 @@ jobs:
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
             --timeout 30 | tee /tmp/smoke.json
-          grep -q '"both_started": true' /tmp/smoke.json
+          # PAS-24 gate: the modified ISO must boot AND the build must have
+          # proven the clone-slot overlay (archive/data artifacts present).
+          # Symbol/observation log markers stay disabled until the decomp
+          # OSReport hook runs on the runner; the in-ISO byte proof is
+          # emitted by the build step above.
+          python -c "import json; p=json.load(open('/tmp/smoke.json')); assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists'), c; print('PAS-24 gate passed:', c['checks'])"
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
