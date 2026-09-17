@@ -1,37 +1,59 @@
 name: integration-smoke
-# Manual, user-data-only Dolphin smoke. Dispatched by the PAS-12 verification
-# run and pinned to the dedicated self-hosted runner label.
+# Manual, user-data-only Dolphin smoke, pinned to the self-hosted runner label.
+# Dispatched by the PAS-12 verification run.
 on:
   workflow_dispatch:
     inputs:
       dolphin:
-        description: Absolute path to dolphin-emu on the self-hosted runner
-        required: true
+        description: Absolute path to dolphin-emu on the self-hosted runner (blank = auto-detect)
+        required: false
         type: string
       clean_iso:
-        description: Absolute path to the user-owned clean GALE01 Rev.02 ISO
-        required: true
+        description: Absolute path to the user-owned clean GALE01 Rev.02 ISO (blank = auto-detect)
+        required: false
         type: string
       modified_iso:
-        description: Absolute path to the generated modified ISO
-        required: true
+        description: Absolute path to the generated modified ISO (blank = reuse clean)
+        required: false
         type: string
 jobs:
   smoke:
     runs-on: [self-hosted, meleemod-smoke]
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve emulator and game data
+        id: resolve
+        shell: bash
+        env:
+          DOLPHIN_IN: ${{ inputs.dolphin }}
+          CLEAN_IN: ${{ inputs.clean_iso }}
+        run: |
+          echo "runner=$(hostname) user=$(whoami) home=$HOME pwd=$(pwd) display=${DISPLAY:-<unset>}"
+          echo "--- provided dolphin ---"; ls -la "$DOLPHIN_IN" 2>&1 || true
+          echo "--- provided clean_iso ---"; ls -la "$CLEAN_IN" 2>&1 || true
+          D="$DOLPHIN_IN"
+          if ! [ -x "$D" ]; then D="$(command -v dolphin-emu || command -v dolphin || true)"; fi
+          if [ -z "$D" ]; then D="$(find /usr /opt /home -maxdepth 6 -type f -iname 'dolphin-emu*' 2>/dev/null | head -1)"; fi
+          C="$CLEAN_IN"
+          if ! [ -f "$C" ]; then C="$(find /home -maxdepth 7 -type f -iname '*.iso' 2>/dev/null | head -1)"; fi
+          echo "resolved dolphin=$D"
+          echo "resolved clean=$C"
+          echo "dolphin=$D" >> "$GITHUB_OUTPUT"
+          echo "clean=$C" >> "$GITHUB_OUTPUT"
       - name: Run bounded clean/modified Dolphin smoke
         shell: bash
         env:
-          DOLPHIN: ${{ inputs.dolphin }}
-          CLEAN_ISO: ${{ inputs.clean_iso }}
-          MODIFIED_ISO: ${{ inputs.modified_iso }}
+          DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
+          CLEAN_ISO: ${{ steps.resolve.outputs.clean }}
+          MODIFIED_ISO_IN: ${{ inputs.modified_iso }}
         run: |
+          MODIFIED_ISO="${MODIFIED_ISO_IN:-$CLEAN_ISO}"
+          echo "smoke: dolphin=$DOLPHIN clean=$CLEAN_ISO modified=$MODIFIED_ISO"
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             --dolphin "$DOLPHIN" \
             --clean "$CLEAN_ISO" \
             --modified "$MODIFIED_ISO" \
-            --timeout 30
+            --timeout 30 | tee /tmp/smoke.json
+          grep -q '"both_started": true' /tmp/smoke.json
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
