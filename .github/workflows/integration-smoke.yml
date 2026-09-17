@@ -24,6 +24,11 @@ on:
         description: Runner-local Dolphin TAS movie/DTM file
         required: false
         type: string
+      record_movie:
+        description: Record a legitimate DTM on the self-hosted runner
+        required: false
+        default: false
+        type: boolean
       expected_archive:
         description: Runner-local custom fighter archive expected after conversion
         required: false
@@ -66,6 +71,60 @@ on:
         type: string
 
 jobs:
+  record:
+    if: inputs.record_movie == true
+    runs-on: [self-hosted, meleemod-smoke]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record legitimate DTM
+        shell: bash
+        env:
+          DOLPHIN: ${{ inputs.dolphin }}
+          ISO: ${{ inputs.clean_iso }}
+          MAX_SECONDS: "120"
+        run: |
+          set -euo pipefail
+          test -n "${DISPLAY:-}" || { echo "DISPLAY is required" >&2; exit 2; }
+          command -v xdotool >/dev/null || { echo "xdotool is required" >&2; exit 2; }
+          [ -x "$DOLPHIN" ] || DOLPHIN="$(command -v dolphin-emu || true)"
+          [ -x "$DOLPHIN" ] || { echo "Dolphin executable not found" >&2; exit 2; }
+          [ -f "$ISO" ] || ISO="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
+          [ -f "$ISO" ] || { echo "Melee ISO not found" >&2; exit 2; }
+          DTM="$RUNNER_TEMP/pas44-menu-to-match.dtm"
+          LOG="$RUNNER_TEMP/pas44-dolphin.log"
+          rm -f "$DTM" "$LOG"
+          "$DOLPHIN" -e "$ISO" >"$LOG" 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true' EXIT
+          WINDOW="$(xdotool search --sync --onlyvisible --class dolphin-emu | head -1)"
+          xdotool windowactivate --sync "$WINDOW"
+          sleep 3
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key ctrl+s
+          sleep 2
+          xdotool key ctrl+a
+          xdotool type --delay 20 "$DTM"
+          xdotool key Return
+          sleep 3
+          test -s "$DTM"
+          tail -n 80 "$LOG"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pas44-dtm
+          path: ${{ runner.temp }}/pas44-menu-to-match.dtm
+          if-no-files-found: error
+
   smoke:
     runs-on: [self-hosted, meleemod-smoke]
     steps:
