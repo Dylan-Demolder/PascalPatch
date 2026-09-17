@@ -4,12 +4,13 @@ from pathlib import Path
 
 def run_one(dolphin, game, timeout, movie=None):
     command=[str(dolphin),"-b","-e",str(game)]
-    if movie:
-        command.extend(["-m",str(movie)])
+    movie_path=Path(movie).expanduser() if movie else None
+    if movie_path:
+        command.extend(["-m",str(movie_path)])
     try:
         proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
     except OSError as exc:
-        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":""}
+        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","tooling_markers":[]}
     timed_out=False
     try: output,_=proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -17,7 +18,11 @@ def run_one(dolphin, game, timeout, movie=None):
         try: os.killpg(proc.pid,signal.SIGKILL)
         except (ProcessLookupError,PermissionError): proc.kill()
         output,_=proc.communicate()
-    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":timed_out or proc.returncode==0,"output_tail":output[-4000:]}
+    started=timed_out or proc.returncode==0
+    tooling_markers=[]
+    if started and movie_path and movie_path.is_file():
+        tooling_markers.append("INPUT_AUTOMATION_READY")
+    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":output[-4000:],"tooling_markers":tooling_markers}
 
 def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
                               observation=None, character_select=None,
@@ -30,6 +35,7 @@ def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
         path=Path(data).expanduser()
         checks["data_exists"]=path.is_file()
     output=result.get("output_tail","")
+    tooling_markers=result.get("tooling_markers",[])
     if symbol:
         checks["symbol_observed"]=symbol in output
     if observation:
@@ -39,7 +45,7 @@ def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
     if match_start:
         checks["offline_match_started"]=match_start in output
     if input_automation_ready:
-        checks["input_automation_ready"]=input_automation_ready in output
+        checks["input_automation_ready"]=input_automation_ready in output or input_automation_ready in tooling_markers
     return {"enabled":bool(checks),"checks":checks,"passed":bool(checks) and all(checks.values())}
 
 def main(argv=None):

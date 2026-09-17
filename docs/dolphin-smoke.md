@@ -12,6 +12,6 @@ PYTHONPATH=host/src python tooling/dolphin_smoke.py \
   --timeout 20
 ```
 
-The runner reports process results only. Menu/title and plugin behavior require a separate GUI/log observer.
+When a supplied movie file exists and Dolphin starts, the JSON includes `tooling_markers: ["INPUT_AUTOMATION_READY"]`; this is a bounded tooling signal that movie playback was requested, not a runtime gameplay marker. Menu/title and plugin behavior still require the Dolphin log and runtime markers.
 
 The manual `.github/workflows/integration-smoke.yml` workflow is self-hosted and accepts all game/emulator paths as inputs. It never uploads or stores game data.

@@ -18,7 +18,9 @@ class ToolTests(unittest.TestCase):
   self.assertFalse(result["checks"]["character_select_complete"])
   self.assertFalse(result["passed"])
  def test_input_automation_marker_is_checked(self):
-  result=custom_fighter_assertion({"output_tail":"INPUT_AUTOMATION_READY"}, input_automation_ready="INPUT_AUTOMATION_READY")
+  result=custom_fighter_assertion({"output_tail":""}, input_automation_ready="INPUT_AUTOMATION_READY")
+  self.assertFalse(result["checks"]["input_automation_ready"])
+  result=custom_fighter_assertion({"output_tail":"", "tooling_markers":["INPUT_AUTOMATION_READY"]}, input_automation_ready="INPUT_AUTOMATION_READY")
   self.assertTrue(result["checks"]["input_automation_ready"])
   self.assertTrue(result["passed"])
  def test_movie_is_forwarded_to_dolphin(self):
