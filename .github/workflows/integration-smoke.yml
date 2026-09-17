@@ -1,4 +1,6 @@
 name: integration-smoke
+# Manual, user-data-only Dolphin smoke. Dispatched by the PAS-12 verification
+# run and pinned to the dedicated self-hosted runner label.
 on:
   workflow_dispatch:
     inputs:
@@ -16,7 +18,7 @@ on:
         type: string
 jobs:
   smoke:
-    runs-on: self-hosted
+    runs-on: [self-hosted, meleemod-smoke]
     steps:
       - uses: actions/checkout@v4
       - name: Run bounded clean/modified Dolphin smoke
