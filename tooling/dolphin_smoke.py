@@ -16,9 +16,32 @@ def run_one(dolphin, game, timeout):
         output,_=proc.communicate()
     return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":timed_out or proc.returncode==0,"output_tail":output[-4000:]}
 
+def custom_fighter_assertion(result, archive=None, symbol=None, data=None, observation=None):
+    checks={}
+    if archive:
+        path=Path(archive).expanduser()
+        checks["archive_exists"]=path.is_file()
+    if data:
+        path=Path(data).expanduser()
+        checks["data_exists"]=path.is_file()
+    output=result.get("output_tail","")
+    if symbol:
+        checks["symbol_observed"]=symbol in output
+    if observation:
+        checks["in_game_observed"]=observation in output
+    return {"enabled":bool(checks),"checks":checks,"passed":bool(checks) and all(checks.values())}
+
 def main(argv=None):
     p=argparse.ArgumentParser(description="Bounded clean/modified Dolphin smoke test")
     p.add_argument("--dolphin",required=True); p.add_argument("--clean",required=True); p.add_argument("--modified",required=True); p.add_argument("--timeout",type=float,default=20.0)
-    a=p.parse_args(argv); results=[run_one(a.dolphin,a.clean,a.timeout),run_one(a.dolphin,a.modified,a.timeout)]
-    print(json.dumps({"results":results,"both_started":all(x["started"] for x in results)},indent=2)); return 0
+    p.add_argument("--expected-archive",help="Runner-local custom fighter archive expected to exist")
+    p.add_argument("--expected-symbol",help="Symbol or load marker expected in Dolphin output")
+    p.add_argument("--expected-data",help="Runner-local custom fighter data expected to exist")
+    p.add_argument("--expected-observation",help="In-game observation marker expected in Dolphin output")
+    a=p.parse_args(argv)
+    results=[run_one(a.dolphin,a.clean,a.timeout),run_one(a.dolphin,a.modified,a.timeout)]
+    fighter=custom_fighter_assertion(results[1],a.expected_archive,a.expected_symbol,a.expected_data,a.expected_observation)
+    payload={"results":results,"both_started":all(x["started"] for x in results),"custom_fighter":fighter}
+    print(json.dumps(payload,indent=2))
+    return 0 if payload["both_started"] and (not fighter["enabled"] or fighter["passed"]) else 1
 if __name__=="__main__": raise SystemExit(main())

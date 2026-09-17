@@ -16,9 +16,25 @@ on:
         description: Absolute path to the modified ISO (blank = reuse clean)
         required: false
         type: string
+      expected_archive:
+        description: Runner-local custom fighter archive expected after conversion
+        required: false
+        type: string
+      expected_symbol:
+        description: Custom fighter load symbol or log marker
+        required: false
+        type: string
+      expected_data:
+        description: Runner-local custom fighter data file expected after conversion
+        required: false
+        type: string
+      expected_observation:
+        description: Optional in-game observation marker emitted by the runtime
+        required: false
+        type: string
 jobs:
   smoke:
-    runs-on: [self-hosted, meleemod-smoke]
+    runs-on: [self-hosted, cachyos-x8664-meleemod-smoke]
     steps:
       - uses: actions/checkout@v4
       - name: Resolve emulator and game data
@@ -45,6 +61,10 @@ jobs:
           DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
           CLEAN_ISO: ${{ steps.resolve.outputs.clean }}
           MODIFIED_ISO_IN: ${{ inputs.modified_iso }}
+          EXPECTED_ARCHIVE: ${{ inputs.expected_archive }}
+          EXPECTED_SYMBOL: ${{ inputs.expected_symbol }}
+          EXPECTED_DATA: ${{ inputs.expected_data }}
+          EXPECTED_OBSERVATION: ${{ inputs.expected_observation }}
         run: |
           set +e
           MODIFIED_ISO="${MODIFIED_ISO_IN:-$CLEAN_ISO}"
@@ -53,6 +73,10 @@ jobs:
             --dolphin "$DOLPHIN" \
             --clean "$CLEAN_ISO" \
             --modified "$MODIFIED_ISO" \
+            --expected-archive "$EXPECTED_ARCHIVE" \
+            --expected-symbol "$EXPECTED_SYMBOL" \
+            --expected-data "$EXPECTED_DATA" \
+            --expected-observation "$EXPECTED_OBSERVATION" \
             --timeout 30 | tee /tmp/smoke.json
           grep -q '"both_started": true' /tmp/smoke.json
       - name: Run non-game integration tests
