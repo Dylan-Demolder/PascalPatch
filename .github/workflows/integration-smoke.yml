@@ -96,9 +96,20 @@ jobs:
           "$DOLPHIN" -e "$ISO" >"$LOG" 2>&1 &
           PID=$!
           trap 'kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true' EXIT
-          WINDOW="$(xdotool search --sync --onlyvisible --name 'Dolphin' 2>/dev/null | head -1 || true)"
-          [ -n "$WINDOW" ] || WINDOW="$(xdotool search --sync --onlyvisible --class dolphin 2>/dev/null | head -1 || true)"
-          [ -n "$WINDOW" ] || { xdotool search --onlyvisible --name . 2>&1 || true; echo "Dolphin window not found" >&2; exit 1; }
+          sleep 5
+          WINDOW=""
+          for _ in $(seq 1 30); do
+            WINDOW="$(xdotool search --onlyvisible --name 'Dolphin' 2>/dev/null | head -1 || true)"
+            [ -n "$WINDOW" ] || WINDOW="$(xdotool search --onlyvisible --class dolphin 2>/dev/null | head -1 || true)"
+            [ -n "$WINDOW" ] && break
+            sleep 1
+          done
+          if [ -z "$WINDOW" ]; then
+            ps -ef | grep -i '[d]olphin' || true
+            tail -n 80 "$LOG" || true
+            echo "Dolphin window not found" >&2
+            exit 1
+          fi
           xdotool windowactivate --sync "$WINDOW"
           sleep 3
           xdotool key ctrl+F11
