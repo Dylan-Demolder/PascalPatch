@@ -250,8 +250,12 @@ jobs:
           sleep 1
           echo "--- Dolphin processes after cleanup ---"
           ps -ef | grep '[d]olphin' || true
-          if pgrep -u "$(id -u)" -f '[d]olphin-emu' >/dev/null; then
-            echo "stale dolphin-emu process remains after cleanup" >&2
+          # Zombies (<defunct>, state Z) cannot be killed; only their parent
+          # can reap them. Fail only on live (non-zombie) processes.
+          LEFTOVER="$(ps -u "$(id -u)" -o stat=,args= 2>/dev/null | grep '[d]olphin-emu' | grep -v '<defunct>' | grep -v '^[[:space:]]*Z' || true)"
+          if [ -n "$LEFTOVER" ]; then
+            echo "stale live dolphin-emu process remains after cleanup:" >&2
+            printf '%s\n' "$LEFTOVER" >&2
             exit 1
           fi
 
