@@ -91,6 +91,7 @@ jobs:
           xdotool key ctrl+F11
           sleep 2
           xdotool key ctrl+s
+          sleep 2
           dialog=""
           for _ in $(seq 1 30); do
             dialog="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
@@ -98,6 +99,17 @@ jobs:
             [ -n "$dialog" ] && break
             sleep 1
           done
+          if [ -z "$dialog" ]; then
+            xdotool key alt+m
+            sleep 1
+            xdotool key s
+            for _ in $(seq 1 15); do
+              dialog="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
+              [ -n "$dialog" ] || dialog="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
+              [ -n "$dialog" ] && break
+              sleep 1
+            done
+          fi
           if [ -z "$dialog" ]; then
             printf '%s\n' 'Visible windows while locating save dialog:'
             xdotool search --onlyvisible --name '.*' 2>/dev/null | while read -r candidate; do
