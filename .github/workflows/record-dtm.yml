@@ -37,11 +37,11 @@ jobs:
           echo "provided iso=$iso"; ls -la "$iso" 2>&1 || true
           [ -x "$dolphin" ] || dolphin="$(command -v dolphin-emu 2>/dev/null || true)"
           [ -n "$dolphin" ] || dolphin="$(command -v dolphin 2>/dev/null || true)"
-          [ -n "$dolphin" ] || dolphin="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1)"
-          [ -n "$dolphin" ] || dolphin="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu*' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+          [ -n "$dolphin" ] || dolphin="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1 || true)"
+          [ -n "$dolphin" ] || dolphin="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu*' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1 || true)"
           [ -x "$dolphin" ] || dolphin="/usr/bin/dolphin-emu"
           [ -x "$dolphin" ] || { echo "Dolphin executable not found" >&2; exit 2; }
-          [ -f "$iso" ] || iso="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
+          [ -f "$iso" ] || iso="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1 || true)"
           [ -f "$iso" ] || iso="$HOME/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso"
           [ -f "$iso" ] || { echo "Melee ISO not found" >&2; exit 2; }
           echo "resolved dolphin=$dolphin"; ls -la "$dolphin"
