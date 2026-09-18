@@ -242,17 +242,15 @@ jobs:
 
       - name: Clear stale Dolphin process state
         shell: bash
-        env:
-          DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
         run: |
           set -euo pipefail
           echo "--- Dolphin processes before cleanup ---"
           ps -ef | grep '[d]olphin' || true
-          pkill -9 -u "$(id -u)" -f dolphin-emu || true
+          pkill -9 -u "$(id -u)" -f '[d]olphin-emu' || true
           sleep 1
           echo "--- Dolphin processes after cleanup ---"
           ps -ef | grep '[d]olphin' || true
-          if pgrep -u "$(id -u)" -f dolphin-emu >/dev/null; then
+          if pgrep -u "$(id -u)" -f '[d]olphin-emu' >/dev/null; then
             echo "stale dolphin-emu process remains after cleanup" >&2
             exit 1
           fi
