@@ -78,10 +78,8 @@ jobs:
 
           timeout 5s xdotool windowactivate --sync "$window"
           sleep 3
-          xdotool key alt+m
-          sleep 1
-          xdotool key r
-          sleep 3
+          xdotool key ctrl+F11
+          sleep 2
           xdotool key Return
           sleep 4
           xdotool key Return
@@ -90,10 +88,9 @@ jobs:
           sleep 4
           xdotool key Return
           sleep 4
-          xdotool key alt+m
-          sleep 1
-          xdotool key Down Down
-          xdotool key Return
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key ctrl+s
           sleep 3
           dialog=""
           for _ in $(seq 1 30); do
@@ -102,6 +99,7 @@ jobs:
             [ -n "$dialog" ] && break
             sleep 1
           done
+
           if [ -z "$dialog" ]; then
             echo "Save Recording dialog not found" >&2
             tail -n 80 "$log" || true
