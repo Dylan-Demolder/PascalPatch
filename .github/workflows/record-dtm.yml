@@ -88,9 +88,35 @@ jobs:
           timeout 5s xdotool windowactivate --sync "$window"
           dump_state
           sleep 3
-          printf '%s\n' 'Authoring real menu input movie with GameCube button masks'
-          python3 tooling/author_dtm.py "$dtm"
-          test -s "$dtm" || { dump_state; echo 'Input movie authoring did not produce a DTM' >&2; exit 1; }
+          printf '%s\n' 'Recording real menu input movie through Dolphin'
+          rm -f "$dtm"
+          xdotool key ctrl+F11
+          sleep 12
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 8
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key ctrl+s
+          dialog=""
+          for _ in $(seq 1 30); do
+            dialog="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
+            [ -n "$dialog" ] || dialog="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
+            [ -n "$dialog" ] && break
+            sleep 1
+          done
+          [ -n "$dialog" ] || { dump_state; echo 'Save Recording File As dialog not found' >&2; exit 1; }
+          timeout 5s xdotool windowactivate --sync "$dialog"
+          xdotool key ctrl+a
+          xdotool type --delay 20 "$dtm"
+          xdotool key Return
+          sleep 8
+          test -s "$dtm" || { dump_state; echo 'Dolphin recording did not produce a DTM' >&2; exit 1; }
           replay_log="$RUNNER_TEMP/pas44-dolphin-replay.log"
           state_snapshot="$RUNNER_TEMP/pas44-dolphin-state.txt"
           dump_state >"$state_snapshot"
