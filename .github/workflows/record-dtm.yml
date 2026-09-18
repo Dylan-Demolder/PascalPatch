@@ -84,6 +84,11 @@ jobs:
           xdotool key Down Down
           xdotool key Return
           sleep 3
+          dialog="$(xdotool search --sync --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
+          [ -n "$dialog" ] || dialog="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
+          [ -n "$dialog" ] || { echo "Save Recording dialog not found" >&2; exit 1; }
+          xdotool windowactivate --sync "$dialog"
+          sleep 1
           xdotool key ctrl+a
           xdotool type --delay 20 "$dtm"
           xdotool key Return
