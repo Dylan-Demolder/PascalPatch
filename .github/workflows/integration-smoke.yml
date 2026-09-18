@@ -240,8 +240,43 @@ jobs:
           echo "symbol=ftDataLeesinhsd2e" >> "$GITHUB_OUTPUT"
           echo "observation=$OBSERVATION" >> "$GITHUB_OUTPUT"
 
+      - name: Clear stale Dolphin process state
+        shell: bash
+        env:
+          DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
+        run: |
+          set -euo pipefail
+          echo "--- Dolphin processes before cleanup ---"
+          ps -ef | grep '[d]olphin' || true
+          pkill -9 -u "$(id -u)" -f dolphin-emu || true
+          sleep 1
+          echo "--- Dolphin processes after cleanup ---"
+          ps -ef | grep '[d]olphin' || true
+          if pgrep -u "$(id -u)" -f dolphin-emu >/dev/null; then
+            echo "stale dolphin-emu process remains after cleanup" >&2
+            exit 1
+          fi
+
+      - name: Capture Dolphin startup diagnostics
+        shell: bash
+        env:
+          DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
+          CLEAN_ISO: ${{ steps.resolve.outputs.clean }}
+          MODIFIED_ISO: ${{ steps.build.outputs.modified }}
+        run: |
+          set -u
+          echo "--- Dolphin version ---"
+          "$DOLPHIN" --version 2>&1 || true
+          echo "--- DISPLAY ---"
+          printf '%s\n' "${DISPLAY:-<unset>}"
+          echo "--- display geometry ---"
+          xdotool getdisplaygeometry 2>&1 || xdpyinfo 2>&1 || true
+          echo "--- resolved ISO files ---"
+          ls -l "$CLEAN_ISO" "$MODIFIED_ISO" 2>&1
+
       - name: Run bounded clean/modified Dolphin smoke
         shell: bash
+
         env:
           DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
           CLEAN_ISO: ${{ steps.resolve.outputs.clean }}
