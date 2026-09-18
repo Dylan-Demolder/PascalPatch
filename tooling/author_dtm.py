@@ -8,6 +8,8 @@ from pathlib import Path
 HEADER_SIZE = 256
 FRAME_SIZE = 8
 GAME_ID = b"GALE01"
+BUTTON_A = 0x0100
+BUTTON_START = 0x1000
 
 
 def controller(buttons: int = 0, stick=(128, 128), cstick=(128, 128), triggers=(0, 0)) -> bytes:
@@ -15,11 +17,16 @@ def controller(buttons: int = 0, stick=(128, 128), cstick=(128, 128), triggers=(
     return struct.pack("<HBBBBBB", flags, triggers[0], triggers[1], stick[0], stick[1], cstick[0], cstick[1])
 
 
+def press(buttons: int, hold: int = 2, settle: int = 30) -> bytes:
+    return controller(buttons) * hold + controller() * settle
+
+
 def build_frames() -> bytes:
-    neutral = controller()
-    start = controller(1 << 0)
-    a = controller(1 << 1)
-    return neutral * 30 + start + neutral * 30 + a + neutral * 30
+    frames = bytearray(controller() * 120)
+    frames += press(BUTTON_START, hold=2, settle=90)
+    frames += press(BUTTON_A, hold=2, settle=120)
+    frames += press(BUTTON_A, hold=2, settle=120)
+    return bytes(frames)
 
 
 def build_dtm() -> bytes:
@@ -36,7 +43,7 @@ def build_dtm() -> bytes:
     struct.pack_into("<Q", header, 29, 0)
     struct.pack_into("<Q", header, 37, 0)
     struct.pack_into("<I", header, 45, 0)
-    author = b"MeleeMod deterministic fallback"
+    author = b"MeleeMod menu input candidate"
     header[49 : 49 + len(author)] = author
     header[137] = 1
     header[138] = 1

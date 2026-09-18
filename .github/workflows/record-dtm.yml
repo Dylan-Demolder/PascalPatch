@@ -88,30 +88,9 @@ jobs:
           timeout 5s xdotool windowactivate --sync "$window"
           dump_state
           sleep 3
-          printf '%s\n' 'Starting GUI movie recording from Dolphin movie menu'
-          xdotool key alt+m
-          sleep 1
-          xdotool key Down Down
-          xdotool key Return
-          sleep 5
-          xdotool key Return
-          sleep 4
-          xdotool key Return
-          sleep 4
-          xdotool key Return
-          sleep 4
-          xdotool key Return
-          sleep 4
-          xdotool key alt+m
-          sleep 1
-          xdotool key Down Down Down
-          xdotool key Return
-          sleep 3
-          xdotool key ctrl+a
-          xdotool type --delay 20 "$dtm"
-          xdotool key Return
-          sleep 5
-          test -s "$dtm" || { dump_state; echo 'GUI recording did not produce a DTM' >&2; exit 1; }
+          printf '%s\n' 'Authoring real menu input movie with GameCube button masks'
+          python3 tooling/author_dtm.py "$dtm"
+          test -s "$dtm" || { dump_state; echo 'Input movie authoring did not produce a DTM' >&2; exit 1; }
           replay_log="$RUNNER_TEMP/pas44-dolphin-replay.log"
           state_image="$RUNNER_TEMP/pas44-dolphin-state.png"
           if command -v import >/dev/null 2>&1; then
