@@ -88,49 +88,37 @@ jobs:
           timeout 5s xdotool windowactivate --sync "$window"
           dump_state
           sleep 3
-          for attempt in 1 2; do
-            printf '%s\n' "GUI recording attempt $attempt"
-            xdotool key alt+m
-            sleep 1
-            xdotool key Down Down
-            xdotool key Return
-            dump_state
-            sleep 2
-            timeout "$MAX_SECONDS" bash -c 'while ! grep -qi "Starting movie recording" "$1"; do sleep 1; done' _ "$log" || true
-            sleep 5
-            dump_state
-            xdotool key alt+m
-            sleep 1
-            xdotool key Down Down Down
-            xdotool key Return
-            dump_state
-            dialog=""
-            for _ in $(seq 1 20); do
-              dialog="$(xdotool search --onlyvisible --name 'Select The Recording File' 2>/dev/null | head -n 1 || true)"
-              [ -n "$dialog" ] && break
-              sleep 1
-            done
-            if [ -n "$dialog" ]; then
-              timeout 5s xdotool windowactivate --sync "$dialog"
-              xdotool key ctrl+a
-              xdotool type --delay 20 "$dtm"
-              xdotool key Return
-              sleep 5
-            fi
-            dump_state
-            test -s "$dtm" && break
-          done
-          if ! test -s "$dtm"; then
-            printf '%s\n' 'GUI recording did not produce a DTM; using deterministic valid DTM fallback'
-            python3 tooling/author_dtm.py "$dtm"
-            test -s "$dtm"
-            replay_log="$RUNNER_TEMP/pas44-dolphin-replay.log"
-            timeout "$MAX_SECONDS" "$DOLPHIN" -b -e "$ISO" -m "$dtm" >"$replay_log" 2>&1 || replay_status=$?
-            replay_status=${replay_status:-0}
-            printf 'replay_status=%s\n' "$replay_status"
-            grep -Eiq 'movie|DTM|GALE01|Starting' "$replay_log" || { cat "$replay_log"; exit 1; }
-            grep -Ei 'movie|DTM|GALE01|Starting' "$replay_log" | tail -n 80 || true
-          fi
+          printf '%s\n' 'Starting GUI movie recording'
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key Return
+          sleep 4
+          xdotool key ctrl+F11
+          sleep 2
+          xdotool key ctrl+s
+          sleep 2
+          xdotool key ctrl+a
+          xdotool type --delay 20 "$dtm"
+          xdotool key Return
+          sleep 5
+          test -s "$dtm" || { dump_state; echo 'GUI recording did not produce a DTM' >&2; exit 1; }
+          replay_log="$RUNNER_TEMP/pas44-dolphin-replay.log"
+          replay_status=0
+          timeout "$MAX_SECONDS" "$DOLPHIN" -b -e "$ISO" -m "$dtm" >"$replay_log" 2>&1 || replay_status=$?
+          printf 'replay_status=%s\n' "$replay_status"
+          grep -Eiq 'movie|DTM|GALE01|Starting' "$replay_log" || { cat "$replay_log"; exit 1; }
+          grep -Eiq 'character[ -]?select|offline[ -]?match|match started|game start' "$replay_log" || {
+            printf '%s\n' 'Replay did not reach character select/offline match; refusing structural-only DTM' >&2
+            tail -n 80 "$replay_log"
+            exit 1
+          }
+          grep -Ei 'movie|DTM|GALE01|Starting|character[ -]?select|offline[ -]?match|match started|game start' "$replay_log" | tail -n 80
           printf '%s\n' 'Recorded DTM:'
           ls -l "$dtm"
           printf '%s\n' 'Bounded Dolphin log tail:'
