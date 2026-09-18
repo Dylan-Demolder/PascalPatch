@@ -63,9 +63,20 @@ jobs:
           finish() { kill "$dolphin_pid" 2>/dev/null || true; wait "$dolphin_pid" 2>/dev/null || true; }
           trap finish EXIT
           sleep 5
-          window="$(xdotool search --sync --onlyvisible --class dolphin-emu | head -1)"
+          window=""
+          for _ in $(seq 1 30); do
+            window="$(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null | head -1 || true)"
+            [ -n "$window" ] && break
+            sleep 1
+          done
+          if [ -z "$window" ]; then
+            echo "Dolphin window not found" >&2
+            tail -n 80 "$log" || true
+            ps -ef | grep -i '[d]olphin' || true
+            exit 1
+          fi
 
-          xdotool windowactivate --sync "$window"
+          timeout 5s xdotool windowactivate --sync "$window"
           sleep 3
           xdotool key alt+m
           sleep 1
@@ -84,10 +95,20 @@ jobs:
           xdotool key Down Down
           xdotool key Return
           sleep 3
-          dialog="$(xdotool search --sync --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
-          [ -n "$dialog" ] || dialog="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
-          [ -n "$dialog" ] || { echo "Save Recording dialog not found" >&2; exit 1; }
-          xdotool windowactivate --sync "$dialog"
+          dialog=""
+          for _ in $(seq 1 30); do
+            dialog="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
+            [ -n "$dialog" ] || dialog="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
+            [ -n "$dialog" ] && break
+            sleep 1
+          done
+          if [ -z "$dialog" ]; then
+            echo "Save Recording dialog not found" >&2
+            tail -n 80 "$log" || true
+            ls -la "$RUNNER_TEMP" || true
+            exit 1
+          fi
+          timeout 5s xdotool windowactivate --sync "$dialog"
           sleep 1
           xdotool key ctrl+a
           xdotool type --delay 20 "$dtm"
