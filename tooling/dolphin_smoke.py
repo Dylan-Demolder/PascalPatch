@@ -2,8 +2,36 @@ from __future__ import annotations
 import argparse, json, os, re, signal, subprocess
 from pathlib import Path
 
-MOVIE_HINT_RE = re.compile(r"movie|\.dtm|\bDTM\b", re.IGNORECASE)
+MOVIE_HINT_RE = re.compile(r"(?:playing|playback|movie|\.dtm|\bDTM\b)", re.IGNORECASE)
 SCENE_RE = re.compile(r"GM:(\d+)\s+SC:(\d+)")
+DTM_HEADER_SIZE = 256
+DTM_GAME_ID_OFFSET = 4
+DTM_GAME_ID_SIZE = 6
+DTM_WII_OFFSET = 10
+DTM_CONTROLLERS_OFFSET = 11
+DTM_SAVE_STATE_OFFSET = 12
+DTM_FRAME_COUNT_OFFSET = 13
+
+
+def read_dtm_metadata(movie_path):
+    data = movie_path.read_bytes()
+    if len(data) < DTM_HEADER_SIZE:
+        raise ValueError(f"DTM is shorter than the 256-byte header: {movie_path}")
+    if data[:4] != b"DTM\x1a":
+        raise ValueError(f"movie is not a raw DTM file: {movie_path}")
+    game_id = data[DTM_GAME_ID_OFFSET : DTM_GAME_ID_OFFSET + DTM_GAME_ID_SIZE].rstrip(b"\x00").decode("ascii", "replace")
+    if game_id != "GALE01":
+        raise ValueError(f"DTM game id must be GALE01, got {game_id!r}")
+    if data[DTM_WII_OFFSET] != 0:
+        raise ValueError("DTM is a Wii movie; GALE01 smoke requires a GameCube movie")
+    if not data[DTM_CONTROLLERS_OFFSET] & 0x01:
+        raise ValueError("DTM has no GameCube controller 1 enabled")
+    if data[DTM_SAVE_STATE_OFFSET] != 0:
+        raise ValueError("DTM starts from a save state; smoke requires boot playback")
+    frame_count = int.from_bytes(data[DTM_FRAME_COUNT_OFFSET : DTM_FRAME_COUNT_OFFSET + 8], "little")
+    if frame_count <= 0:
+        raise ValueError("DTM has no recorded frames")
+    return {"game_id": game_id, "controllers": data[DTM_CONTROLLERS_OFFSET], "frame_count": frame_count}
 
 def parse_playback_evidence(output):
     text = output or ""
@@ -40,6 +68,14 @@ def _read_dolphin_log(log_file, user_dir=None):
 
 
 def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
+    movie_path=Path(movie).expanduser() if movie else None
+    movie_metadata = None
+    movie_error = None
+    if movie_path:
+        try:
+            movie_metadata = read_dtm_metadata(movie_path)
+        except (OSError, ValueError) as exc:
+            movie_error = str(exc)
     command=[str(dolphin),"-b","-e",str(game)]
     run_user_dir = Path(user_dir).expanduser() if user_dir else None
     if run_user_dir:
@@ -47,16 +83,15 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
         command.extend(["-u", str(run_user_dir)])
     for setting in ("Logger.Options.WriteToFile=True", "Logger.Options.WriteToConsole=True", "Logger.Logs.BOOT=True", "Logger.Logs.CORE=True", "Logger.Logs.OSREPORT=True"):
         command.extend(["-C", setting])
-    movie_path=Path(movie).expanduser() if movie else None
     if movie_path:
-        command.extend(["-m",str(movie_path)])
+        command.extend(["-m", str(movie_path)])
     log_path = Path(log_file).expanduser() if log_file else None
     if log_path:
         log_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
     except OSError as exc:
-        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"log_file":str(log_path) if log_path else None,"log_len":0,"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence("")}
+        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"log_file":str(log_path) if log_path else None,"log_len":0,"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"movie_metadata":movie_metadata,"movie_error":movie_error,"playback":parse_playback_evidence("")}
     timed_out=False
     previous_handlers = {signum: signal.getsignal(signum) for signum in (signal.SIGTERM, signal.SIGINT)}
     for signum in previous_handlers:
@@ -80,7 +115,7 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
     if log_path and evidence_output and discovered_log != str(log_path):
         log_path.write_text(evidence_output)
     started=timed_out or proc.returncode==0
-    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else discovered_log,"log_len":len(log_output),"user_dir":str(run_user_dir) if run_user_dir else None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(evidence_output)}
+    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else discovered_log,"log_len":len(log_output),"user_dir":str(run_user_dir) if run_user_dir else None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"movie_metadata":movie_metadata,"movie_error":movie_error,"playback":parse_playback_evidence(evidence_output)}
 
 
 def custom_fighter_assertion(result, archive=None, symbol=None, data=None,

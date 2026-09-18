@@ -343,8 +343,9 @@ jobs:
           SMOKE_TIMEOUT=30
           if [ -n "$MOVIE" ]; then
             test -f "$MOVIE"
+            python3 -c 'import struct,sys; d=open(sys.argv[1],"rb").read(); assert d[:4]==b"DTM\x1a", "movie is not a raw DTM file"; assert d[4:10].rstrip(b"\x00")==b"GALE01", "DTM game id must be GALE01"; assert d[10]==0, "DTM must be a GameCube movie"; assert d[11]&0x01, "DTM must enable GC controller 1"; assert d[12]==0, "DTM must start from boot"; f=struct.unpack_from("<Q",d,13)[0]; assert f>0, "DTM has no frames"; print("dtm ok game=GALE01 controllers=%#04x frames=%d" % (d[11],f))' "$MOVIE"
             ARGS+=(--movie "$MOVIE")
-            SMOKE_TIMEOUT=$(python3 -c 'import struct,sys;d=open(sys.argv[1],"rb").read();f=struct.unpack_from("<I",d,13)[0];print(max(60,int(f/60)+60))' "$MOVIE")
+            SMOKE_TIMEOUT=$(python3 -c 'import struct,sys;d=open(sys.argv[1],"rb").read();f=struct.unpack_from("<Q",d,13)[0];print(max(60,int(f/60)+60))' "$MOVIE")
           fi
 
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
@@ -359,7 +360,11 @@ jobs:
           # silently empty) and the modified ISO must emit loader,
           # character-select, offline-match, and input-automation markers
           # from actual Dolphin output. No synthesized bytes or markers.
-          python -c "import json; p=json.load(open('$RUNNER_TEMP/smoke.json')); print('bounded tails:'); [print('---', r.get('game'), 'len=', r.get('output_len'), 'log=', r.get('log_file'), 'log_len=', r.get('log_len'), 'movie=', r.get('movie'), 'exists=', r.get('movie_exists'), 'playback=', r.get('playback')) for r in p['results']]; [print(r.get('output_tail','')[-2000:]) for r in p['results']]; assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('character_select_complete') and c['checks'].get('offline_match_started') and c['checks'].get('input_automation_ready'), c; assert all(r.get('log_len', 0) > 0 for r in p['results']), 'empty Dolphin log is a diagnostic failure'; assert all((r.get('playback') or {}).get('movie_playback_entered') for r in p['results'] if r.get('movie')), 'movie playback not entered'; print('PAS-99 gate passed:', c['checks'])"
+          # PAS-154: Dolphin 2606 enters playback via `-b -e <iso> -m <dtm>`
+          # (MainWindow PlayInput path); raw DTM/GALE01 metadata is validated
+          # above and echoed here, so `movie playback not entered` points at
+          # the emulator/boot path rather than a wrapped or mismatched movie.
+          python -c "import json; p=json.load(open('$RUNNER_TEMP/smoke.json')); print('bounded tails:'); [print('---', r.get('game'), 'len=', r.get('output_len'), 'log=', r.get('log_file'), 'log_len=', r.get('log_len'), 'movie=', r.get('movie'), 'exists=', r.get('movie_exists'), 'meta=', r.get('movie_metadata'), 'err=', r.get('movie_error'), 'playback=', r.get('playback')) for r in p['results']]; [print(r.get('output_tail','')[-2000:]) for r in p['results']]; assert all(not r.get('movie_error') for r in p['results'] if r.get('movie')), 'invalid DTM metadata'; assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('character_select_complete') and c['checks'].get('offline_match_started') and c['checks'].get('input_automation_ready'), c; assert all(r.get('log_len', 0) > 0 for r in p['results']), 'empty Dolphin log is a diagnostic failure'; assert all((r.get('playback') or {}).get('movie_playback_entered') for r in p['results'] if r.get('movie')), 'movie playback not entered'; print('PAS-99 gate passed:', c['checks'])"
 
       - name: Upload raw Dolphin logs
         if: always()
