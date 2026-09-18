@@ -307,6 +307,12 @@ jobs:
 
 
           set -euo pipefail
+          # PAS-165 host root cause: the runner tab exports QT_QPA_PLATFORM=xcb
+          # (plus QT_XCB_NO_XI2/QT_WAYLAND_RECONNECT) for xdotool in the record
+          # job. Dolphin 2606 stalls/SIGILLs during movie playback under that Qt
+          # env, while native Wayland playback passes. Neutralise the xcb vars
+          # for this smoke job only; the record job keeps xcb for xdotool.
+          unset QT_QPA_PLATFORM QT_XCB_NO_XI2 QT_WAYLAND_RECONNECT
           cleanup_smoke_children() {
             local children
             children="$(jobs -pr)"

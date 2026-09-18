@@ -88,8 +88,18 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
     log_path = Path(log_file).expanduser() if log_file else None
     if log_path:
         log_path.parent.mkdir(parents=True, exist_ok=True)
+    # PAS-165 host root cause: the runner tab exports QT_QPA_PLATFORM=xcb plus
+    # QT_XCB_NO_XI2/QT_WAYLAND_RECONNECT (needed only for xdotool in the record
+    # job). Under that Qt env, Dolphin 2606 stalls/SIGILLs during movie playback
+    # (boot without a movie still passes). Native Wayland playback passes, so
+    # neutralise the xcb vars for the smoke subprocess only.
+    dolphin_env = os.environ.copy()
+    for var in ("QT_QPA_PLATFORM", "QT_XCB_NO_XI2", "QT_WAYLAND_RECONNECT"):
+        dolphin_env.pop(var, None)
+    if os.environ.get("PAS_DOLPHIN_QT_QPA_PLATFORM"):
+        dolphin_env["QT_QPA_PLATFORM"] = os.environ["PAS_DOLPHIN_QT_QPA_PLATFORM"]
     try:
-        proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
+        proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True,env=dolphin_env)
     except OSError as exc:
         return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"log_file":str(log_path) if log_path else None,"log_len":0,"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"movie_metadata":movie_metadata,"movie_error":movie_error,"playback":parse_playback_evidence("")}
     timed_out=False
