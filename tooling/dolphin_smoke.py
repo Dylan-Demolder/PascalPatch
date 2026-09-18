@@ -12,13 +12,21 @@ def parse_playback_evidence(output):
     advanced_past_boot = any(s != "GM:28 SC:00" for s in scenes)
     return {"movie_playback_entered": bool(MOVIE_HINT_RE.search(text)), "scenes": scenes[-20:], "last_scene": last_scene, "advanced_past_boot": advanced_past_boot, "output_len": len(text)}
 
-def _read_dolphin_log(log_file, user_dir):
+def _read_dolphin_log(log_file, user_dir=None):
     candidates = [Path(log_file)] if log_file else []
-    for path in (user_dir / "dolphin.log", user_dir / "Logs" / "dolphin.log"):
-        if path not in candidates:
-            candidates.append(path)
-    if user_dir.is_dir():
-        candidates.extend(path for path in user_dir.rglob("dolphin.log") if path not in candidates)
+    roots = []
+    if user_dir:
+        roots.append(Path(user_dir))
+    configured_dir = os.environ.get("DOLPHIN_EMU_USER_DIR")
+    if configured_dir:
+        roots.append(Path(configured_dir).expanduser())
+    roots.extend((Path.home() / ".config" / "dolphin-emu", Path.home() / ".dolphin-emu"))
+    for root in roots:
+        for path in (root / "dolphin.log", root / "Logs" / "dolphin.log"):
+            if path not in candidates:
+                candidates.append(path)
+        if root.is_dir():
+            candidates.extend(path for path in root.rglob("dolphin.log") if path not in candidates)
     content = ""
     source = None
     for path in candidates:
@@ -52,12 +60,12 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None):
         try: os.killpg(proc.pid,signal.SIGKILL)
         except (ProcessLookupError,PermissionError): proc.kill()
         output,_=proc.communicate()
-    log_output = output or ""
-    if log_path:
-        log_path.write_text(log_output)
-    evidence_output = log_output
+    log_output, discovered_log = _read_dolphin_log(log_path)
+    evidence_output = log_output or output or ""
+    if log_path and evidence_output and discovered_log != str(log_path):
+        log_path.write_text(evidence_output)
     started=timed_out or proc.returncode==0
-    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else None,"log_len":len(log_output),"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(evidence_output)}
+    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else discovered_log,"log_len":len(log_output),"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(evidence_output)}
 
 
 def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
