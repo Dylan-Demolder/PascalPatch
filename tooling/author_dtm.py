@@ -22,10 +22,10 @@ def press(buttons: int, hold: int = 2, settle: int = 30) -> bytes:
 
 
 def build_frames() -> bytes:
-    frames = bytearray(controller() * 120)
-    frames += press(BUTTON_START, hold=2, settle=90)
-    frames += press(BUTTON_A, hold=2, settle=120)
-    frames += press(BUTTON_A, hold=2, settle=120)
+    frames = bytearray(controller() * 900)
+    frames += press(BUTTON_START, hold=3, settle=120)
+    frames += press(BUTTON_A, hold=3, settle=180)
+    frames += press(BUTTON_A, hold=3, settle=240)
     return bytes(frames)
 
 
