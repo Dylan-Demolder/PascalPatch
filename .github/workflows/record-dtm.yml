@@ -91,11 +91,19 @@ jobs:
           xdotool key ctrl+F11
           sleep 2
           xdotool key ctrl+s
-          sleep 2
+          dialog=""
+          for _ in $(seq 1 30); do
+            dialog="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
+            [ -n "$dialog" ] && break
+            sleep 1
+          done
+          [ -n "$dialog" ] || { echo "Save Recording File As dialog not found" >&2; exit 1; }
+          timeout 5s xdotool windowactivate --sync "$dialog"
           xdotool key ctrl+a
           xdotool type --delay 20 "$dtm"
           xdotool key Return
           sleep 8
+
           if ! test -s "$dtm"; then
             printf '%s\n' 'DTM was not created; bounded Dolphin log tail:'
             tail -n 80 "$log" || true
