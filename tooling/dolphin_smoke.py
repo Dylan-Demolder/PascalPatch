@@ -1,6 +1,16 @@
 from __future__ import annotations
-import argparse, json, os, signal, subprocess
+import argparse, json, os, re, signal, subprocess
 from pathlib import Path
+
+MOVIE_HINT_RE = re.compile(r"movie|\.dtm|\bDTM\b", re.IGNORECASE)
+SCENE_RE = re.compile(r"GM:(\d+)\s+SC:(\d+)")
+
+def parse_playback_evidence(output):
+    text = output or ""
+    scenes = ["GM:%s SC:%s" % (gm, sc) for gm, sc in SCENE_RE.findall(text)]
+    last_scene = scenes[-1] if scenes else None
+    advanced_past_boot = any(s != "GM:28 SC:00" for s in scenes)
+    return {"movie_playback_entered": bool(MOVIE_HINT_RE.search(text)), "scenes": scenes[-20:], "last_scene": last_scene, "advanced_past_boot": advanced_past_boot, "output_len": len(text)}
 
 def run_one(dolphin, game, timeout, movie=None):
     command=[str(dolphin),"-b","-e",str(game)]
@@ -10,7 +20,7 @@ def run_one(dolphin, game, timeout, movie=None):
     try:
         proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
     except OSError as exc:
-        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","tooling_markers":[]}
+        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence("")}
     timed_out=False
     try: output,_=proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -19,10 +29,9 @@ def run_one(dolphin, game, timeout, movie=None):
         except (ProcessLookupError,PermissionError): proc.kill()
         output,_=proc.communicate()
     started=timed_out or proc.returncode==0
-    tooling_markers=[]
-    if started and movie_path and movie_path.is_file():
-        tooling_markers.append("INPUT_AUTOMATION_READY")
-    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":output[-4000:],"tooling_markers":tooling_markers}
+    output=output or ""
+    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":output[-4000:],"output_len":len(output),"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(output)}
+
 
 def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
                               observation=None, character_select=None,
@@ -35,7 +44,7 @@ def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
         path=Path(data).expanduser()
         checks["data_exists"]=path.is_file()
     output=result.get("output_tail","")
-    tooling_markers=result.get("tooling_markers",[])
+
     if symbol:
         checks["symbol_observed"]=symbol in output
     if observation:
@@ -45,7 +54,8 @@ def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
     if match_start:
         checks["offline_match_started"]=match_start in output
     if input_automation_ready:
-        checks["input_automation_ready"]=input_automation_ready in output or input_automation_ready in tooling_markers
+         checks["input_automation_ready"]=input_automation_ready in output
+
     return {"enabled":bool(checks),"checks":checks,"passed":bool(checks) and all(checks.values())}
 
 def main(argv=None):
