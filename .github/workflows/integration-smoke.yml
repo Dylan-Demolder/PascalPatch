@@ -296,14 +296,7 @@ jobs:
           if [ -n "$MOVIE" ]; then
             test -f "$MOVIE"
             ARGS+=(--movie "$MOVIE")
-            SMOKE_TIMEOUT=$(python3 - "$MOVIE" <<'PY'
-import struct
-import sys
-from pathlib import Path
-frames = struct.unpack_from("<I", Path(sys.argv[1]).read_bytes(), 13)[0]
-print(max(60, int(frames / 60) + 60))
-PY
-)
+            SMOKE_TIMEOUT=$(python3 -c 'import struct,sys;d=open(sys.argv[1],"rb").read();f=struct.unpack_from("<I",d,13)[0];print(max(60,int(f/60)+60))' "$MOVIE")
           fi
 
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
