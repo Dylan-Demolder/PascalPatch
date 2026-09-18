@@ -91,23 +91,7 @@ jobs:
           xdotool key ctrl+F11
           sleep 2
           xdotool key ctrl+s
-          sleep 3
-          dialog=""
-          for _ in $(seq 1 30); do
-            dialog="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
-            [ -n "$dialog" ] || dialog="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
-            [ -n "$dialog" ] && break
-            sleep 1
-          done
-
-          if [ -z "$dialog" ]; then
-            echo "Save Recording dialog not found" >&2
-            tail -n 80 "$log" || true
-            ls -la "$RUNNER_TEMP" || true
-            exit 1
-          fi
-          timeout 5s xdotool windowactivate --sync "$dialog"
-          sleep 1
+          sleep 2
           xdotool key ctrl+a
           xdotool type --delay 20 "$dtm"
           xdotool key Return
