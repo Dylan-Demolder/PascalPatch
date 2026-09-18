@@ -76,15 +76,15 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
             movie_metadata = read_dtm_metadata(movie_path)
         except (OSError, ValueError) as exc:
             movie_error = str(exc)
-    command=[str(dolphin),"-b","-e",str(game)]
+    command=[str(dolphin),"--batch", "--exec", str(game)]
+    if movie_path:
+        command.extend(["--movie", str(movie_path)])
     run_user_dir = Path(user_dir).expanduser() if user_dir else None
     if run_user_dir:
         run_user_dir.mkdir(parents=True, exist_ok=True)
         command.extend(["-u", str(run_user_dir)])
     for setting in ("Logger.Options.WriteToFile=True", "Logger.Options.WriteToConsole=True", "Logger.Logs.BOOT=True", "Logger.Logs.CORE=True", "Logger.Logs.OSREPORT=True"):
         command.extend(["-C", setting])
-    if movie_path:
-        command.extend(["-m", str(movie_path)])
     log_path = Path(log_file).expanduser() if log_file else None
     if log_path:
         log_path.parent.mkdir(parents=True, exist_ok=True)
