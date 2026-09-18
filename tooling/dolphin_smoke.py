@@ -39,8 +39,12 @@ def _read_dolphin_log(log_file, user_dir=None):
     return content, str(source) if source else None
 
 
-def run_one(dolphin, game, timeout, movie=None, log_file=None):
+def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
     command=[str(dolphin),"-b","-e",str(game)]
+    run_user_dir = Path(user_dir).expanduser() if user_dir else None
+    if run_user_dir:
+        run_user_dir.mkdir(parents=True, exist_ok=True)
+        command.extend(["-u", str(run_user_dir)])
     for setting in ("Logger.Options.WriteToFile=True", "Logger.Options.WriteToConsole=True", "Logger.Logs.BOOT=True", "Logger.Logs.CORE=True", "Logger.Logs.OSREPORT=True"):
         command.extend(["-C", setting])
     movie_path=Path(movie).expanduser() if movie else None
@@ -60,12 +64,12 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None):
         try: os.killpg(proc.pid,signal.SIGKILL)
         except (ProcessLookupError,PermissionError): proc.kill()
         output,_=proc.communicate()
-    log_output, discovered_log = _read_dolphin_log(log_path)
+    log_output, discovered_log = _read_dolphin_log(log_path, run_user_dir)
     evidence_output = log_output or output or ""
     if log_path and evidence_output and discovered_log != str(log_path):
         log_path.write_text(evidence_output)
     started=timed_out or proc.returncode==0
-    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else discovered_log,"log_len":len(log_output),"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(evidence_output)}
+    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else discovered_log,"log_len":len(log_output),"user_dir":str(run_user_dir) if run_user_dir else None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(evidence_output)}
 
 
 def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
@@ -98,6 +102,7 @@ def main(argv=None):
     p.add_argument("--dolphin",required=True); p.add_argument("--clean",required=True); p.add_argument("--modified",required=True); p.add_argument("--timeout",type=float,default=20.0)
     p.add_argument("--movie",help="Dolphin movie/DTM file to play")
     p.add_argument("--log-dir",help="Directory for one raw Dolphin log per ISO")
+    p.add_argument("--user-dir",help="Explicit Dolphin user directory for isolated settings and logs")
     p.add_argument("--expected-archive",help="Runner-local custom fighter archive expected to exist")
     p.add_argument("--expected-symbol",help="Symbol or load marker expected in Dolphin output")
     p.add_argument("--expected-data",help="Runner-local custom fighter data expected to exist")
@@ -111,7 +116,10 @@ def main(argv=None):
         log_dir.mkdir(parents=True, exist_ok=True)
     clean_log=log_dir / "clean-dolphin.log" if log_dir else None
     modified_log=log_dir / "modified-dolphin.log" if log_dir else None
-    results=[run_one(a.dolphin,a.clean,a.timeout,a.movie,clean_log),run_one(a.dolphin,a.modified,a.timeout,a.movie,modified_log)]
+    user_dir=Path(a.user_dir).expanduser() if a.user_dir else None
+    clean_user_dir=user_dir / "clean" if user_dir else None
+    modified_user_dir=user_dir / "modified" if user_dir else None
+    results=[run_one(a.dolphin,a.clean,a.timeout,a.movie,clean_log,clean_user_dir),run_one(a.dolphin,a.modified,a.timeout,a.movie,modified_log,modified_user_dir)]
     fighter=custom_fighter_assertion(results[1],a.expected_archive,a.expected_symbol,a.expected_data,a.expected_observation,a.expected_character_select,a.expected_match_start,a.expected_input_automation_ready)
     payload={"results":results,"both_started":all(x["started"] for x in results),"evidence_scope":"marker_checks" if fighter["enabled"] else "boot_only","custom_fighter":fighter}
     print(json.dumps(payload,indent=2))

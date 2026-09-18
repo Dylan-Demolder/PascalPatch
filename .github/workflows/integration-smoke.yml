@@ -260,8 +260,10 @@ jobs:
           MOVIE: ${{ inputs.movie }}
           EXPECTED_INPUT_AUTOMATION_READY: ${{ inputs.expected_input_automation_ready }}
           SMOKE_LOG_DIR: ${{ runner.temp }}/pas99-dolphin-logs
+          SMOKE_USER_DIR: ${{ runner.temp }}/pas99-dolphin-user
 
         run: |
+
 
           set -euo pipefail
           MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
@@ -302,6 +304,7 @@ jobs:
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
             --log-dir "$SMOKE_LOG_DIR" \
+            --user-dir "$SMOKE_USER_DIR" \
             --timeout "$SMOKE_TIMEOUT" | tee "$RUNNER_TEMP/smoke.json"
 
 
