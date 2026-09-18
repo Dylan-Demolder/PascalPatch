@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 HEADER_SIZE = 256
-FRAME_SIZE = 8
+FRAME_SIZE = 32
 GAME_ID = b"GALE01"
 BUTTON_A = 0x0100
 BUTTON_START = 0x1000
@@ -17,12 +17,16 @@ def controller(buttons: int = 0, stick=(128, 128), cstick=(128, 128), triggers=(
     return struct.pack("<HBBBBBB", flags, triggers[0], triggers[1], stick[0], stick[1], cstick[0], cstick[1])
 
 
+def frame(port_one: bytes | None = None) -> bytes:
+    return (port_one or controller()) + controller() * 3
+
+
 def press(buttons: int, hold: int = 2, settle: int = 30) -> bytes:
-    return controller(buttons) * hold + controller() * settle
+    return frame(controller(buttons)) * hold + frame() * settle
 
 
 def build_frames() -> bytes:
-    frames = bytearray(controller() * 900)
+    frames = bytearray(frame() * 900)
     frames += press(BUTTON_START, hold=3, settle=120)
     frames += press(BUTTON_A, hold=3, settle=180)
     frames += press(BUTTON_A, hold=3, settle=240)
