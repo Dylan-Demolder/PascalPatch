@@ -1,4 +1,4 @@
-import hashlib, json, shutil, tempfile, unittest
+import hashlib, json, os, shutil, tempfile, unittest
 from unittest.mock import patch
 from types import SimpleNamespace
 from pathlib import Path
@@ -24,10 +24,10 @@ from meleemod.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
 from meleemod.recompose_iso import recompose_iso
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
-from dolphin_smoke import run_one
+from dolphin_smoke import custom_fighter_assertion, run_one
 
-ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
-DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
+ISO=Path(os.environ.get("MELEEMOD_TEST_ISO","/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")).expanduser()
+DOL=Path(os.environ.get("MELEEMOD_TEST_DOL","/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")).expanduser()
 class CoreTests(unittest.TestCase):
  def test_real_iso_revision_and_hash(self):
   if not ISO.exists(): self.skipTest("local user ISO unavailable")
@@ -254,9 +254,18 @@ class CoreTests(unittest.TestCase):
  def test_dolphin_smoke_reports_missing_executable(self):
   result=run_one("/definitely/missing/dolphin", "game.iso", 0.1); self.assertFalse(result["started"]); self.assertIn("error",result)
 
+ def test_custom_fighter_assertion_checks_artifacts_and_observation(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); archive=t/"leesin.dat"; data=t/"leesin.bin"; archive.write_bytes(b"archive"); data.write_bytes(b"data")
+   result={"output_tail":"custom_fighter_symbol entered\nCUSTOM_FIGHTER_VISIBLE\n"}
+   check=custom_fighter_assertion(result,archive,"custom_fighter_symbol",data,"CUSTOM_FIGHTER_VISIBLE")
+   self.assertTrue(check["passed"]); self.assertEqual(set(check["checks"]),{"archive_exists","data_exists","symbol_observed","in_game_observed"})
+   self.assertFalse(custom_fighter_assertion(result,archive,"missing_symbol")["passed"])
+
  def test_static_startup_phase_is_explicit(self):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); bundle=make_bundle([{"id":"p","entrypoint":"plugin_init","source":"plugin.c","init_phase":"startup"}],t); self.assertIn("mm_meleemod_startup_init",bundle); self.assertIn("plugin_init();",bundle)
+
 
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):

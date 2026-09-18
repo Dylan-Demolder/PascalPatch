@@ -18,12 +18,13 @@ def _sha1(path):
 
 def make_bundle(plugins, source_root, runtime_root=None):
  root=Path(source_root).resolve(); runtime=Path(runtime_root).resolve() if runtime_root else None
- seen=set(); chunks=[]; signatures={}; phases={}; shutdowns={}; timing=False; shutdown_after=None; errors=[]
+ seen=set(); chunks=[]; signatures={}; phases={}; shutdowns={}; frame_hooks={}; timing=False; shutdown_after=None; errors=[]
  for i,p in enumerate(plugins):
-  ident=p.get("id",f"plugins[{i}]"); entry=p.get("entrypoint"); shutdown=p.get("shutdown"); signature=p.get("static_signature","none"); phase=p.get("init_phase","first-frame")
+  ident=p.get("id",f"plugins[{i}]"); entry=p.get("entrypoint"); shutdown=p.get("shutdown"); frame_hook=p.get("frame_hook"); signature=p.get("static_signature","none"); phase=p.get("init_phase","first-frame")
   if not isinstance(entry,str) or not IDENT.fullmatch(entry): errors.append(ValidationError(f"plugins[{i}].entrypoint","identifier","static entrypoint must be a C identifier"))
   if shutdown is not None and (not isinstance(shutdown,str) or not IDENT.fullmatch(shutdown)): errors.append(ValidationError(f"plugins[{i}].shutdown","identifier","shutdown must be a C identifier"))
-  if signature not in {"none","context"}: errors.append(ValidationError(f"plugins[{i}].static_signature","signature",str(signature)))
+  if frame_hook is not None and (not isinstance(frame_hook,str) or not IDENT.fullmatch(frame_hook)): errors.append(ValidationError(f"plugins[{i}].frame_hook","identifier","frame hook must be a C identifier"))
+   if signature not in {"none","context"}: errors.append(ValidationError(f"plugins[{i}].static_signature","signature",str(signature)))
   if signature=="context" and not runtime: errors.append(ValidationError(f"plugins[{i}].static_signature","runtime_required","context plugins require runtime_root"))
   if phase not in {"first-frame","startup"}: errors.append(ValidationError(f"plugins[{i}].init_phase","phase",str(phase)))
   source=p.get("source")
@@ -32,7 +33,7 @@ def make_bundle(plugins, source_root, runtime_root=None):
   path=(root/source).resolve()
   if root not in path.parents or not path.is_file(): errors.append(ValidationError(f"plugins[{i}].source","missing","plugin source does not exist below source_root")); continue
   if ident in seen: errors.append(ValidationError(f"plugins[{i}].id","duplicate","duplicate plugin ID"))
-  seen.add(ident); signatures[ident]=signature; phases[ident]=phase; shutdowns[ident]=shutdown; timing = timing or bool(p.get("frame_timing",False))
+  seen.add(ident); signatures[ident]=signature; phases[ident]=phase; shutdowns[ident]=shutdown; frame_hooks[ident]=frame_hook; timing = timing or bool(p.get("frame_timing",False))
   candidate=p.get("shutdown_after_frames")
   if candidate is not None:
    if shutdown_after is not None and shutdown_after != candidate: errors.append(ValidationError(f"plugins[{i}].shutdown_after_frames","conflict","all shutdown probe values must match"))
@@ -68,9 +69,11 @@ def make_bundle(plugins, source_root, runtime_root=None):
  if runtime:
   body.extend(["    {", "        mm_event ready;", "        ready.type=MM_EVENT_RUNTIME_READY; ready.frame=0; ready.payload=0; ready.payload_size=0;", "        mm_dispatch(&ready);", "    }"])
  body.append("}")
+ body.extend(["extern unsigned char gm_GetCurrentSceneIndex(void);", "extern unsigned char gm_GetCurrentGameMode(void);", "static unsigned char mm_meleemod_css_reported=0;", "static unsigned char mm_meleemod_match_reported=0;", "static void mm_meleemod_scene_markers(void) {", "    unsigned char mode=gm_GetCurrentGameMode();", "    unsigned char scene=gm_GetCurrentSceneIndex();", "    if (mode==0x02u && scene==0x00u && !mm_meleemod_css_reported) { mm_meleemod_css_reported=1; OSReport(\"CHARACTER_SELECT_COMPLETE\\n\"); }", "    if (mode==0x02u && (scene==0x02u || scene==0x81u) && !mm_meleemod_match_reported) { mm_meleemod_match_reported=1; OSReport(\"OFFLINE_MATCH_STARTED\\n\"); }", "}"])
+ hooks=[frame_hooks[ident] for ident in frame_hooks if frame_hooks[ident]]
  if runtime:
-  body.extend(["extern HSD_PadStatus HSD_PadCopyStatus[4];", "static uint32_t mm_meleemod_frame_number=0;"] + (["static long long mm_meleemod_timing_start;", "static long long mm_meleemod_timing_end;"] if timing else []) + ["void mm_meleemod_frame(void) {", "    int i;", "    mm_event event;", "    mm_input_sample sample;", "    if (mm_meleemod_shutdown_done) return;"] + (["    mm_meleemod_timing_start=OSGetTime();"] if timing else []) + ["    mm_meleemod_frame_init();", "    event.type=MM_EVENT_FRAME; event.frame=mm_meleemod_frame_number++; event.payload=0; event.payload_size=0;", "    for (i=0; i<4; i++) {", "        sample.frame=event.frame; sample.port=(uint8_t)i;", "        sample.buttons=(uint16_t)HSD_PadCopyStatus[i].button;", "        sample.stick_x=(int16_t)HSD_PadCopyStatus[i].stickX; sample.stick_y=(int16_t)HSD_PadCopyStatus[i].stickY;", "        sample.trigger_l=HSD_PadCopyStatus[i].analogL; sample.trigger_r=HSD_PadCopyStatus[i].analogR;", "        mm_input_history_push(&sample);", "    }", "    mm_bridge_poll(&mm_meleemod_bridge_endpoint,event.frame);", "    mm_bridge_tick(&mm_meleemod_bridge_endpoint,event.frame);", "    mm_dispatch(&event);"] + (["    mm_meleemod_timing_end=OSGetTime();", '    if ((event.frame % 60u)==0u) OSReport("[meleemod] frame-hook ticks %lld\\n",mm_meleemod_timing_end-mm_meleemod_timing_start);'] if timing else []) + ([f"    if (event.frame+1u == {shutdown_after}u) mm_meleemod_static_shutdown();"] if shutdown_after is not None else []) + ["}"])
- else: body.extend(["void mm_meleemod_frame(void) {", "    mm_meleemod_frame_init();", "}"])
+  body.extend(["extern HSD_PadStatus HSD_PadCopyStatus[4];", "static uint32_t mm_meleemod_frame_number=0;"] + (["static long long mm_meleemod_timing_start;", "static long long mm_meleemod_timing_end;"] if timing else []) + ["void mm_meleemod_frame(void) {", "    int i;", "    mm_event event;", "    mm_input_sample sample;", "    if (mm_meleemod_shutdown_done) return;"] + (["    mm_meleemod_timing_start=OSGetTime();"] if timing else []) + ["    mm_meleemod_frame_init();"] + [f"    {hook}();" for hook in hooks] + ["    mm_meleemod_scene_markers();", "    event.type=MM_EVENT_FRAME; event.frame=mm_meleemod_frame_number++; event.payload=0; event.payload_size=0;", "    for (i=0; i<4; i++) {", "        sample.frame=event.frame; sample.port=(uint8_t)i;", "        sample.buttons=(uint16_t)HSD_PadCopyStatus[i].button;", "        sample.stick_x=(int16_t)HSD_PadCopyStatus[i].stickX; sample.stick_y=(int16_t)HSD_PadCopyStatus[i].stickY;", "        sample.trigger_l=HSD_PadCopyStatus[i].analogL; sample.trigger_r=HSD_PadCopyStatus[i].analogR;", "        mm_input_history_push(&sample);", "    }", "    mm_bridge_poll(&mm_meleemod_bridge_endpoint,event.frame);", "    mm_bridge_tick(&mm_meleemod_bridge_endpoint,event.frame);", "    mm_dispatch(&event);"] + (["    mm_meleemod_timing_end=OSGetTime();", '    if ((event.frame % 60u)==0u) OSReport("[meleemod] frame-hook ticks %lld\\n",mm_meleemod_timing_end-mm_meleemod_timing_start);'] if timing else []) + ([f"    if (event.frame+1u == {shutdown_after}u) mm_meleemod_static_shutdown();"] if shutdown_after is not None else []) + ["}"])
+ else: body.extend(["void mm_meleemod_frame(void) {", "    mm_meleemod_frame_init();", "    mm_meleemod_scene_markers();", "}"])
  return "\n".join(body)+"\n"
 
 def apply_overlay(worktree,plugins,source_root,runtime_root=None):
