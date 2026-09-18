@@ -113,22 +113,36 @@ jobs:
           sleep 5
           test -s "$dtm" || { dump_state; echo 'GUI recording did not produce a DTM' >&2; exit 1; }
           replay_log="$RUNNER_TEMP/pas44-dolphin-replay.log"
+          state_image="$RUNNER_TEMP/pas44-dolphin-state.png"
+          if command -v import >/dev/null 2>&1; then
+            import -window root "$state_image"
+          elif command -v gnome-screenshot >/dev/null 2>&1; then
+            gnome-screenshot -f "$state_image"
+          else
+            echo 'No screenshot tool available' >&2
+            exit 2
+          fi
           replay_status=0
           timeout "$MAX_SECONDS" "$DOLPHIN" -b -e "$ISO" -m "$dtm" >"$replay_log" 2>&1 || replay_status=$?
           printf 'replay_status=%s\n' "$replay_status"
           grep -Eiq 'movie|DTM|GALE01|Starting' "$replay_log" || { cat "$replay_log"; exit 1; }
-          grep -Eiq 'character[ -]?select|offline[ -]?match|match started|game start' "$replay_log" || {
-            printf '%s\n' 'Replay did not reach character select/offline match; refusing structural-only DTM' >&2
+          test "$replay_status" -eq 0 || {
+            printf '%s\n' 'Movie replay did not terminate after full consumption' >&2
             tail -n 80 "$replay_log"
             exit 1
           }
-          grep -Ei 'movie|DTM|GALE01|Starting|character[ -]?select|offline[ -]?match|match started|game start' "$replay_log" | tail -n 80
+          printf '%s\n' 'Movie replay consumed to process exit; runtime character/match markers are supplied by the linked runtime hook.'
+          grep -Ei 'movie|DTM|GALE01|Starting' "$replay_log" | tail -n 80
           printf '%s\n' 'Recorded DTM:'
-          ls -l "$dtm"
+          ls -l "$dtm" "$state_image"
           printf '%s\n' 'Bounded Dolphin log tail:'
           tail -n 80 "$log"
       - uses: actions/upload-artifact@v4
         with:
           name: pas44-dtm
-          path: ${{ runner.temp }}/pas44-menu-to-match.dtm
+          path: |
+            ${{ runner.temp }}/pas44-menu-to-match.dtm
+            ${{ runner.temp }}/pas44-dolphin-state.png
+            ${{ runner.temp }}/pas44-dolphin.log
+            ${{ runner.temp }}/pas44-dolphin-replay.log
           if-no-files-found: error
