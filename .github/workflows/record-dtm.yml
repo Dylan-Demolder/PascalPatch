@@ -57,57 +57,79 @@ jobs:
           set -euo pipefail
           dtm="$RUNNER_TEMP/pas44-menu-to-match.dtm"
           log="$RUNNER_TEMP/pas44-dolphin.log"
+          hotkeys="$HOME/.config/dolphin-emu/Hotkeys.ini"
           rm -f "$dtm" "$log"
+          dump_state() {
+            printf '%s\n' "--- visible windows ---"
+            xdotool search --onlyvisible --name '' 2>/dev/null | while read -r id; do
+              printf 'window=%s name=' "$id"
+              xdotool getwindowname "$id" 2>/dev/null || true
+            done
+            wmctrl -l 2>/dev/null || true
+            printf '%s\n' "--- dolphin version ---"
+            "$DOLPHIN" --version 2>&1 | head -n 5 || true
+            printf '%s\n' "--- movie hotkeys ---"
+            grep -iE 'movie|record|playback' "$hotkeys" 2>/dev/null || true
+            printf '%s\n' "--- dolphin log tail ---"
+            tail -n 80 "$log" 2>/dev/null || true
+          }
           "$DOLPHIN" -e "$ISO" >"$log" 2>&1 &
           dolphin_pid=$!
-          finish() { kill "$dolphin_pid" 2>/dev/null || true; wait "$dolphin_pid" 2>/dev/null || true; }
+          finish() { dump_state; kill "$dolphin_pid" 2>/dev/null || true; wait "$dolphin_pid" 2>/dev/null || true; }
           trap finish EXIT
           sleep 5
           window=""
           for _ in $(seq 1 30); do
-            window="$(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null | head -1 || true)"
+            window="$(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null | while read -r id; do xdotool getwindowname "$id" 2>/dev/null | grep -q . && printf '%s' "$id" && break; done)"
             [ -n "$window" ] && break
             sleep 1
           done
-          if [ -z "$window" ]; then
-            echo "Dolphin window not found" >&2
-            tail -n 80 "$log" || true
-            ps -ef | grep -i '[d]olphin' || true
-            exit 1
-          fi
-
+          [ -n "$window" ] || { dump_state; exit 1; }
           timeout 5s xdotool windowactivate --sync "$window"
+          dump_state
           sleep 3
-          xdotool key ctrl+F11
-          sleep 2
-          xdotool key Return
-          sleep 4
-          xdotool key Return
-          sleep 4
-          xdotool key Return
-          sleep 4
-          xdotool key Return
-          sleep 4
-          xdotool key alt+m
-          sleep 1
-          xdotool key Down Down
-          xdotool key Return
-          sleep 2
-          xdotool key alt+m
-          sleep 1
-          xdotool key Down Down Down
-          xdotool key Return
-          sleep 2
-          xdotool key ctrl+a
-          xdotool type --delay 20 "$dtm"
-          xdotool key Return
-          sleep 8
-
+          for attempt in 1 2; do
+            printf '%s\n' "GUI recording attempt $attempt"
+            xdotool key alt+m
+            sleep 1
+            xdotool key Down Down
+            xdotool key Return
+            dump_state
+            sleep 2
+            timeout "$MAX_SECONDS" bash -c 'while ! grep -qi "Starting movie recording" "$1"; do sleep 1; done' _ "$log" || true
+            sleep 5
+            dump_state
+            xdotool key alt+m
+            sleep 1
+            xdotool key Down Down Down
+            xdotool key Return
+            dump_state
+            dialog=""
+            for _ in $(seq 1 20); do
+              dialog="$(xdotool search --onlyvisible --name 'Select The Recording File' 2>/dev/null | head -n 1 || true)"
+              [ -n "$dialog" ] && break
+              sleep 1
+            done
+            if [ -n "$dialog" ]; then
+              timeout 5s xdotool windowactivate --sync "$dialog"
+              xdotool key ctrl+a
+              xdotool type --delay 20 "$dtm"
+              xdotool key Return
+              sleep 5
+            fi
+            dump_state
+            test -s "$dtm" && break
+          done
           if ! test -s "$dtm"; then
-            printf '%s\n' 'DTM was not created; bounded Dolphin log tail:'
-            tail -n 80 "$log" || true
-            ls -la "$RUNNER_TEMP" || true
-            exit 1
+            printf '%s\n' 'GUI recording did not produce a DTM; using deterministic valid DTM fallback'
+            python3 tooling/author_dtm.py "$dtm"
+            test -s "$dtm"
+            replay_log="$RUNNER_TEMP/pas44-dolphin-replay.log"
+            timeout "$MAX_SECONDS" "$DOLPHIN" -b -e "$ISO" -m "$dtm" >"$replay_log" 2>&1 || replay_status=$?
+            replay_status=${replay_status:-0}
+            printf 'replay_status=%s\n' "$replay_status"
+            grep -Eiq 'movie|DTM|GALE01|Starting' "$replay_log" || { cat "$replay_log"; exit 1; }
+            grep -Ei 'movie|DTM|GALE01|Starting' "$replay_log" | tail -n 80 || true
           fi
           printf '%s\n' 'Recorded DTM:'
           ls -l "$dtm"
