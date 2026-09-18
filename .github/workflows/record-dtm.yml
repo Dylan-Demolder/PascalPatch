@@ -83,11 +83,6 @@ jobs:
           sleep 1
           xdotool key Down Down
           xdotool key Return
-          sleep 2
-          xdotool key alt+m
-          sleep 1
-          xdotool key Down Down Down
-          xdotool key Return
           sleep 3
           xdotool key ctrl+a
           xdotool type --delay 20 "$dtm"
