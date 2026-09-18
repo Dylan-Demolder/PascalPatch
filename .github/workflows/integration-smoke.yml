@@ -95,10 +95,27 @@ jobs:
           [ -f "$ISO" ] || { echo "Melee ISO not found" >&2; exit 2; }
           DTM="$RUNNER_TEMP/pas44-menu-to-match.dtm"
           LOG="$RUNNER_TEMP/pas44-dolphin.log"
-          rm -f "$DTM" "$LOG"
+          STATE="$RUNNER_TEMP/pas44-dolphin-state.txt"
+          REPLAY_LOG="$RUNNER_TEMP/pas44-dolphin-replay.log"
+          HOTKEYS="$HOME/.config/dolphin-emu/Hotkeys.ini"
+          rm -f "$DTM" "$LOG" "$STATE" "$REPLAY_LOG"
+          dump_state() {
+            printf '%s\n' "--- visible windows ---"
+            xdotool search --onlyvisible --name '' 2>/dev/null | while read -r id; do
+              printf 'window=%s name=' "$id"
+              xdotool getwindowname "$id" 2>/dev/null || true
+            done
+            wmctrl -l 2>/dev/null || true
+            printf '%s\n' "--- dolphin version ---"
+            "$DOLPHIN" --version 2>&1 | head -n 5 || true
+            printf '%s\n' "--- movie hotkeys ---"
+            grep -iE 'movie|record|playback' "$HOTKEYS" 2>/dev/null || true
+            printf '%s\n' "--- dolphin log tail ---"
+            tail -n 80 "$LOG" 2>/dev/null || true
+          }
           "$DOLPHIN" -e "$ISO" >"$LOG" 2>&1 &
           PID=$!
-          trap 'kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true' EXIT
+          trap 'dump_state; kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true' EXIT
           sleep 5
           WINDOW=""
           for _ in $(seq 1 30); do
@@ -109,14 +126,17 @@ jobs:
           done
           if [ -z "$WINDOW" ]; then
             ps -ef | grep -i '[d]olphin' || true
-            tail -n 80 "$LOG" || true
+            dump_state
             echo "Dolphin window not found" >&2
             exit 1
           fi
           xdotool windowactivate --sync "$WINDOW"
           sleep 3
+          dump_state
+          printf '%s\n' 'Recording real menu input movie through Dolphin'
+          rm -f "$DTM"
           xdotool key ctrl+F11
-          sleep 2
+          sleep 12
           xdotool key Return
           sleep 4
           xdotool key Return
@@ -124,27 +144,61 @@ jobs:
           xdotool key Return
           sleep 4
           xdotool key Return
-          sleep 4
+          sleep 8
           xdotool key ctrl+F11
           sleep 2
           xdotool key ctrl+s
           sleep 2
+          DIALOG=""
+          for _ in $(seq 1 30); do
+            DIALOG="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
+            [ -n "$DIALOG" ] || DIALOG="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
+            [ -n "$DIALOG" ] && break
+            sleep 1
+          done
+          [ -n "$DIALOG" ] || { dump_state; echo 'Save Recording File As dialog not found' >&2; exit 1; }
+          timeout 5s xdotool windowactivate --sync "$DIALOG"
           xdotool key ctrl+a
           xdotool type --delay 20 "$DTM"
           xdotool key Return
-          sleep 3
-          test -s "$DTM"
+          sleep 8
+          test -s "$DTM" || { dump_state; echo 'Dolphin recording did not produce a DTM' >&2; exit 1; }
+          dump_state >"$STATE"
+          test -s "$STATE"
+          FRAME_COUNT=$(python3 -c 'import struct,sys; print(struct.unpack_from("<Q", open(sys.argv[1], "rb").read(29), 13)[0])' "$DTM")
+          REPLAY_BUDGET=$(( (FRAME_COUNT + 59) / 60 + 10 ))
+          REPLAY_STATUS=0
+          timeout "$REPLAY_BUDGET" "$DOLPHIN" -b -e "$ISO" -m "$DTM" >"$REPLAY_LOG" 2>&1 || REPLAY_STATUS=$?
+          printf 'replay_status=%s frame_count=%s replay_budget_seconds=%s\n' "$REPLAY_STATUS" "$FRAME_COUNT" "$REPLAY_BUDGET"
+          grep -Eiq 'movie|DTM|GALE01|Starting' "$REPLAY_LOG" || { cat "$REPLAY_LOG"; exit 1; }
+          test "$REPLAY_STATUS" -eq 0 -o "$REPLAY_STATUS" -eq 124 || {
+            printf '%s\n' 'Dolphin replay exited before the bounded movie budget' >&2
+            tail -n 80 "$REPLAY_LOG"
+            exit 1
+          }
+          grep -Ei 'movie|DTM|GALE01|Starting' "$REPLAY_LOG" | tail -n 80
+          ls -l "$DTM" "$STATE"
           tail -n 80 "$LOG"
       - uses: actions/upload-artifact@v4
         with:
           name: pas44-dtm
-          path: ${{ runner.temp }}/pas44-menu-to-match.dtm
+          path: |
+            ${{ runner.temp }}/pas44-menu-to-match.dtm
+            ${{ runner.temp }}/pas44-dolphin-state.txt
+            ${{ runner.temp }}/pas44-dolphin.log
+            ${{ runner.temp }}/pas44-dolphin-replay.log
           if-no-files-found: error
 
   smoke:
     runs-on: [self-hosted, meleemod-smoke]
     steps:
       - uses: actions/checkout@v4
+      - name: Download recorded movie
+        if: inputs.record_movie == true && inputs.movie == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: pas44-dtm
+          path: ${{ runner.temp }}/pas44-dtm
       - name: Resolve emulator and game data
         id: resolve
         shell: bash
@@ -211,8 +265,15 @@ jobs:
           MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
 
 
-          MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
-          if [ -z "$MODIFIED_ISO_IN" ] && [ -z "$BUILD_MODIFIED" ]; then
+           MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
+           if [ -z "$MOVIE" ] && [ "${{ inputs.record_movie }}" = "true" ]; then
+             MOVIE="$RUNNER_TEMP/pas44-dtm/pas44-menu-to-match.dtm"
+           fi
+           if [ -z "$MOVIE" ]; then
+             MOVIE="$GITHUB_WORKSPACE/tooling/fixtures/tasvideos-2505M-numerics.dtm"
+           fi
+           if [ -z "$MODIFIED_ISO_IN" ] && [ -z "$BUILD_MODIFIED" ]; then
+
             echo "PAS-24 build produced no modified ISO; refusing clean-vs-clean smoke" >&2
             exit 1
           fi
@@ -237,8 +298,10 @@ jobs:
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
             --timeout 30 | tee /tmp/smoke.json
-          # PAS-31 gate: the modified ISO must boot and emit loader,
-          # character-select, and offline-match markers from the linked DOL.
-          python -c "import json; p=json.load(open('/tmp/smoke.json')); assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('input_automation_ready'), c; print('PAS-24 gate passed:', c['checks'])"
+          # PAS-99 gate: movie playback must be entered (bounded tail is never
+          # silently empty) and the modified ISO must emit loader,
+          # character-select, offline-match, and input-automation markers
+          # from actual Dolphin output. No synthesized bytes or markers.
+          python -c "import json; p=json.load(open('/tmp/smoke.json')); print('bounded tails:'); [print('---', r.get('game'), 'len=', r.get('output_len'), 'movie=', r.get('movie'), 'exists=', r.get('movie_exists'), 'playback=', r.get('playback')) for r in p['results']]; [print(r.get('output_tail','')[-2000:]) for r in p['results']]; assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('character_select_complete') and c['checks'].get('offline_match_started') and c['checks'].get('input_automation_ready'), c; assert all(r.get('output_len', 0) > 0 for r in p['results']), 'empty Dolphin tail is a diagnostic failure'; assert all((r.get('playback') or {}).get('movie_playback_entered') for r in p['results'] if r.get('movie')), 'movie playback not entered'; print('PAS-99 gate passed:', c['checks'])"
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
