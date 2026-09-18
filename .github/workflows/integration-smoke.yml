@@ -333,10 +333,14 @@ jobs:
              rm -rf "$user_dir"
              mkdir -p "$user_dir"
              set +e
+             # Dolphin ignores/handles SIGTERM by popping a confirm-close
+             # dialog instead of exiting, and `timeout` never escalates past
+             # its first signal unless told to, so a bare `timeout 30 ...`
+             # hangs forever on that dialog. Send SIGKILL directly.
              if [ -n "$backend" ]; then
-               timeout 30 "$DOLPHIN" --batch --exec "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
+               timeout -s KILL 30 "$DOLPHIN" --batch --exec "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
              else
-               timeout 30 "$DOLPHIN" --batch --exec "$iso" -u "$user_dir" >"$log" 2>&1
+               timeout -s KILL 30 "$DOLPHIN" --batch --exec "$iso" -u "$user_dir" >"$log" 2>&1
              fi
              status=$?
              set -e
