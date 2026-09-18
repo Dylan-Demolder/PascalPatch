@@ -24,7 +24,7 @@ def make_bundle(plugins, source_root, runtime_root=None):
   if not isinstance(entry,str) or not IDENT.fullmatch(entry): errors.append(ValidationError(f"plugins[{i}].entrypoint","identifier","static entrypoint must be a C identifier"))
   if shutdown is not None and (not isinstance(shutdown,str) or not IDENT.fullmatch(shutdown)): errors.append(ValidationError(f"plugins[{i}].shutdown","identifier","shutdown must be a C identifier"))
   if frame_hook is not None and (not isinstance(frame_hook,str) or not IDENT.fullmatch(frame_hook)): errors.append(ValidationError(f"plugins[{i}].frame_hook","identifier","frame hook must be a C identifier"))
-   if signature not in {"none","context"}: errors.append(ValidationError(f"plugins[{i}].static_signature","signature",str(signature)))
+  if signature not in {"none","context"}: errors.append(ValidationError(f"plugins[{i}].static_signature","signature",str(signature)))
   if signature=="context" and not runtime: errors.append(ValidationError(f"plugins[{i}].static_signature","runtime_required","context plugins require runtime_root"))
   if phase not in {"first-frame","startup"}: errors.append(ValidationError(f"plugins[{i}].init_phase","phase",str(phase)))
   source=p.get("source")
