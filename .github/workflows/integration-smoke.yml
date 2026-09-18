@@ -266,6 +266,15 @@ jobs:
 
 
           set -euo pipefail
+          cleanup_smoke_children() {
+            local children
+            children="$(jobs -pr)"
+            if [ -n "$children" ]; then
+              kill -KILL $children 2>/dev/null || true
+            fi
+          }
+          trap cleanup_smoke_children EXIT
+          trap 'cleanup_smoke_children; exit 143' TERM INT
           MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
 
 

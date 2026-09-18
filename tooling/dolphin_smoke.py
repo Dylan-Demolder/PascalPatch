@@ -58,12 +58,23 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
     except OSError as exc:
         return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"log_file":str(log_path) if log_path else None,"log_len":0,"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence("")}
     timed_out=False
-    try: output,_=proc.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        timed_out=True
-        try: os.killpg(proc.pid,signal.SIGKILL)
-        except (ProcessLookupError,PermissionError): proc.kill()
-        output,_=proc.communicate()
+    previous_handlers = {signum: signal.getsignal(signum) for signum in (signal.SIGTERM, signal.SIGINT)}
+    for signum in previous_handlers:
+        signal.signal(signum, lambda _signum, _frame: (_ for _ in ()).throw(KeyboardInterrupt()))
+    try:
+        try: output,_=proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            timed_out=True
+            try: os.killpg(proc.pid,signal.SIGKILL)
+            except (ProcessLookupError,PermissionError): proc.kill()
+            output,_=proc.communicate()
+    finally:
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
+        if proc.poll() is None:
+            try: os.killpg(proc.pid,signal.SIGKILL)
+            except (ProcessLookupError,PermissionError): proc.kill()
+            proc.wait()
     log_output, discovered_log = _read_dolphin_log(log_path, run_user_dir)
     evidence_output = log_output or output or ""
     if log_path and evidence_output and discovered_log != str(log_path):
