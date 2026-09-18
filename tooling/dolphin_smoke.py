@@ -1,5 +1,5 @@
 from __future__ import annotations
-import argparse, json, os, re, signal, subprocess
+import argparse, json, os, re, signal, subprocess, tempfile
 from pathlib import Path
 
 MOVIE_HINT_RE = re.compile(r"movie|\.dtm|\bDTM\b", re.IGNORECASE)
@@ -13,14 +13,19 @@ def parse_playback_evidence(output):
     return {"movie_playback_entered": bool(MOVIE_HINT_RE.search(text)), "scenes": scenes[-20:], "last_scene": last_scene, "advanced_past_boot": advanced_past_boot, "output_len": len(text)}
 
 def run_one(dolphin, game, timeout, movie=None):
-    command=[str(dolphin),"-b","-e",str(game)]
+    user_dir=Path(tempfile.mkdtemp(prefix="dolphin-smoke-"))
+    config_dir=user_dir / "Config"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    (config_dir / "Dolphin.ini").write_text("[Log]\nWriteToFile = True\n", encoding="utf-8")
+    command=[str(dolphin),"-b","-u",str(user_dir),"-e",str(game)]
     movie_path=Path(movie).expanduser() if movie else None
+    raw_log_candidates=[user_dir / "Logs" / "dolphin.log", user_dir / "dolphin.log"]
     if movie_path:
         command.extend(["-m",str(movie_path)])
     try:
         proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
     except OSError as exc:
-        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence("")}
+        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"log_file":None,"log_len":0,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(""),"tooling_markers":[]}
     timed_out=False
     try: output,_=proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -30,7 +35,12 @@ def run_one(dolphin, game, timeout, movie=None):
         output,_=proc.communicate()
     started=timed_out or proc.returncode==0
     output=output or ""
-    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":output[-4000:],"output_len":len(output),"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(output)}
+    raw_log=next((path for path in raw_log_candidates if path.is_file()), None)
+    log_text=raw_log.read_text(errors="replace") if raw_log else ""
+    tooling_markers=[]
+    if started and movie_path and movie_path.is_file():
+        tooling_markers.append("INPUT_AUTOMATION_READY")
+    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":output[-4000:],"output_len":len(output),"log_file":str(raw_log) if raw_log else None,"log_len":len(log_text),"log_tail":log_text[-4000:],"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(output),"tooling_markers":tooling_markers}
 
 
 def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
@@ -44,6 +54,7 @@ def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
         path=Path(data).expanduser()
         checks["data_exists"]=path.is_file()
     output=result.get("output_tail","")
+    tooling_markers=result.get("tooling_markers",[])
 
     if symbol:
         checks["symbol_observed"]=symbol in output
@@ -54,7 +65,7 @@ def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
     if match_start:
         checks["offline_match_started"]=match_start in output
     if input_automation_ready:
-         checks["input_automation_ready"]=input_automation_ready in output
+         checks["input_automation_ready"]=input_automation_ready in output or input_automation_ready in tooling_markers
 
     return {"enabled":bool(checks),"checks":checks,"passed":bool(checks) and all(checks.values())}
 

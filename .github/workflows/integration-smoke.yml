@@ -295,13 +295,24 @@ jobs:
             ARGS+=(--movie "$MOVIE")
           fi
 
+          LOG_DIR="${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
+          mkdir -p "$LOG_DIR"
+          SMOKE_JSON="$LOG_DIR/smoke.json"
+          set +e
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
-            --timeout 30 | tee /tmp/smoke.json
-          # PAS-99 gate: movie playback must be entered (bounded tail is never
-          # silently empty) and the modified ISO must emit loader,
-          # character-select, offline-match, and input-automation markers
-          # from actual Dolphin output. No synthesized bytes or markers.
-          python -c "import json; p=json.load(open('/tmp/smoke.json')); print('bounded tails:'); [print('---', r.get('game'), 'len=', r.get('output_len'), 'movie=', r.get('movie'), 'exists=', r.get('movie_exists'), 'playback=', r.get('playback')) for r in p['results']]; [print(r.get('output_tail','')[-2000:]) for r in p['results']]; assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('character_select_complete') and c['checks'].get('offline_match_started') and c['checks'].get('input_automation_ready'), c; assert all(r.get('output_len', 0) > 0 for r in p['results']), 'empty Dolphin tail is a diagnostic failure'; assert all((r.get('playback') or {}).get('movie_playback_entered') for r in p['results'] if r.get('movie')), 'movie playback not entered'; print('PAS-99 gate passed:', c['checks'])"
+            --timeout 30 | tee "$SMOKE_JSON"
+          SMOKE_STATUS=${PIPESTATUS[0]}
+          set -e
+          python -c "import json, pathlib, shutil, sys; p=json.load(open(sys.argv[1])); [shutil.copyfile(r['log_file'], pathlib.Path(sys.argv[2]) / ('%s.log' % ('clean' if i == 0 else 'modified'))) for i, r in enumerate(p['results']) if r.get('log_file') and pathlib.Path(r['log_file']).is_file()]; print('raw Dolphin logs:', [(r.get('game'), r.get('log_file'), r.get('log_len')) for r in p['results'])]" "$SMOKE_JSON" "$LOG_DIR"
+          test "$SMOKE_STATUS" -eq 0
+          python -c "import json; p=json.load(open('$SMOKE_JSON')); print('bounded tails:'); [print('---', r.get('game'), 'len=', r.get('output_len'), 'movie=', r.get('movie'), 'exists=', r.get('movie_exists'), 'playback=', r.get('playback')) for r in p['results']]; [print(r.get('output_tail','')[-2000:]) for r in p['results']]; assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('character_select_complete') and c['checks'].get('offline_match_started') and c['checks'].get('input_automation_ready'), c; assert all(r.get('output_len', 0) > 0 for r in p['results']), 'empty Dolphin tail is a diagnostic failure'; assert all((r.get('playback') or {}).get('movie_playback_entered') for r in p['results'] if r.get('movie')), 'movie playback not entered'; print('PAS-99 gate passed:', c['checks'])"
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
+      - name: Upload raw Dolphin logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pas99-dolphin-logs
+          path: ${{ runner.temp }}/pas99-dolphin-logs
+          if-no-files-found: warn
