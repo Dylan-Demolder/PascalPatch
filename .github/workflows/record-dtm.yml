@@ -88,38 +88,16 @@ jobs:
           sleep 4
           xdotool key Return
           sleep 4
-          xdotool key ctrl+F11
+          xdotool key alt+m
+          sleep 1
+          xdotool key Down Down
+          xdotool key Return
           sleep 2
-          xdotool key ctrl+s
+          xdotool key alt+m
+          sleep 1
+          xdotool key Down Down Down
+          xdotool key Return
           sleep 2
-          dialog=""
-          for _ in $(seq 1 30); do
-            dialog="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
-            [ -n "$dialog" ] || dialog="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
-            [ -n "$dialog" ] && break
-            sleep 1
-          done
-          if [ -z "$dialog" ]; then
-            xdotool key alt+m
-            sleep 1
-            xdotool key s
-            for _ in $(seq 1 15); do
-              dialog="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
-              [ -n "$dialog" ] || dialog="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
-              [ -n "$dialog" ] && break
-              sleep 1
-            done
-          fi
-          if [ -z "$dialog" ]; then
-            printf '%s\n' 'Visible windows while locating save dialog:'
-            xdotool search --onlyvisible --name '.*' 2>/dev/null | while read -r candidate; do
-              printf 'window=%s name=' "$candidate"
-              xdotool getwindowname "$candidate" 2>/dev/null || true
-            done
-            echo "Save Recording File As dialog not found" >&2
-            exit 1
-          fi
-          timeout 5s xdotool windowactivate --sync "$dialog"
           xdotool key ctrl+a
           xdotool type --delay 20 "$dtm"
           xdotool key Return
