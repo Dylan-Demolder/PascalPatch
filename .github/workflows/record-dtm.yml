@@ -88,9 +88,12 @@ jobs:
           timeout 5s xdotool windowactivate --sync "$window"
           dump_state
           sleep 3
-          printf '%s\n' 'Starting GUI movie recording'
-          xdotool key ctrl+F11
-          sleep 2
+          printf '%s\n' 'Starting GUI movie recording from Dolphin movie menu'
+          xdotool key alt+m
+          sleep 1
+          xdotool key Down Down
+          xdotool key Return
+          sleep 5
           xdotool key Return
           sleep 4
           xdotool key Return
@@ -99,10 +102,11 @@ jobs:
           sleep 4
           xdotool key Return
           sleep 4
-          xdotool key ctrl+F11
-          sleep 2
-          xdotool key ctrl+s
-          sleep 2
+          xdotool key alt+m
+          sleep 1
+          xdotool key Down Down Down
+          xdotool key Return
+          sleep 3
           xdotool key ctrl+a
           xdotool type --delay 20 "$dtm"
           xdotool key Return
