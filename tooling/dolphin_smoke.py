@@ -1,5 +1,5 @@
 from __future__ import annotations
-import argparse, json, os, re, signal, subprocess, tempfile
+import argparse, json, os, re, signal, subprocess
 from pathlib import Path
 
 MOVIE_HINT_RE = re.compile(r"movie|\.dtm|\bDTM\b", re.IGNORECASE)
@@ -41,14 +41,10 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None):
     log_path = Path(log_file).expanduser() if log_file else None
     if log_path:
         log_path.parent.mkdir(parents=True, exist_ok=True)
-    user_dir = Path(tempfile.mkdtemp(prefix="dolphin-user-", dir=str(log_path.parent) if log_path else None))
-    command.extend(["-u", str(user_dir)])
-    environment = os.environ.copy()
-    environment["DOLPHIN_EMU_USER_DIR"] = str(user_dir)
     try:
-        proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True,env=environment)
+        proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True)
     except OSError as exc:
-        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"log_file":str(log_path) if log_path else None,"log_len":0,"user_dir":str(user_dir),"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence("")}
+        return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"log_file":str(log_path) if log_path else None,"log_len":0,"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence("")}
     timed_out=False
     try: output,_=proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -56,12 +52,12 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None):
         try: os.killpg(proc.pid,signal.SIGKILL)
         except (ProcessLookupError,PermissionError): proc.kill()
         output,_=proc.communicate()
-    log_output, discovered_log = _read_dolphin_log(log_path, user_dir)
-    if log_path and log_output and discovered_log != str(log_path):
+    log_output = output or ""
+    if log_path:
         log_path.write_text(log_output)
-    evidence_output = log_output or output or ""
+    evidence_output = log_output
     started=timed_out or proc.returncode==0
-    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else discovered_log,"log_len":len(log_output),"user_dir":str(user_dir),"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(evidence_output)}
+    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else None,"log_len":len(log_output),"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"playback":parse_playback_evidence(evidence_output)}
 
 
 def custom_fighter_assertion(result, archive=None, symbol=None, data=None,

@@ -292,15 +292,25 @@ jobs:
           ARGS+=(--expected-symbol "$EXPECTED_SYMBOL" --expected-observation "$EXPECTED_OBSERVATION")
           ARGS+=(--expected-character-select "$EXPECTED_CHARACTER_SELECT" --expected-match-start "$EXPECTED_MATCH_START")
           ARGS+=(--expected-input-automation-ready "$EXPECTED_INPUT_AUTOMATION_READY")
+          SMOKE_TIMEOUT=30
           if [ -n "$MOVIE" ]; then
             test -f "$MOVIE"
             ARGS+=(--movie "$MOVIE")
+            SMOKE_TIMEOUT=$(python3 - "$MOVIE" <<'PY'
+import struct
+import sys
+from pathlib import Path
+frames = struct.unpack_from("<I", Path(sys.argv[1]).read_bytes(), 13)[0]
+print(max(60, int(frames / 60) + 60))
+PY
+)
           fi
 
           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
             --log-dir "$SMOKE_LOG_DIR" \
-            --timeout 30 | tee "$RUNNER_TEMP/smoke.json"
+            --timeout "$SMOKE_TIMEOUT" | tee "$RUNNER_TEMP/smoke.json"
+
 
 
           # PAS-99 gate: movie playback must be entered (bounded tail is never
