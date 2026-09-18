@@ -32,7 +32,9 @@ def _read_dolphin_log(log_file, user_dir):
 
 
 def run_one(dolphin, game, timeout, movie=None, log_file=None):
-    command=[str(dolphin),"-b","-e",str(game),"-C","Logger.Options.WriteToFile=True"]
+    command=[str(dolphin),"-b","-e",str(game)]
+    for setting in ("Logger.Options.WriteToFile=True", "Logger.Options.WriteToConsole=True", "Logger.Logs.BOOT=True", "Logger.Logs.CORE=True", "Logger.Logs.OSREPORT=True"):
+        command.extend(["-C", setting])
     movie_path=Path(movie).expanduser() if movie else None
     if movie_path:
         command.extend(["-m",str(movie_path)])
