@@ -273,8 +273,12 @@ jobs:
           printf '%s\n' "${DISPLAY:-<unset>}"
           echo "--- display geometry ---"
           xdotool getdisplaygeometry 2>&1 || xdpyinfo 2>&1 || true
-          echo "--- resolved ISO files ---"
-          ls -l "$CLEAN_ISO" "$MODIFIED_ISO" 2>&1
+           echo "--- resolved ISO files ---"
+           ls -l "$CLEAN_ISO" "$MODIFIED_ISO" 2>&1
+           echo "--- Dolphin help/backend list ---"
+           mkdir -p "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
+           "$DOLPHIN" --help 2>&1 | tee "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs/dolphin-help.log" || true
+
 
       - name: Run bounded clean/modified Dolphin smoke
         shell: bash
@@ -310,12 +314,47 @@ jobs:
               kill -KILL $children 2>/dev/null || true
             fi
           }
-          trap cleanup_smoke_children EXIT
-          trap 'cleanup_smoke_children; exit 143' TERM INT
-          MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
-
-
+           trap cleanup_smoke_children EXIT
+           trap 'cleanup_smoke_children; exit 143' TERM INT
+           MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
            MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
+           mkdir -p "$SMOKE_LOG_DIR" "$SMOKE_USER_DIR"
+           PROBE_FAILED=0
+           run_probe() {
+             local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
+             local log="$SMOKE_LOG_DIR/${name}.log"
+             echo "probe_command=$DOLPHIN --batch --exec $iso -u $user_dir${backend:+ -C $backend}"
+             rm -rf "$user_dir"
+             mkdir -p "$user_dir"
+             set +e
+             if [ -n "$backend" ]; then
+               timeout 30 "$DOLPHIN" --batch --exec "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
+             else
+               timeout 30 "$DOLPHIN" --batch --exec "$iso" -u "$user_dir" >"$log" 2>&1
+             fi
+             status=$?
+             set -e
+             signal_name=""
+             if [ "$status" -eq 139 ]; then signal_name="SIGSEGV"; fi
+             printf 'probe=%s exit_code=%s signal=%s coredumpctl=\n' "$name" "$status" "$signal_name" >>"$log"
+             coredumpctl --no-pager info "$DOLPHIN" >>"$log" 2>&1 || true
+             printf 'probe=%s exit_code=%s signal=%s\n' "$name" "$status" "$signal_name"
+             if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then PROBE_FAILED=1; fi
+           }
+           run_probe boot-only-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-clean" ""
+           run_probe boot-only-null-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-null-clean" "Core.GFXBackend=Null"
+           run_probe boot-only-null-modified "$MODIFIED_ISO" "$SMOKE_USER_DIR/boot-only-null-modified" "Core.GFXBackend=Null"
+           if [ "$PROBE_FAILED" -ne 0 ]; then
+             echo "Dolphin boot probe failed; skipping DTM playback"
+             PYTHONPATH=host/src python tooling/dolphin_smoke.py \
+               --dolphin "$DOLPHIN" --clean "$CLEAN_ISO" --modified "$MODIFIED_ISO" \
+               --log-dir "$SMOKE_LOG_DIR" --user-dir "$SMOKE_USER_DIR" --timeout 30 \
+               | tee "$RUNNER_TEMP/smoke.json" || true
+             exit 1
+           fi
+
+            MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
+
            if [ -z "$MOVIE" ] && [ "${{ inputs.record_movie }}" = "true" ]; then
              MOVIE="$RUNNER_TEMP/pas44-dtm/pas44-menu-to-match.dtm"
            fi
@@ -348,8 +387,10 @@ jobs:
             SMOKE_TIMEOUT=$(python3 -c 'import struct,sys;d=open(sys.argv[1],"rb").read();f=struct.unpack_from("<Q",d,13)[0];print(max(60,int(f/60)+60))' "$MOVIE")
           fi
 
-          PYTHONPATH=host/src python tooling/dolphin_smoke.py \
-            "${ARGS[@]}" \
+           echo "dolphin_smoke_command=PYTHONPATH=host/src python tooling/dolphin_smoke.py ${ARGS[*]} --log-dir $SMOKE_LOG_DIR --user-dir $SMOKE_USER_DIR --timeout $SMOKE_TIMEOUT"
+           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
+             "${ARGS[@]}" \
+
             --log-dir "$SMOKE_LOG_DIR" \
             --user-dir "$SMOKE_USER_DIR" \
             --timeout "$SMOKE_TIMEOUT" | tee "$RUNNER_TEMP/smoke.json"
