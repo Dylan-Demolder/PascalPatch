@@ -76,7 +76,7 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
             movie_metadata = read_dtm_metadata(movie_path)
         except (OSError, ValueError) as exc:
             movie_error = str(exc)
-    command=[str(dolphin), "-v", "Null", "-a", "Null"]
+    command=[str(dolphin), "-v", "Null", "-a", "HLE"]
     command.extend(["-e", str(game)])
     if movie_path:
         command.extend(["-m", str(movie_path)])

@@ -168,7 +168,7 @@ jobs:
           FRAME_COUNT=$(python3 -c 'import struct,sys; print(struct.unpack_from("<Q", open(sys.argv[1], "rb").read(29), 13)[0])' "$DTM")
           REPLAY_BUDGET=$(( (FRAME_COUNT + 59) / 60 + 10 ))
           REPLAY_STATUS=0
-           timeout "$REPLAY_BUDGET" "$DOLPHIN" -v Null -a Null -e "$ISO" -m "$DTM" >"$REPLAY_LOG" 2>&1 || REPLAY_STATUS=$?
+           timeout "$REPLAY_BUDGET" "$DOLPHIN" -v Null -a HLE -e "$ISO" -m "$DTM" >"$REPLAY_LOG" 2>&1 || REPLAY_STATUS=$?
 
           printf 'replay_status=%s frame_count=%s replay_budget_seconds=%s\n' "$REPLAY_STATUS" "$FRAME_COUNT" "$REPLAY_BUDGET"
           grep -Eiq 'movie|DTM|GALE01|Starting' "$REPLAY_LOG" || { cat "$REPLAY_LOG"; exit 1; }
@@ -343,7 +343,7 @@ jobs:
            run_probe() {
              local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
              local log="$SMOKE_LOG_DIR/${name}.log"
-               echo "probe_command=$DOLPHIN -v Null -a Null -e $iso -u $user_dir${backend:+ -C $backend}"
+               echo "probe_command=$DOLPHIN -v Null -a HLE -e $iso -u $user_dir${backend:+ -C $backend}"
 
 
 
@@ -352,11 +352,11 @@ jobs:
              mkdir -p "$user_dir"
              set +e
              if [ -n "$backend" ]; then
-                  timeout 30 "$DOLPHIN" -v Null -a Null -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
+                  timeout 30 "$DOLPHIN" -v Null -a HLE -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
 
 
               else
-                  timeout 30 "$DOLPHIN" -v Null -a Null -e "$iso" -u "$user_dir" >"$log" 2>&1
+                  timeout 30 "$DOLPHIN" -v Null -a HLE -e "$iso" -u "$user_dir" >"$log" 2>&1
 
 
 
