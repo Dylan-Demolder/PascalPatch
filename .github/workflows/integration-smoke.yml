@@ -352,7 +352,7 @@ jobs:
             local log="$SMOKE_LOG_DIR/${name}.log"
             local stdout_log="$SMOKE_LOG_DIR/${name}.stdout.log"
             local stderr_log="$SMOKE_LOG_DIR/${name}.stderr.log"
-            echo "probe_command=${XVFB_PREFIX[*]} timeout -s KILL 30 $DOLPHIN -b -e $iso -u $user_dir${backend:+ -C $backend}"
+            echo "probe_command=${XVFB_PREFIX[*]} timeout 30 $DOLPHIN -b -e $iso -u $user_dir${backend:+ -C $backend}"
 
 
 
@@ -360,35 +360,29 @@ jobs:
 
 
             mkdir -p "$user_dir"
-            set +e
-            # Dolphin ignores/handles SIGTERM by popping a confirm-close
-            # dialog instead of exiting, and `timeout` never escalates past
-            # its first signal unless told to, so a bare `timeout 30 ...`
-            # hangs forever on that dialog. Send SIGKILL directly.
-            if [ -n "$backend" ]; then
-              "${XVFB_PREFIX[@]}" timeout -s KILL 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True \
-                >"$stdout_log" 2>"$stderr_log"
+             set +e
+             if [ -n "$backend" ]; then
+               "${XVFB_PREFIX[@]}" timeout --signal=TERM --kill-after=5 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True \
+                 >"$stdout_log" 2>"$stderr_log"
+             else
+               "${XVFB_PREFIX[@]}" timeout --signal=TERM --kill-after=5 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" \
+                 >"$stdout_log" 2>"$stderr_log"
+             fi
+             status=$?
+             cat "$stdout_log" "$stderr_log" >"$log"
+             set -e
 
+             signal_name=""
+             if [ "$status" -eq 139 ]; then signal_name="SIGSEGV"; fi
+             if [ "$status" -eq 135 ]; then signal_name="SIGBUS"; fi
+             if [ "$status" -eq 137 ]; then signal_name="SIGKILL"; fi
+             startup_marker=0
+             if grep -Eq 'Active title: (GALE01|[A-Z0-9]{6})' "$log"; then startup_marker=1; fi
+             printf 'probe=%s exit_code=%s signal=%s startup_marker=%s timeout_is_bounded_live_process=%s coredumpctl=\n' "$name" "$status" "$signal_name" "$startup_marker" "$([ "$status" -eq 124 ] || [ "$status" -eq 137 ] && echo 1 || echo 0)" >>"$log"
+             coredumpctl --no-pager info "$DOLPHIN" >>"$log" 2>&1 || true
+             printf 'probe=%s exit_code=%s signal=%s startup_marker=%s\n' "$name" "$status" "$signal_name" "$startup_marker"
+             if [ "$status" -eq 135 ] || [ "$status" -eq 139 ] || { [ "$status" -ne 0 ] && [ "$status" -ne 124 ] && [ "$status" -ne 137 ]; } || [ "$startup_marker" -ne 1 ]; then PROBE_FAILED=1; fi
 
-
-            else
-              "${XVFB_PREFIX[@]}" timeout -s KILL 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" \
-                >"$stdout_log" 2>"$stderr_log"
-
-
-
-
-            fi
-            status=$?
-            cat "$stdout_log" "$stderr_log" >"$log"
-            set -e
-
-            signal_name=""
-            if [ "$status" -eq 139 ]; then signal_name="SIGSEGV"; fi
-            printf 'probe=%s exit_code=%s signal=%s coredumpctl=\n' "$name" "$status" "$signal_name" >>"$log"
-            coredumpctl --no-pager info "$DOLPHIN" >>"$log" 2>&1 || true
-            printf 'probe=%s exit_code=%s signal=%s\n' "$name" "$status" "$signal_name"
-            if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then PROBE_FAILED=1; fi
           }
           run_probe boot-only-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-clean" ""
           run_probe boot-only-null-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-null-clean" "Core.GFXBackend=Null"
