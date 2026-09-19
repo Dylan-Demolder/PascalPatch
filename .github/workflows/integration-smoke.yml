@@ -205,18 +205,24 @@ jobs:
         run: |
           set +e
           echo "runner=$(hostname) user=$(whoami) home=$HOME display=${DISPLAY:-<unset>} pwd=$(pwd)"
-          D="${{ inputs.dolphin }}"
-          C="${{ inputs.clean_iso }}"
-          echo "--- provided dolphin=$D"; ls -la "$D" 2>&1
-          echo "--- provided clean=$C";   ls -la "$C" 2>&1
-          [ -x "$D" ] || D="$(command -v dolphin-emu 2>/dev/null)"
-          [ -n "$D" ] || D="$(command -v dolphin 2>/dev/null)"
-          [ -n "$D" ] || D="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1)"
+           INPUT_DOLPHIN="${{ inputs.dolphin }}"
+           C="${{ inputs.clean_iso }}"
+           echo "--- provided dolphin=$INPUT_DOLPHIN"; ls -la "$INPUT_DOLPHIN" 2>&1
+           echo "--- provided clean=$C";   ls -la "$C" 2>&1
+           D="$(command -v dolphin-emu-nogui 2>/dev/null || true)"
+           [ -x "$D" ] || D="$INPUT_DOLPHIN"
+           [ -x "$D" ] || D="$(command -v dolphin-emu 2>/dev/null || true)"
+           [ -n "$D" ] || D="$(command -v dolphin 2>/dev/null || true)"
+
+           [ -n "$D" ] || D="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1)"
           [ -n "$D" ] || D="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu*' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
           [ -n "$C" ] || C="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
-          echo "resolved dolphin=$D"; ls -la "$D" 2>&1
-          echo "resolved clean=$C";   ls -la "$C" 2>&1
-          { echo "dolphin=$D"; echo "clean=$C"; } >> "$GITHUB_OUTPUT"
+           echo "resolved dolphin=$D"; ls -la "$D" 2>&1
+           echo "resolved clean=$C";   ls -la "$C" 2>&1
+           mkdir -p "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
+           { echo "binary=$D"; echo "path=$D"; echo "version:"; "$D" --version 2>&1 || true; } | tee "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs/resolved-binary.txt"
+           { echo "dolphin=$D"; echo "clean=$C"; } >> "$GITHUB_OUTPUT"
+
       - name: Build linked DOL and modified ISO on the runner
         id: build
         shell: bash
@@ -329,18 +335,17 @@ jobs:
            run_probe() {
              local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
              local log="$SMOKE_LOG_DIR/${name}.log"
-             echo "probe_command=$DOLPHIN --batch --exec $iso -u $user_dir${backend:+ -C $backend}"
+              echo "probe_command=$DOLPHIN --batch -e $iso -u $user_dir${backend:+ -C $backend}"
+
              rm -rf "$user_dir"
              mkdir -p "$user_dir"
              set +e
-             # Dolphin ignores/handles SIGTERM by popping a confirm-close
-             # dialog instead of exiting, and `timeout` never escalates past
-             # its first signal unless told to, so a bare `timeout 30 ...`
-             # hangs forever on that dialog. Send SIGKILL directly.
              if [ -n "$backend" ]; then
-               timeout -s KILL 30 "$DOLPHIN" --batch --exec "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
+                timeout 30 "$DOLPHIN" --batch -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
+
              else
-               timeout -s KILL 30 "$DOLPHIN" --batch --exec "$iso" -u "$user_dir" >"$log" 2>&1
+                timeout 30 "$DOLPHIN" --batch -e "$iso" -u "$user_dir" >"$log" 2>&1
+
              fi
              status=$?
              set -e
@@ -422,9 +427,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pas99-dolphin-logs
-          path: |
-            ${{ runner.temp }}/pas99-dolphin-logs/*.log
-            ${{ runner.temp }}/smoke.json
+           path: |
+             ${{ runner.temp }}/pas99-dolphin-logs/*
+             ${{ runner.temp }}/smoke.json
+
           if-no-files-found: error
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v
