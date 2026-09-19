@@ -88,6 +88,27 @@ PYTHONPATH=host/src python tooling/dolphin_smoke.py \
 The runner kills the complete emulator process group on timeout. It does not leave a Confirm Stop dialog or orphan process.
 
 
+## Roster / character verification (old + new characters together)
+
+Boot-level smoke above only proves Dolphin didn't crash. To confirm specific
+characters — retail and newly-injected custom ones — actually exist as live
+`Fighter` instances in the same running match/demo, attach over Dolphin's GDB
+stub and read the real fighter list:
+
+```sh
+dolphin-emu -b --batch -e /path/to/modified.iso \
+  -C Dolphin.General.GDBPort=24689 -C Dolphin.Display.RenderToMain=False &
+PYTHONPATH=host/src python tooling/verify_fighters.py \
+  --port 24689 --duration 180 --expect-kind 1 --expect-kind 20
+```
+
+See `docs/dolphin-control.md` for the full guide: Dolphin control rules
+(SIGKILL only, xcb/movie-playback pitfalls, container `QT_QPA_PLATFORM`
+requirements), driving character-select deterministically with `.dtm` movies,
+and what evidence actually counts as a working character per
+`docs/character-conversion-research.md`'s PAS-28 gates.
+
+
 ## Verified demo mod
 
 The repository includes a harmless `demo-mod` catalog entry at `plugins/demo-mod/plugin.json`. Create a local runnable profile with `python tooling/create_demo_profile.py /path/to/game.iso /path/to/MeleeDecomp/melee`. It is a visual-only static PPC plugin that logs initialization and its first frame callback. Use a temporary profile with your own GALE01 Rev.02 input, then run `profile validate` and `build`; do not commit the ISO or generated game output. Direct loader/Dolphin evidence is in `docs/evidence/demo-mod.md`.
