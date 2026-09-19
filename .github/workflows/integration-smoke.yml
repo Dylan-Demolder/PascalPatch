@@ -224,7 +224,7 @@ jobs:
           [ -n "$D" ] || D="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
           [ -n "$D" ] || { echo 'GUI dolphin-emu binary not found; refusing nogui fallback' >&2; exit 2; }
           case "$(basename "$D")" in *nogui*) echo "resolved binary is headless-only: $D" >&2; exit 2 ;; esac
-          [ -n "$C" ] || C="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
+          [ -f "$C" ] || C="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
           echo "resolved dolphin=$D"; ls -la "$D" 2>&1
           echo "resolved clean=$C";   ls -la "$C" 2>&1
           mkdir -p "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
