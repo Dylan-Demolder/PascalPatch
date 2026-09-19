@@ -427,9 +427,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pas99-dolphin-logs
-           path: |
-             ${{ runner.temp }}/pas99-dolphin-logs/*
-             ${{ runner.temp }}/smoke.json
+          path: |
+            ${{ runner.temp }}/pas99-dolphin-logs/*
+            ${{ runner.temp }}/smoke.json
 
           if-no-files-found: error
       - name: Run non-game integration tests
