@@ -213,23 +213,23 @@ jobs:
         run: |
           set +e
           echo "runner=$(hostname) user=$(whoami) home=$HOME display=${DISPLAY:-<unset>} pwd=$(pwd)"
-           INPUT_DOLPHIN="${{ inputs.dolphin }}"
-           C="${{ inputs.clean_iso }}"
-           echo "--- provided dolphin=$INPUT_DOLPHIN"; ls -la "$INPUT_DOLPHIN" 2>&1
-           echo "--- provided clean=$C";   ls -la "$C" 2>&1
-           D="/usr/bin/dolphin-emu"
-           [ -x "$D" ] || D="$INPUT_DOLPHIN"
-           [ -x "$D" ] || D="$(command -v dolphin-emu 2>/dev/null || true)"
-           [ -n "$D" ] || D="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f \( -iname 'dolphin-emu' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
-           [ -n "$D" ] || D="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
-           [ -n "$D" ] || { echo 'GUI dolphin-emu binary not found; refusing nogui fallback' >&2; exit 2; }
-           case "$(basename "$D")" in *nogui*) echo "resolved binary is headless-only: $D" >&2; exit 2 ;; esac
+          INPUT_DOLPHIN="${{ inputs.dolphin }}"
+          C="${{ inputs.clean_iso }}"
+          echo "--- provided dolphin=$INPUT_DOLPHIN"; ls -la "$INPUT_DOLPHIN" 2>&1
+          echo "--- provided clean=$C";   ls -la "$C" 2>&1
+          D="/usr/bin/dolphin-emu"
+          [ -x "$D" ] || D="$INPUT_DOLPHIN"
+          [ -x "$D" ] || D="$(command -v dolphin-emu 2>/dev/null || true)"
+          [ -n "$D" ] || D="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f \( -iname 'dolphin-emu' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+          [ -n "$D" ] || D="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+          [ -n "$D" ] || { echo 'GUI dolphin-emu binary not found; refusing nogui fallback' >&2; exit 2; }
+          case "$(basename "$D")" in *nogui*) echo "resolved binary is headless-only: $D" >&2; exit 2 ;; esac
           [ -n "$C" ] || C="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
-           echo "resolved dolphin=$D"; ls -la "$D" 2>&1
-           echo "resolved clean=$C";   ls -la "$C" 2>&1
-           mkdir -p "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
-           { echo "binary=$D"; echo "path=$D"; echo "version:"; "$D" --version 2>&1 || true; } | tee "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs/resolved-binary.txt"
-           { echo "dolphin=$D"; echo "clean=$C"; } >> "$GITHUB_OUTPUT"
+          echo "resolved dolphin=$D"; ls -la "$D" 2>&1
+          echo "resolved clean=$C";   ls -la "$C" 2>&1
+          mkdir -p "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
+          { echo "binary=$D"; echo "path=$D"; echo "version:"; "$D" --version 2>&1 || true; } | tee "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs/resolved-binary.txt"
+          { echo "dolphin=$D"; echo "clean=$C"; } >> "$GITHUB_OUTPUT"
 
       - name: Build linked DOL and modified ISO on the runner
         id: build
@@ -287,11 +287,11 @@ jobs:
           printf '%s\n' "${DISPLAY:-<unset>}"
           echo "--- display geometry ---"
           xdotool getdisplaygeometry 2>&1 || xdpyinfo 2>&1 || true
-           echo "--- resolved ISO files ---"
-           ls -l "$CLEAN_ISO" "$MODIFIED_ISO" 2>&1
-           echo "--- Dolphin help/backend list ---"
-           mkdir -p "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
-           "$DOLPHIN" --help 2>&1 | tee "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs/dolphin-help.log" || true
+          echo "--- resolved ISO files ---"
+          ls -l "$CLEAN_ISO" "$MODIFIED_ISO" 2>&1
+          echo "--- Dolphin help/backend list ---"
+          mkdir -p "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
+          "$DOLPHIN" --help 2>&1 | tee "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs/dolphin-help.log" || true
 
 
       - name: Run bounded clean/modified Dolphin smoke
@@ -315,10 +315,10 @@ jobs:
           MOVIE: ${{ inputs.movie }}
           EXPECTED_INPUT_AUTOMATION_READY: ${{ inputs.expected_input_automation_ready }}
           SMOKE_LOG_DIR: ${{ runner.temp }}/pas99-dolphin-logs
-            SMOKE_USER_DIR: ${{ runner.temp }}/pas99-dolphin-user
+          SMOKE_USER_DIR: ${{ runner.temp }}/pas99-dolphin-user
 
 
-         run: |
+        run: |
 
 
           set -euo pipefail
@@ -335,79 +335,79 @@ jobs:
               kill -KILL $children 2>/dev/null || true
             fi
           }
-           trap cleanup_smoke_children EXIT
-           trap 'cleanup_smoke_children; exit 143' TERM INT
-           MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
-           MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
-            mkdir -p "$SMOKE_LOG_DIR" "$SMOKE_USER_DIR"
-            if [ -n "${DISPLAY:-}" ]; then
-              XVFB_PREFIX=()
+          trap cleanup_smoke_children EXIT
+          trap 'cleanup_smoke_children; exit 143' TERM INT
+          MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
+          MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
+          mkdir -p "$SMOKE_LOG_DIR" "$SMOKE_USER_DIR"
+          if [ -n "${DISPLAY:-}" ]; then
+            XVFB_PREFIX=()
+          else
+            command -v xvfb-run >/dev/null || { echo "DISPLAY is unset and xvfb-run is unavailable" >&2; exit 2; }
+            XVFB_PREFIX=(xvfb-run -a)
+          fi
+          PROBE_FAILED=0
+          run_probe() {
+            local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
+            local log="$SMOKE_LOG_DIR/${name}.log"
+            local stdout_log="$SMOKE_LOG_DIR/${name}.stdout.log"
+            local stderr_log="$SMOKE_LOG_DIR/${name}.stderr.log"
+            echo "probe_command=${XVFB_PREFIX[*]} timeout 30 $DOLPHIN -b -e $iso -u $user_dir${backend:+ -C $backend}"
+
+
+
+            rm -rf "$user_dir"
+
+
+            mkdir -p "$user_dir"
+            set +e
+            if [ -n "$backend" ]; then
+              "${XVFB_PREFIX[@]}" timeout 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True \
+                >"$stdout_log" 2>"$stderr_log"
+
+
+
             else
-              command -v xvfb-run >/dev/null || { echo "DISPLAY is unset and xvfb-run is unavailable" >&2; exit 2; }
-              XVFB_PREFIX=(xvfb-run -a)
+              "${XVFB_PREFIX[@]}" timeout 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" \
+                >"$stdout_log" 2>"$stderr_log"
+
+
+
+
             fi
-            PROBE_FAILED=0
-            run_probe() {
-              local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
-              local log="$SMOKE_LOG_DIR/${name}.log"
-              local stdout_log="$SMOKE_LOG_DIR/${name}.stdout.log"
-              local stderr_log="$SMOKE_LOG_DIR/${name}.stderr.log"
-                echo "probe_command=${XVFB_PREFIX[*]} timeout 30 $DOLPHIN -b -e $iso -u $user_dir${backend:+ -C $backend}"
+            status=$?
+            cat "$stdout_log" "$stderr_log" >"$log"
+            set -e
 
+            signal_name=""
+            if [ "$status" -eq 139 ]; then signal_name="SIGSEGV"; fi
+            printf 'probe=%s exit_code=%s signal=%s coredumpctl=\n' "$name" "$status" "$signal_name" >>"$log"
+            coredumpctl --no-pager info "$DOLPHIN" >>"$log" 2>&1 || true
+            printf 'probe=%s exit_code=%s signal=%s\n' "$name" "$status" "$signal_name"
+            if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then PROBE_FAILED=1; fi
+          }
+          run_probe boot-only-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-clean" ""
+          run_probe boot-only-null-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-null-clean" "Core.GFXBackend=Null"
+          run_probe boot-only-null-modified "$MODIFIED_ISO" "$SMOKE_USER_DIR/boot-only-null-modified" "Core.GFXBackend=Null"
+          if [ "$PROBE_FAILED" -ne 0 ]; then
+            echo "Dolphin boot probe failed; skipping DTM playback"
+            "${XVFB_PREFIX[@]}" env PYTHONPATH=host/src python tooling/dolphin_smoke.py \
+              --dolphin "$DOLPHIN" --clean "$CLEAN_ISO" --modified "$MODIFIED_ISO" \
+              --log-dir "$SMOKE_LOG_DIR" --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
+              --user-dir "$SMOKE_USER_DIR" --timeout 30 \
+              | tee "$RUNNER_TEMP/smoke.json" || true
+            exit 1
+          fi
 
+          MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
 
-              rm -rf "$user_dir"
-
-
-             mkdir -p "$user_dir"
-             set +e
-             if [ -n "$backend" ]; then
-                                      "${XVFB_PREFIX[@]}" timeout 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True
- >"$stdout_log" 2>"$stderr_log"
-
-
-
-              else
-                                      "${XVFB_PREFIX[@]}" timeout 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir"
- >"$stdout_log" 2>"$stderr_log"
-
-
-
-
-             fi
-              status=$?
-              cat "$stdout_log" "$stderr_log" >"$log"
-              set -e
-
-             signal_name=""
-             if [ "$status" -eq 139 ]; then signal_name="SIGSEGV"; fi
-             printf 'probe=%s exit_code=%s signal=%s coredumpctl=\n' "$name" "$status" "$signal_name" >>"$log"
-             coredumpctl --no-pager info "$DOLPHIN" >>"$log" 2>&1 || true
-             printf 'probe=%s exit_code=%s signal=%s\n' "$name" "$status" "$signal_name"
-             if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then PROBE_FAILED=1; fi
-           }
-           run_probe boot-only-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-clean" ""
-           run_probe boot-only-null-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-null-clean" "Core.GFXBackend=Null"
-           run_probe boot-only-null-modified "$MODIFIED_ISO" "$SMOKE_USER_DIR/boot-only-null-modified" "Core.GFXBackend=Null"
-           if [ "$PROBE_FAILED" -ne 0 ]; then
-             echo "Dolphin boot probe failed; skipping DTM playback"
-             PYTHONPATH=host/src python tooling/dolphin_smoke.py \
-               --dolphin "$DOLPHIN" --clean "$CLEAN_ISO" --modified "$MODIFIED_ISO" \
-                --log-dir "$SMOKE_LOG_DIR" --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
-                --user-dir "$SMOKE_USER_DIR" --timeout 30 \
-                | tee "$RUNNER_TEMP/smoke.json" || true
-             exit 1
-           fi
-
-            MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
-
-           if [ -z "$MOVIE" ] && [ "${{ inputs.record_movie }}" = "true" ]; then
-             MOVIE="$RUNNER_TEMP/pas44-dtm/pas44-menu-to-match.dtm"
-           fi
-           if [ -z "$MOVIE" ]; then
-             MOVIE="$GITHUB_WORKSPACE/tooling/fixtures/tasvideos-2505M-numerics.dtm"
-           fi
-           if [ -z "$MODIFIED_ISO_IN" ] && [ -z "$BUILD_MODIFIED" ]; then
+          if [ -z "$MOVIE" ] && [ "${{ inputs.record_movie }}" = "true" ]; then
+            MOVIE="$RUNNER_TEMP/pas44-dtm/pas44-menu-to-match.dtm"
+          fi
+          if [ -z "$MOVIE" ]; then
+            MOVIE="$GITHUB_WORKSPACE/tooling/fixtures/tasvideos-2505M-numerics.dtm"
+          fi
+          if [ -z "$MODIFIED_ISO_IN" ] && [ -z "$BUILD_MODIFIED" ]; then
 
             echo "PAS-24 build produced no modified ISO; refusing clean-vs-clean smoke" >&2
             exit 1
@@ -433,15 +433,13 @@ jobs:
             SMOKE_TIMEOUT=$(python3 -c 'import struct,sys;d=open(sys.argv[1],"rb").read();f=struct.unpack_from("<Q",d,13)[0];print(max(60,int(f/60)+60))' "$MOVIE")
           fi
 
-            echo "dolphin_smoke_command=${XVFB_PREFIX[*]} env PYTHONPATH=host/src python tooling/dolphin_smoke.py ${ARGS[*]} --log-dir $SMOKE_LOG_DIR --user-dir $SMOKE_USER_DIR --timeout $SMOKE_TIMEOUT"
-            "${XVFB_PREFIX[@]}" env PYTHONPATH=host/src python tooling/dolphin_smoke.py \
-
-             "${ARGS[@]}" \
-
-             --log-dir "$SMOKE_LOG_DIR" \
-             --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
-             --user-dir "$SMOKE_USER_DIR" \
-             --timeout "$SMOKE_TIMEOUT" | tee "$RUNNER_TEMP/smoke.json"
+          echo "dolphin_smoke_command=${XVFB_PREFIX[*]} env PYTHONPATH=host/src python tooling/dolphin_smoke.py ${ARGS[*]} --log-dir $SMOKE_LOG_DIR --user-dir $SMOKE_USER_DIR --timeout $SMOKE_TIMEOUT"
+          "${XVFB_PREFIX[@]}" env PYTHONPATH=host/src python tooling/dolphin_smoke.py \
+            "${ARGS[@]}" \
+            --log-dir "$SMOKE_LOG_DIR" \
+            --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
+            --user-dir "$SMOKE_USER_DIR" \
+            --timeout "$SMOKE_TIMEOUT" | tee "$RUNNER_TEMP/smoke.json"
 
 
 
@@ -449,7 +447,7 @@ jobs:
           # silently empty) and the modified ISO must emit loader,
           # character-select, offline-match, and input-automation markers
           # from actual Dolphin output. No synthesized bytes or markers.
-           # PAS-154: Dolphin 2606 enters playback via `-e <iso> -m <dtm>`
+          # PAS-154: Dolphin 2606 enters playback via `-e <iso> -m <dtm>`
 
           # (MainWindow PlayInput path); raw DTM/GALE01 metadata is validated
           # above and echoed here, so `movie playback not entered` points at
