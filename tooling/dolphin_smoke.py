@@ -76,9 +76,12 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
             movie_metadata = read_dtm_metadata(movie_path)
         except (OSError, ValueError) as exc:
             movie_error = str(exc)
-    command=[str(dolphin),"--batch", "--exec", str(game)]
+    command=[str(dolphin)]
+    if Path(dolphin).name != "dolphin-emu-nogui":
+        command.append("--batch")
+    command.extend(["-e", str(game)])
     if movie_path:
-        command.extend(["--movie", str(movie_path)])
+        command.extend(["-m", str(movie_path)])
     run_user_dir = Path(user_dir).expanduser() if user_dir else None
     if run_user_dir:
         run_user_dir.mkdir(parents=True, exist_ok=True)

@@ -335,16 +335,20 @@ jobs:
            run_probe() {
              local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
              local log="$SMOKE_LOG_DIR/${name}.log"
-              echo "probe_command=$DOLPHIN --batch -e $iso -u $user_dir${backend:+ -C $backend}"
+              probe_batch=(--batch)
+              if [ "$(basename "$DOLPHIN")" = "dolphin-emu-nogui" ]; then probe_batch=(); fi
+              echo "probe_command=$DOLPHIN ${probe_batch[*]} -e $iso -u $user_dir${backend:+ -C $backend}"
 
-             rm -rf "$user_dir"
+              rm -rf "$user_dir"
+
              mkdir -p "$user_dir"
              set +e
              if [ -n "$backend" ]; then
-                timeout 30 "$DOLPHIN" --batch -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
+                 timeout 30 "$DOLPHIN" "${probe_batch[@]}" -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
 
-             else
-                timeout 30 "$DOLPHIN" --batch -e "$iso" -u "$user_dir" >"$log" 2>&1
+              else
+                 timeout 30 "$DOLPHIN" "${probe_batch[@]}" -e "$iso" -u "$user_dir" >"$log" 2>&1
+
 
              fi
              status=$?
