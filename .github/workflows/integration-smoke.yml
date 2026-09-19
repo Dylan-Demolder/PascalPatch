@@ -217,13 +217,13 @@ jobs:
            C="${{ inputs.clean_iso }}"
            echo "--- provided dolphin=$INPUT_DOLPHIN"; ls -la "$INPUT_DOLPHIN" 2>&1
            echo "--- provided clean=$C";   ls -la "$C" 2>&1
-           D="$(command -v dolphin-emu-nogui 2>/dev/null || true)"
+           D="/usr/bin/dolphin-emu"
            [ -x "$D" ] || D="$INPUT_DOLPHIN"
            [ -x "$D" ] || D="$(command -v dolphin-emu 2>/dev/null || true)"
-           [ -n "$D" ] || D="$(command -v dolphin 2>/dev/null || true)"
-
-           [ -n "$D" ] || D="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1)"
-          [ -n "$D" ] || D="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu*' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+           [ -n "$D" ] || D="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f \( -iname 'dolphin-emu' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+           [ -n "$D" ] || D="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+           [ -n "$D" ] || { echo 'GUI dolphin-emu binary not found; refusing nogui fallback' >&2; exit 2; }
+           case "$(basename "$D")" in *nogui*) echo "resolved binary is headless-only: $D" >&2; exit 2 ;; esac
           [ -n "$C" ] || C="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
            echo "resolved dolphin=$D"; ls -la "$D" 2>&1
            echo "resolved clean=$C";   ls -la "$C" 2>&1
@@ -315,9 +315,10 @@ jobs:
           MOVIE: ${{ inputs.movie }}
           EXPECTED_INPUT_AUTOMATION_READY: ${{ inputs.expected_input_automation_ready }}
           SMOKE_LOG_DIR: ${{ runner.temp }}/pas99-dolphin-logs
-          SMOKE_USER_DIR: ${{ runner.temp }}/pas99-dolphin-user
+            SMOKE_USER_DIR: ${{ runner.temp }}/pas99-dolphin-user
 
-        run: |
+
+         run: |
 
 
           set -euo pipefail
@@ -338,31 +339,46 @@ jobs:
            trap 'cleanup_smoke_children; exit 143' TERM INT
            MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
            MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
-           mkdir -p "$SMOKE_LOG_DIR" "$SMOKE_USER_DIR"
-           PROBE_FAILED=0
-           run_probe() {
-             local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
-             local log="$SMOKE_LOG_DIR/${name}.log"
-               echo "probe_command=$DOLPHIN -v Null -a HLE -e $iso -u $user_dir${backend:+ -C $backend}"
+            mkdir -p "$SMOKE_LOG_DIR" "$SMOKE_USER_DIR"
+            if [ -n "${DISPLAY:-}" ]; then
+              XVFB_PREFIX=()
+            else
+              command -v xvfb-run >/dev/null || { echo "DISPLAY is unset and xvfb-run is unavailable" >&2; exit 2; }
+              XVFB_PREFIX=(xvfb-run -a)
+            fi
+            PROBE_FAILED=0
+            run_probe() {
+              local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
+              local log="$SMOKE_LOG_DIR/${name}.log"
+              local stdout_log="$SMOKE_LOG_DIR/${name}.stdout.log"
+              local stderr_log="$SMOKE_LOG_DIR/${name}.stderr.log"
+                echo "probe_command=${XVFB_PREFIX[*]} timeout 30 $DOLPHIN -b -e $iso -u $user_dir${backend:+ -C $backend}"
 
 
 
               rm -rf "$user_dir"
 
+
              mkdir -p "$user_dir"
              set +e
              if [ -n "$backend" ]; then
-                  timeout 30 "$DOLPHIN" -v Null -a HLE -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
+                                      "${XVFB_PREFIX[@]}" timeout 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True
+ >"$stdout_log" 2>"$stderr_log"
+
 
 
               else
-                  timeout 30 "$DOLPHIN" -v Null -a HLE -e "$iso" -u "$user_dir" >"$log" 2>&1
+                                      "${XVFB_PREFIX[@]}" timeout 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir"
+ >"$stdout_log" 2>"$stderr_log"
+
 
 
 
              fi
-             status=$?
-             set -e
+              status=$?
+              cat "$stdout_log" "$stderr_log" >"$log"
+              set -e
+
              signal_name=""
              if [ "$status" -eq 139 ]; then signal_name="SIGSEGV"; fi
              printf 'probe=%s exit_code=%s signal=%s coredumpctl=\n' "$name" "$status" "$signal_name" >>"$log"
@@ -377,8 +393,9 @@ jobs:
              echo "Dolphin boot probe failed; skipping DTM playback"
              PYTHONPATH=host/src python tooling/dolphin_smoke.py \
                --dolphin "$DOLPHIN" --clean "$CLEAN_ISO" --modified "$MODIFIED_ISO" \
-               --log-dir "$SMOKE_LOG_DIR" --user-dir "$SMOKE_USER_DIR" --timeout 30 \
-               | tee "$RUNNER_TEMP/smoke.json" || true
+                --log-dir "$SMOKE_LOG_DIR" --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
+                --user-dir "$SMOKE_USER_DIR" --timeout 30 \
+                | tee "$RUNNER_TEMP/smoke.json" || true
              exit 1
            fi
 
@@ -416,13 +433,15 @@ jobs:
             SMOKE_TIMEOUT=$(python3 -c 'import struct,sys;d=open(sys.argv[1],"rb").read();f=struct.unpack_from("<Q",d,13)[0];print(max(60,int(f/60)+60))' "$MOVIE")
           fi
 
-           echo "dolphin_smoke_command=PYTHONPATH=host/src python tooling/dolphin_smoke.py ${ARGS[*]} --log-dir $SMOKE_LOG_DIR --user-dir $SMOKE_USER_DIR --timeout $SMOKE_TIMEOUT"
-           PYTHONPATH=host/src python tooling/dolphin_smoke.py \
+            echo "dolphin_smoke_command=${XVFB_PREFIX[*]} env PYTHONPATH=host/src python tooling/dolphin_smoke.py ${ARGS[*]} --log-dir $SMOKE_LOG_DIR --user-dir $SMOKE_USER_DIR --timeout $SMOKE_TIMEOUT"
+            "${XVFB_PREFIX[@]}" env PYTHONPATH=host/src python tooling/dolphin_smoke.py \
+
              "${ARGS[@]}" \
 
-            --log-dir "$SMOKE_LOG_DIR" \
-            --user-dir "$SMOKE_USER_DIR" \
-            --timeout "$SMOKE_TIMEOUT" | tee "$RUNNER_TEMP/smoke.json"
+             --log-dir "$SMOKE_LOG_DIR" \
+             --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
+             --user-dir "$SMOKE_USER_DIR" \
+             --timeout "$SMOKE_TIMEOUT" | tee "$RUNNER_TEMP/smoke.json"
 
 
 

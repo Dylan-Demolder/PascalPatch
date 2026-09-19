@@ -67,7 +67,7 @@ def _read_dolphin_log(log_file, user_dir=None):
     return content, str(source) if source else None
 
 
-def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
+def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None, diagnostics_dir=None):
     movie_path=Path(movie).expanduser() if movie else None
     movie_metadata = None
     movie_error = None
@@ -76,8 +76,10 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
             movie_metadata = read_dtm_metadata(movie_path)
         except (OSError, ValueError) as exc:
             movie_error = str(exc)
-    command=[str(dolphin), "-v", "Null", "-a", "HLE"]
-    command.extend(["-e", str(game)])
+    command=[str(dolphin), "-b", "-e", str(game)]
+    platform=os.environ.get("PAS_DOLPHIN_PLATFORM")
+    if platform:
+        command.extend(["-p", platform])
     if movie_path:
         command.extend(["-m", str(movie_path)])
     run_user_dir = Path(user_dir).expanduser() if user_dir else None
@@ -99,8 +101,13 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
         dolphin_env.pop(var, None)
     if os.environ.get("PAS_DOLPHIN_QT_QPA_PLATFORM"):
         dolphin_env["QT_QPA_PLATFORM"] = os.environ["PAS_DOLPHIN_QT_QPA_PLATFORM"]
+    if diagnostics_dir:
+        diagnostics_path = Path(diagnostics_dir).expanduser()
+        diagnostics_path.mkdir(parents=True, exist_ok=True)
+        dolphin_env["DOLPHIN_DIAGNOSTICS"] = "1"
+        dolphin_env["DOLPHIN_DIAGNOSTICS_DIR"] = str(diagnostics_path)
     try:
-        proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,start_new_session=True,env=dolphin_env)
+        proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True,env=dolphin_env)
     except OSError as exc:
         return {"game":str(game),"pid":None,"exit_code":None,"timed_out":False,"started":False,"error":str(exc),"output_tail":"","output_len":0,"log_file":str(log_path) if log_path else None,"log_len":0,"user_dir":None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"movie_metadata":movie_metadata,"movie_error":movie_error,"playback":parse_playback_evidence("")}
     timed_out=False
@@ -108,12 +115,18 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
     for signum in previous_handlers:
         signal.signal(signum, lambda _signum, _frame: (_ for _ in ()).throw(KeyboardInterrupt()))
     try:
-        try: output,_=proc.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
             timed_out=True
+            stdout = exc.stdout or ""
+            stderr = exc.stderr or ""
             try: os.killpg(proc.pid,signal.SIGKILL)
             except (ProcessLookupError,PermissionError): proc.kill()
-            output,_=proc.communicate()
+            remaining_stdout, remaining_stderr = proc.communicate()
+            stdout += remaining_stdout or ""
+            stderr += remaining_stderr or ""
+        output = stdout + stderr
     finally:
         for signum, handler in previous_handlers.items():
             signal.signal(signum, handler)
@@ -125,8 +138,11 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
     evidence_output = log_output or output or ""
     if log_path and evidence_output and discovered_log != str(log_path):
         log_path.write_text(evidence_output)
+    if log_path:
+        Path(str(log_path).replace(".log", "-stdout.log")).write_text(stdout or "")
+        Path(str(log_path).replace(".log", "-stderr.log")).write_text(stderr or "")
     started=timed_out or proc.returncode==0
-    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"timed_out":timed_out,"started":started,"output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else discovered_log,"log_len":len(log_output),"user_dir":str(run_user_dir) if run_user_dir else None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"movie_metadata":movie_metadata,"movie_error":movie_error,"playback":parse_playback_evidence(evidence_output)}
+    return {"game":str(game),"pid":proc.pid,"exit_code":proc.returncode,"signal":-proc.returncode if proc.returncode and proc.returncode < 0 else None,"timed_out":timed_out,"started":started,"command":command,"stdout":stdout or "","stderr":stderr or "","output_tail":evidence_output[-4000:],"output_len":len(evidence_output),"log_file":str(log_path) if log_path else discovered_log,"log_len":len(log_output),"user_dir":str(run_user_dir) if run_user_dir else None,"movie":str(movie_path) if movie_path else None,"movie_exists":movie_path.is_file() if movie_path else False,"movie_metadata":movie_metadata,"movie_error":movie_error,"playback":parse_playback_evidence(evidence_output)}
 
 
 def custom_fighter_assertion(result, archive=None, symbol=None, data=None,
@@ -159,6 +175,7 @@ def main(argv=None):
     p.add_argument("--dolphin",required=True); p.add_argument("--clean",required=True); p.add_argument("--modified",required=True); p.add_argument("--timeout",type=float,default=20.0)
     p.add_argument("--movie",help="Dolphin movie/DTM file to play")
     p.add_argument("--log-dir",help="Directory for one raw Dolphin log per ISO")
+    p.add_argument("--diagnostics-dir",help="Directory for binary version/help/stdout/stderr/coredump diagnostics")
     p.add_argument("--user-dir",help="Explicit Dolphin user directory for isolated settings and logs")
     p.add_argument("--expected-archive",help="Runner-local custom fighter archive expected to exist")
     p.add_argument("--expected-symbol",help="Symbol or load marker expected in Dolphin output")
@@ -176,7 +193,10 @@ def main(argv=None):
     user_dir=Path(a.user_dir).expanduser() if a.user_dir else None
     clean_user_dir=user_dir / "clean" if user_dir else None
     modified_user_dir=user_dir / "modified" if user_dir else None
-    results=[run_one(a.dolphin,a.clean,a.timeout,a.movie,clean_log,clean_user_dir),run_one(a.dolphin,a.modified,a.timeout,a.movie,modified_log,modified_user_dir)]
+    diagnostics_dir=Path(a.diagnostics_dir).expanduser() if a.diagnostics_dir else None
+    clean_diagnostics=diagnostics_dir / "clean" if diagnostics_dir else None
+    modified_diagnostics=diagnostics_dir / "modified" if diagnostics_dir else None
+    results=[run_one(a.dolphin,a.clean,a.timeout,a.movie,clean_log,clean_user_dir,clean_diagnostics),run_one(a.dolphin,a.modified,a.timeout,a.movie,modified_log,modified_user_dir,modified_diagnostics)]
     fighter=custom_fighter_assertion(results[1],a.expected_archive,a.expected_symbol,a.expected_data,a.expected_observation,a.expected_character_select,a.expected_match_start,a.expected_input_automation_ready)
     payload={"results":results,"both_started":all(x["started"] for x in results),"evidence_scope":"marker_checks" if fighter["enabled"] else "boot_only","custom_fighter":fighter}
     print(json.dumps(payload,indent=2))
