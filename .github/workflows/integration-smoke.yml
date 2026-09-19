@@ -168,7 +168,8 @@ jobs:
           FRAME_COUNT=$(python3 -c 'import struct,sys; print(struct.unpack_from("<Q", open(sys.argv[1], "rb").read(29), 13)[0])' "$DTM")
           REPLAY_BUDGET=$(( (FRAME_COUNT + 59) / 60 + 10 ))
           REPLAY_STATUS=0
-          timeout "$REPLAY_BUDGET" "$DOLPHIN" -b -e "$ISO" -m "$DTM" >"$REPLAY_LOG" 2>&1 || REPLAY_STATUS=$?
+           timeout "$REPLAY_BUDGET" "$DOLPHIN" -v Null -a Null -e "$ISO" -m "$DTM" >"$REPLAY_LOG" 2>&1 || REPLAY_STATUS=$?
+
           printf 'replay_status=%s frame_count=%s replay_budget_seconds=%s\n' "$REPLAY_STATUS" "$FRAME_COUNT" "$REPLAY_BUDGET"
           grep -Eiq 'movie|DTM|GALE01|Starting' "$REPLAY_LOG" || { cat "$REPLAY_LOG"; exit 1; }
           test "$REPLAY_STATUS" -eq 0 -o "$REPLAY_STATUS" -eq 124 || {
@@ -342,8 +343,8 @@ jobs:
            run_probe() {
              local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
              local log="$SMOKE_LOG_DIR/${name}.log"
-              probe_batch=(--batch)
-              echo "probe_command=$DOLPHIN ${probe_batch[*]} -e $iso -u $user_dir${backend:+ -C $backend}"
+               echo "probe_command=$DOLPHIN -v Null -a Null -e $iso -u $user_dir${backend:+ -C $backend}"
+
 
 
               rm -rf "$user_dir"
@@ -351,10 +352,12 @@ jobs:
              mkdir -p "$user_dir"
              set +e
              if [ -n "$backend" ]; then
-                 timeout 30 "$DOLPHIN" "${probe_batch[@]}" -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
+                  timeout 30 "$DOLPHIN" -v Null -a Null -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True >"$log" 2>&1
+
 
               else
-                 timeout 30 "$DOLPHIN" "${probe_batch[@]}" -e "$iso" -u "$user_dir" >"$log" 2>&1
+                  timeout 30 "$DOLPHIN" -v Null -a Null -e "$iso" -u "$user_dir" >"$log" 2>&1
+
 
 
              fi
@@ -427,7 +430,8 @@ jobs:
           # silently empty) and the modified ISO must emit loader,
           # character-select, offline-match, and input-automation markers
           # from actual Dolphin output. No synthesized bytes or markers.
-          # PAS-154: Dolphin 2606 enters playback via `-b -e <iso> -m <dtm>`
+           # PAS-154: Dolphin 2606 enters playback via `-e <iso> -m <dtm>`
+
           # (MainWindow PlayInput path); raw DTM/GALE01 metadata is validated
           # above and echoed here, so `movie playback not entered` points at
           # the emulator/boot path rather than a wrapped or mismatched movie.
