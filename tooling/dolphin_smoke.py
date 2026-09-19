@@ -77,7 +77,9 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None):
         except (OSError, ValueError) as exc:
             movie_error = str(exc)
     command=[str(dolphin)]
-    if Path(dolphin).name != "dolphin-emu-nogui":
+    if Path(dolphin).name == "dolphin-emu-nogui":
+        command.append("-b")
+    else:
         command.append("--batch")
     command.extend(["-e", str(game)])
     if movie_path:
