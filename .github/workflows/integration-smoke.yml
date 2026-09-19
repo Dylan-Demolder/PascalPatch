@@ -399,7 +399,13 @@ jobs:
              if [ "$status" -eq 135 ]; then signal_name="SIGBUS"; fi
              if [ "$status" -eq 137 ]; then signal_name="SIGKILL"; fi
              startup_marker=0
-             if grep -Eq 'Active title: (GALE01|[A-Z0-9]{6})' "$log"; then startup_marker=1; fi
+             # Dolphin's real log format is "Active title: <Game Name> (<ID>)",
+             # e.g. "Active title: Super Smash Bros. Melee (GALE01)" -- the
+             # ID is in parens at the end, NOT immediately after the colon.
+             # The previous regex only matched an ID directly after "Active
+             # title: ", which this real format never produces, so
+             # startup_marker was stuck at 0 on every successful boot too.
+             if grep -Eq 'Active title:.*\([A-Z0-9]{6}\)' "$log"; then startup_marker=1; fi
              printf 'probe=%s exit_code=%s signal=%s startup_marker=%s timeout_is_bounded_live_process=%s coredumpctl=\n' "$name" "$status" "$signal_name" "$startup_marker" "$([ "$status" -eq 124 ] || [ "$status" -eq 137 ] && echo 1 || echo 0)" >>"$log"
              coredumpctl --no-pager info "$DOLPHIN" >>"$log" 2>&1 || true
              printf 'probe=%s exit_code=%s signal=%s startup_marker=%s\n' "$name" "$status" "$signal_name" "$startup_marker"
