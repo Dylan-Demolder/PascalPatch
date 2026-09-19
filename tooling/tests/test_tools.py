@@ -1,5 +1,6 @@
 import json, tempfile, unittest, sys
 from pathlib import Path
+from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parents[1]/"../host/src"))
 from meleemod.discovery import _looks_like_emulator
 sys.path.insert(0,str(Path(__file__).parents[1]))
@@ -113,6 +114,41 @@ class VerifyFightersTests(unittest.TestCase):
   with self.assertRaises(KeyError):
    read_fighters(client)
   self.assertEqual(client.continue_calls,1,"must resume the CPU even when the read fails")
+
+
+class PrimeMemcardTests(unittest.TestCase):
+ def test_refuses_to_write_inside_a_git_repo(self):
+  from prime_memcard import _refuses_repo_path
+  with tempfile.TemporaryDirectory() as td:
+   repo=Path(td)/"repo"; (repo/".git").mkdir(parents=True)
+   self.assertTrue(_refuses_repo_path(repo/"nested"/"seed"))
+   self.assertFalse(_refuses_repo_path(Path(td)/"outside-any-repo"))
+ def test_picks_the_render_window_not_a_helper_window(self):
+  from prime_memcard import _find_window
+  search_result=type("R",(),{"stdout":"25165830\n25165833\n25165835\n25165836\n","returncode":0})()
+  names={
+   "25165830":"Qt Selection Owner for dolphin-emu",
+   "25165833":"Dolphin 2606",
+   "25165835":"dolphin-emu",
+   "25165836":"Dolphin 2606 | JIT64 SC | OpenGL | HLE | Super Smash Bros. Melee (GALE01)",
+  }
+  def fake_run(cmd,**kwargs):
+   if cmd[:2]==["xdotool","search"]:
+    return search_result
+   window_id=cmd[-1]
+   return type("R",(),{"stdout":names[window_id],"returncode":0})()
+  with patch("prime_memcard.subprocess.run",side_effect=fake_run):
+   window_id=_find_window(":0",timeout=1.0)
+  self.assertEqual(window_id,"25165836","must pick the window whose title has pipe-separated core/backend/game info, not a helper window with the same substring match")
+ def test_find_window_times_out_when_none_match(self):
+  from prime_memcard import _find_window
+  def fake_run(cmd,**kwargs):
+   if cmd[:2]==["xdotool","search"]:
+    return type("R",(),{"stdout":"","returncode":0})()
+   return type("R",(),{"stdout":"","returncode":0})()
+  with patch("prime_memcard.subprocess.run",side_effect=fake_run):
+   with self.assertRaises(SystemExit):
+    _find_window(":0",timeout=0.1)
 
 
 if __name__=="__main__":unittest.main()

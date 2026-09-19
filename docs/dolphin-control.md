@@ -51,6 +51,71 @@ or Dolphin will hang or crash under automation.
   (`~/paperclip/.paperclip/up.sh`) — do not remove it, and if you ever
   `docker run` a fresh Dolphin/Paperclip container by hand, set it again.
 
+## 1.5. The "stuck at the memory card screen" trap — and the real fix
+
+A fresh/empty GameCube memory card triggers a **two-stage, mostly
+button-gated** prompt on Melee's first boot with any given user-dir:
+
+1. A GameCube-BIOS-level "The Memory Card in Slot A has no saved Game Data.
+   Create Game Data?" Yes/No dialog. **This needs a real confirm keypress —
+   it does not clear on its own, and it does NOT respond to DTM movie
+   input** (confirmed by direct testing: a DTM authored to mash the A
+   button continuously for 90 real-time seconds never cleared it; Dolphin's
+   movie-input hook attaches at the game's own SI polling layer, which
+   starts after this BIOS-level prompt, not before it).
+2. After confirming, a second, purely-timed "Game Data has been created."
+   banner (~15-25s, no input needed) plays before the intro FMV/title
+   screen.
+
+Every CI/headless probe does `rm -rf "$user_dir"` before each launch, so
+this two-stage prompt reappears on **every single run** — this is the
+actual reason runs report being stuck "at the memory card screen" and never
+reach character select or a match, independent of any of the batch-vs-GUI,
+audio-backend, or xcb/Qt issues documented elsewhere in this file.
+
+**The fix is not to solve this every run.** `tooling/prime_memcard.py` does
+a one-time, per-host, interactive priming pass:
+
+```sh
+DISPLAY=:0 PYTHONPATH=host/src python tooling/prime_memcard.py \
+  --dolphin /usr/bin/dolphin-emu \
+  --iso "/path/to/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso" \
+  --output ~/.cache/meleemod/memcard-seed
+```
+
+It requires a real display (must be run at the desktop, not headless/
+off-screen — the dialog cannot be cleared any other way). It finds
+Dolphin's actual render window via `xdotool search`/`getwindowname`
+(several other Dolphin-owned windows exist and do not receive input — only
+the one whose title contains `|`, e.g. `Dolphin 2606 | JIT64 SC | OpenGL |
+HLE | Super Smash Bros. Melee (GALE01)`), then the load-bearing sequence is:
+
+```sh
+xdotool windowactivate --sync "$WINDOW_ID"   # REQUIRED before key — a bare
+                                              # `xdotool key --window <id> x`
+                                              # with no activation was
+                                              # observed to NOT deliver input
+xdotool key --clearmodifiers x               # GCPad1 Buttons/A default
+# repeat 2 more times, 1s apart -- a single press was unreliable (~1 in 3
+# attempts registered nothing) in testing on this host
+```
+
+...then it waits out the timed banner and harvests the resulting
+`GC/<region>/Card A/*.gci` into `--output`.
+
+**Legal boundary:** the harvested `.gci` contains real Melee-derived save
+data (the game bakes icon/banner graphics into it). Per `docs/legal-notice.md`
+it must **never** be committed to this repository or distributed —
+`prime_memcard.py` refuses to write under any path containing a `.git`
+folder as a guard rail. Cache it somewhere like `~/.cache/meleemod/
+memcard-seed` outside any repo, once per host.
+
+Every subsequent run — `dolphin_smoke.py` via `--memcard-seed <dir>`, or the
+CI workflow via the `MEMCARD_SEED` env var (defaults to
+`~/.cache/meleemod/memcard-seed`) — copies that cached `GC/` tree into the
+fresh `user_dir` **before** boot, so the whole two-stage prompt never
+appears on any headless/CI run again.
+
 ## 2. Boot-level smoke: does clean AND modified both start?
 
 ```sh
@@ -59,10 +124,15 @@ PYTHONPATH=host/src python tooling/dolphin_smoke.py \
   --clean "/path/to/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso" \
   --modified /path/to/generated-modified.iso \
   --movie tooling/fixtures/pas44-menu-to-match.dtm \
+  --memcard-seed ~/.cache/meleemod/memcard-seed \
   --log-dir /tmp/meleemod-smoke-logs \
   --user-dir /tmp/meleemod-smoke-user \
   --timeout 30
 ```
+
+`--memcard-seed` (see section 1.5) is what actually gets you past the first-boot
+memory-card prompt at all — without it, every run hits the un-clearable
+"Create Game Data?" dialog and never reaches anything else.
 
 This runs the clean ISO, then the modified ISO, each in its own isolated
 Dolphin user directory, and reports `started`/`exit_code`/`timed_out`/a

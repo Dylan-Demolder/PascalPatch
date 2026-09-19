@@ -347,6 +347,7 @@ jobs:
             XVFB_PREFIX=(xvfb-run -a)
           fi
           PROBE_FAILED=0
+          MEMCARD_SEED="${MEMCARD_SEED:-$HOME/.cache/meleemod/memcard-seed}"
           run_probe() {
             local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
             local log="$SMOKE_LOG_DIR/${name}.log"
@@ -360,6 +361,20 @@ jobs:
 
 
             mkdir -p "$user_dir"
+            # Seed a pre-primed memory card so Melee's GameCube-BIOS-level
+            # "Create Game Data?" dialog (button-gated, NOT reachable via a
+            # DTM movie -- confirmed by direct testing) and the following
+            # timed "Game Data has been created." banner never appear. See
+            # tooling/prime_memcard.py for how to (re)generate this cache;
+            # it must be produced once, interactively, per runner host and
+            # is intentionally NOT checked into git (real Melee save data).
+            if [ -d "$MEMCARD_SEED/GC" ]; then
+              cp -r "$MEMCARD_SEED/GC" "$user_dir/"
+            else
+              echo "WARN: no memcard seed at $MEMCARD_SEED -- this probe will hit the" \
+                   "first-boot memory-card dialog and likely time out. Run" \
+                   "tooling/prime_memcard.py once on this host." >&2
+            fi
              set +e
              if [ -n "$backend" ]; then
                "${XVFB_PREFIX[@]}" timeout --signal=TERM --kill-after=5 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True \
@@ -392,7 +407,7 @@ jobs:
             "${XVFB_PREFIX[@]}" env PYTHONPATH=host/src python tooling/dolphin_smoke.py \
               --dolphin "$DOLPHIN" --clean "$CLEAN_ISO" --modified "$MODIFIED_ISO" \
               --log-dir "$SMOKE_LOG_DIR" --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
-              --user-dir "$SMOKE_USER_DIR" --timeout 30 \
+              --user-dir "$SMOKE_USER_DIR" --memcard-seed "$MEMCARD_SEED" --timeout 30 \
               | tee "$RUNNER_TEMP/smoke.json" || true
             exit 1
           fi
@@ -431,12 +446,13 @@ jobs:
             SMOKE_TIMEOUT=$(python3 -c 'import struct,sys;d=open(sys.argv[1],"rb").read();f=struct.unpack_from("<Q",d,13)[0];print(max(60,int(f/60)+60))' "$MOVIE")
           fi
 
-          echo "dolphin_smoke_command=${XVFB_PREFIX[*]} env PYTHONPATH=host/src python tooling/dolphin_smoke.py ${ARGS[*]} --log-dir $SMOKE_LOG_DIR --user-dir $SMOKE_USER_DIR --timeout $SMOKE_TIMEOUT"
+          echo "dolphin_smoke_command=${XVFB_PREFIX[*]} env PYTHONPATH=host/src python tooling/dolphin_smoke.py ${ARGS[*]} --log-dir $SMOKE_LOG_DIR --user-dir $SMOKE_USER_DIR --memcard-seed $MEMCARD_SEED --timeout $SMOKE_TIMEOUT"
           "${XVFB_PREFIX[@]}" env PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
             --log-dir "$SMOKE_LOG_DIR" \
             --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
             --user-dir "$SMOKE_USER_DIR" \
+            --memcard-seed "$MEMCARD_SEED" \
             --timeout "$SMOKE_TIMEOUT" | tee "$RUNNER_TEMP/smoke.json"
 
 

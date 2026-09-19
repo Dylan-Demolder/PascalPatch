@@ -90,6 +90,16 @@ The runner kills the complete emulator process group on timeout. It does not lea
 
 ## Roster / character verification (old + new characters together)
 
+Before any of this: a fresh Dolphin user-dir hits an un-clearable
+"Create Game Data?" memory-card dialog on first boot (it does not respond to
+DTM movie input). Prime a memory card once per host:
+
+```sh
+DISPLAY=:0 PYTHONPATH=host/src python tooling/prime_memcard.py \
+  --dolphin /usr/bin/dolphin-emu --iso "/path/to/GALE01.iso" \
+  --output ~/.cache/meleemod/memcard-seed
+```
+
 Boot-level smoke above only proves Dolphin didn't crash. To confirm specific
 characters — retail and newly-injected custom ones — actually exist as live
 `Fighter` instances in the same running match/demo, attach over Dolphin's GDB

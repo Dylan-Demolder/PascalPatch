@@ -1,5 +1,5 @@
 from __future__ import annotations
-import argparse, json, os, re, signal, subprocess
+import argparse, json, os, re, shutil, signal, subprocess
 from pathlib import Path
 
 MOVIE_HINT_RE = re.compile(r"(?:playing|playback|movie|\.dtm|\bDTM\b)", re.IGNORECASE)
@@ -67,7 +67,7 @@ def _read_dolphin_log(log_file, user_dir=None):
     return content, str(source) if source else None
 
 
-def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None, diagnostics_dir=None):
+def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None, diagnostics_dir=None, memcard_seed=None):
     movie_path=Path(movie).expanduser() if movie else None
     movie_metadata = None
     movie_error = None
@@ -86,6 +86,15 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None, di
     if run_user_dir:
         run_user_dir.mkdir(parents=True, exist_ok=True)
         command.extend(["-u", str(run_user_dir)])
+        # Seed a pre-primed memory card (see tooling/prime_memcard.py) so Melee's
+        # timed "Game Data has been created" first-boot banner never appears.
+        # Without this, every fresh user_dir hits that ~15-25s banner on every
+        # single run, which looks like a stuck boot to any bounded probe/marker
+        # check. The seed directory is runner-local and gitignored -- it holds
+        # real Melee-derived save data and must never be committed (legal-notice.md).
+        seed_path = Path(memcard_seed).expanduser() if memcard_seed else None
+        if seed_path and (seed_path / "GC").is_dir():
+            shutil.copytree(seed_path / "GC", run_user_dir / "GC", dirs_exist_ok=True)
     for setting in ("Logger.Options.WriteToFile=True", "Logger.Options.WriteToConsole=True", "Logger.Logs.BOOT=True", "Logger.Logs.CORE=True", "Logger.Logs.OSREPORT=True"):
         command.extend(["-C", setting])
     log_path = Path(log_file).expanduser() if log_file else None
@@ -177,6 +186,7 @@ def main(argv=None):
     p.add_argument("--log-dir",help="Directory for one raw Dolphin log per ISO")
     p.add_argument("--diagnostics-dir",help="Directory for binary version/help/stdout/stderr/coredump diagnostics")
     p.add_argument("--user-dir",help="Explicit Dolphin user directory for isolated settings and logs")
+    p.add_argument("--memcard-seed",help="Directory (see tooling/prime_memcard.py) whose GC/ tree is copied into each run's user-dir before boot, so the timed first-boot memory-card banner never appears. Never point this at a path inside this git repo.")
     p.add_argument("--expected-archive",help="Runner-local custom fighter archive expected to exist")
     p.add_argument("--expected-symbol",help="Symbol or load marker expected in Dolphin output")
     p.add_argument("--expected-data",help="Runner-local custom fighter data expected to exist")
@@ -196,7 +206,7 @@ def main(argv=None):
     diagnostics_dir=Path(a.diagnostics_dir).expanduser() if a.diagnostics_dir else None
     clean_diagnostics=diagnostics_dir / "clean" if diagnostics_dir else None
     modified_diagnostics=diagnostics_dir / "modified" if diagnostics_dir else None
-    results=[run_one(a.dolphin,a.clean,a.timeout,a.movie,clean_log,clean_user_dir,clean_diagnostics),run_one(a.dolphin,a.modified,a.timeout,a.movie,modified_log,modified_user_dir,modified_diagnostics)]
+    results=[run_one(a.dolphin,a.clean,a.timeout,a.movie,clean_log,clean_user_dir,clean_diagnostics,a.memcard_seed),run_one(a.dolphin,a.modified,a.timeout,a.movie,modified_log,modified_user_dir,modified_diagnostics,a.memcard_seed)]
     fighter=custom_fighter_assertion(results[1],a.expected_archive,a.expected_symbol,a.expected_data,a.expected_observation,a.expected_character_select,a.expected_match_start,a.expected_input_automation_ready)
     payload={"results":results,"both_started":all(x["started"] for x in results),"evidence_scope":"marker_checks" if fighter["enabled"] else "boot_only","custom_fighter":fighter}
     print(json.dumps(payload,indent=2))
