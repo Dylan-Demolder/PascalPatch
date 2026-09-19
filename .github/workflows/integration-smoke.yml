@@ -376,11 +376,18 @@ jobs:
                    "tooling/prime_memcard.py once on this host." >&2
             fi
              set +e
+             # Logger.Options.WriteToConsole (+ BOOT/CORE/OSREPORT logs) is
+             # REQUIRED or Dolphin's stdout/stderr never contains "Active
+             # title: ..." at all, which makes the startup_marker check below
+             # structurally unable to pass regardless of whether boot
+             # actually succeeded -- this was silently failing every probe.
+             LOG_ARGS=(-C Logger.Options.WriteToConsole=True -C Logger.Logs.BOOT=True \
+                       -C Logger.Logs.CORE=True -C Logger.Logs.OSREPORT=True)
              if [ -n "$backend" ]; then
-               "${XVFB_PREFIX[@]}" timeout --signal=TERM --kill-after=5 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True \
+               "${XVFB_PREFIX[@]}" timeout --signal=TERM --kill-after=5 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True "${LOG_ARGS[@]}" \
                  >"$stdout_log" 2>"$stderr_log"
              else
-               "${XVFB_PREFIX[@]}" timeout --signal=TERM --kill-after=5 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" \
+               "${XVFB_PREFIX[@]}" timeout --signal=TERM --kill-after=5 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" "${LOG_ARGS[@]}" \
                  >"$stdout_log" 2>"$stderr_log"
              fi
              status=$?
