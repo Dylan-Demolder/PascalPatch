@@ -193,6 +193,13 @@ jobs:
     runs-on: [self-hosted, meleemod-smoke]
     steps:
       - uses: actions/checkout@v4
+      - name: Report executed checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "checkout_sha=$(git rev-parse HEAD)"
+          echo "checkout_ref=$(git symbolic-ref --short -q HEAD || true)"
+          git show -s --format='checkout_commit=%H %D %s' HEAD
       - name: Download recorded movie
         if: inputs.record_movie == true && inputs.movie == ''
         uses: actions/download-artifact@v4
@@ -337,6 +344,7 @@ jobs:
              local log="$SMOKE_LOG_DIR/${name}.log"
               probe_batch=(--batch)
               echo "probe_command=$DOLPHIN ${probe_batch[*]} -e $iso -u $user_dir${backend:+ -C $backend}"
+
 
               rm -rf "$user_dir"
 
