@@ -1,4 +1,4 @@
-import hashlib, json, shutil, tempfile, unittest
+import hashlib, json, os, shutil, tempfile, unittest
 from unittest.mock import patch
 from types import SimpleNamespace
 from pathlib import Path
@@ -24,10 +24,10 @@ from meleemod.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
 from meleemod.recompose_iso import recompose_iso
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
-from dolphin_smoke import run_one
+from dolphin_smoke import custom_fighter_assertion, run_one
 
-ISO=Path("/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")
-DOL=Path("/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")
+ISO=Path(os.environ.get("MELEEMOD_TEST_ISO","/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")).expanduser()
+DOL=Path(os.environ.get("MELEEMOD_TEST_DOL","/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")).expanduser()
 class CoreTests(unittest.TestCase):
  def test_real_iso_revision_and_hash(self):
   if not ISO.exists(): self.skipTest("local user ISO unavailable")
@@ -142,7 +142,9 @@ class CoreTests(unittest.TestCase):
  def test_static_bundle_overlay_is_deterministic_and_has_hook(self):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\nvoid plugin_shutdown(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    OSReport(\"#\\n\\n\");\n    gm_801A4510();\n    return 0;\n}\n"); (t/"src/melee/gm/gm_1A45.c").write_text("void frame(void) {\n        lb_800195D0();\n\n        if (HSD_PadGetResetSwitch()) {\n        }\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","shutdown":"plugin_shutdown","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t,runtime_root=Path(__file__).parents[2]); result=(t/"src/melee/gm/gmmain.c").read_text(); loop=(t/"src/melee/gm/gm_1A45.c").read_text(); bundle=(t/"src/melee/gm/meleemod_static_bundle.c").read_text(); self.assertIn("mm_meleemod_static_init",result); self.assertIn("mm_meleemod_static_shutdown",result); self.assertIn("plugin_shutdown",bundle); self.assertIn("mm_meleemod_frame();",loop); self.assertIn("mm_input_history_push",bundle); self.assertIn("mm_meleemod_frame_init",bundle); self.assertIn("if (mm_meleemod_shutdown_done) return;",bundle); self.assertTrue((t/"src/melee/gm/meleemod_static_bundle.c").exists())
-
+ def test_static_bundle_emits_scene_markers_from_runtime_state(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); plugins=[{"id":"m","entrypoint":"plugin_init","source":"plugin.c"}]; plain=make_bundle(plugins,t); hooked=make_bundle(plugins,t,runtime_root=Path(__file__).parents[2]); self.assertIn("CHARACTER_SELECT_COMPLETE",plain); self.assertIn("OFFLINE_MATCH_STARTED",plain); self.assertIn("mm_meleemod_scene_markers();",plain); self.assertIn("mm_meleemod_scene_markers();",hooked); self.assertIn("gm_GetCurrentSceneIndex",plain); self.assertIn("gm_GetCurrentGameMode",plain); self.assertEqual(plain.count("CHARACTER_SELECT_COMPLETE"),1); self.assertEqual(plain.count("OFFLINE_MATCH_STARTED"),1); self.assertIn("scene GM:",plain); self.assertEqual(plain.count("scene GM:"),1); self.assertIn("gm_GetCurrentSceneEnterData",plain); self.assertIn("pending_scene_change",plain); self.assertIn("css->match_type==0x00u",plain); self.assertNotIn("u && scene==0x00u",plain)
 
 
  def test_symbolizer_rejects_bad_address_and_redacts_missing_elf(self):
@@ -254,9 +256,18 @@ class CoreTests(unittest.TestCase):
  def test_dolphin_smoke_reports_missing_executable(self):
   result=run_one("/definitely/missing/dolphin", "game.iso", 0.1); self.assertFalse(result["started"]); self.assertIn("error",result)
 
+ def test_custom_fighter_assertion_checks_artifacts_and_observation(self):
+  with tempfile.TemporaryDirectory() as td:
+   t=Path(td); archive=t/"leesin.dat"; data=t/"leesin.bin"; archive.write_bytes(b"archive"); data.write_bytes(b"data")
+   result={"output_tail":"custom_fighter_symbol entered\nCUSTOM_FIGHTER_VISIBLE\n"}
+   check=custom_fighter_assertion(result,archive,"custom_fighter_symbol",data,"CUSTOM_FIGHTER_VISIBLE")
+   self.assertTrue(check["passed"]); self.assertEqual(set(check["checks"]),{"archive_exists","data_exists","symbol_observed","in_game_observed"})
+   self.assertFalse(custom_fighter_assertion(result,archive,"missing_symbol")["passed"])
+
  def test_static_startup_phase_is_explicit(self):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); bundle=make_bundle([{"id":"p","entrypoint":"plugin_init","source":"plugin.c","init_phase":"startup"}],t); self.assertIn("mm_meleemod_startup_init",bundle); self.assertIn("plugin_init();",bundle)
+
 
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):

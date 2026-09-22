@@ -95,10 +95,27 @@ jobs:
           [ -f "$ISO" ] || { echo "Melee ISO not found" >&2; exit 2; }
           DTM="$RUNNER_TEMP/pas44-menu-to-match.dtm"
           LOG="$RUNNER_TEMP/pas44-dolphin.log"
-          rm -f "$DTM" "$LOG"
+          STATE="$RUNNER_TEMP/pas44-dolphin-state.txt"
+          REPLAY_LOG="$RUNNER_TEMP/pas44-dolphin-replay.log"
+          HOTKEYS="$HOME/.config/dolphin-emu/Hotkeys.ini"
+          rm -f "$DTM" "$LOG" "$STATE" "$REPLAY_LOG"
+          dump_state() {
+            printf '%s\n' "--- visible windows ---"
+            xdotool search --onlyvisible --name '' 2>/dev/null | while read -r id; do
+              printf 'window=%s name=' "$id"
+              xdotool getwindowname "$id" 2>/dev/null || true
+            done
+            wmctrl -l 2>/dev/null || true
+            printf '%s\n' "--- dolphin version ---"
+            "$DOLPHIN" --version 2>&1 | head -n 5 || true
+            printf '%s\n' "--- movie hotkeys ---"
+            grep -iE 'movie|record|playback' "$HOTKEYS" 2>/dev/null || true
+            printf '%s\n' "--- dolphin log tail ---"
+            tail -n 80 "$LOG" 2>/dev/null || true
+          }
           "$DOLPHIN" -e "$ISO" >"$LOG" 2>&1 &
           PID=$!
-          trap 'kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true' EXIT
+          trap 'dump_state; kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true' EXIT
           sleep 5
           WINDOW=""
           for _ in $(seq 1 30); do
@@ -109,14 +126,17 @@ jobs:
           done
           if [ -z "$WINDOW" ]; then
             ps -ef | grep -i '[d]olphin' || true
-            tail -n 80 "$LOG" || true
+            dump_state
             echo "Dolphin window not found" >&2
             exit 1
           fi
           xdotool windowactivate --sync "$WINDOW"
           sleep 3
+          dump_state
+          printf '%s\n' 'Recording real menu input movie through Dolphin'
+          rm -f "$DTM"
           xdotool key ctrl+F11
-          sleep 2
+          sleep 12
           xdotool key Return
           sleep 4
           xdotool key Return
@@ -124,45 +144,93 @@ jobs:
           xdotool key Return
           sleep 4
           xdotool key Return
-          sleep 4
+          sleep 8
           xdotool key ctrl+F11
           sleep 2
           xdotool key ctrl+s
           sleep 2
+          DIALOG=""
+          for _ in $(seq 1 30); do
+            DIALOG="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
+            [ -n "$DIALOG" ] || DIALOG="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
+            [ -n "$DIALOG" ] && break
+            sleep 1
+          done
+          [ -n "$DIALOG" ] || { dump_state; echo 'Save Recording File As dialog not found' >&2; exit 1; }
+          timeout 5s xdotool windowactivate --sync "$DIALOG"
           xdotool key ctrl+a
           xdotool type --delay 20 "$DTM"
           xdotool key Return
-          sleep 3
-          test -s "$DTM"
+          sleep 8
+          test -s "$DTM" || { dump_state; echo 'Dolphin recording did not produce a DTM' >&2; exit 1; }
+          dump_state >"$STATE"
+          test -s "$STATE"
+          FRAME_COUNT=$(python3 -c 'import struct,sys; print(struct.unpack_from("<Q", open(sys.argv[1], "rb").read(29), 13)[0])' "$DTM")
+          REPLAY_BUDGET=$(( (FRAME_COUNT + 59) / 60 + 10 ))
+          REPLAY_STATUS=0
+           timeout "$REPLAY_BUDGET" "$DOLPHIN" -v Null -a HLE -e "$ISO" -m "$DTM" >"$REPLAY_LOG" 2>&1 || REPLAY_STATUS=$?
+
+          printf 'replay_status=%s frame_count=%s replay_budget_seconds=%s\n' "$REPLAY_STATUS" "$FRAME_COUNT" "$REPLAY_BUDGET"
+          grep -Eiq 'movie|DTM|GALE01|Starting' "$REPLAY_LOG" || { cat "$REPLAY_LOG"; exit 1; }
+          test "$REPLAY_STATUS" -eq 0 -o "$REPLAY_STATUS" -eq 124 || {
+            printf '%s\n' 'Dolphin replay exited before the bounded movie budget' >&2
+            tail -n 80 "$REPLAY_LOG"
+            exit 1
+          }
+          grep -Ei 'movie|DTM|GALE01|Starting' "$REPLAY_LOG" | tail -n 80
+          ls -l "$DTM" "$STATE"
           tail -n 80 "$LOG"
       - uses: actions/upload-artifact@v4
         with:
           name: pas44-dtm
-          path: ${{ runner.temp }}/pas44-menu-to-match.dtm
+          path: |
+            ${{ runner.temp }}/pas44-menu-to-match.dtm
+            ${{ runner.temp }}/pas44-dolphin-state.txt
+            ${{ runner.temp }}/pas44-dolphin.log
+            ${{ runner.temp }}/pas44-dolphin-replay.log
           if-no-files-found: error
 
   smoke:
     runs-on: [self-hosted, meleemod-smoke]
     steps:
       - uses: actions/checkout@v4
+      - name: Report executed checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "checkout_sha=$(git rev-parse HEAD)"
+          echo "checkout_ref=$(git symbolic-ref --short -q HEAD || true)"
+          git show -s --format='checkout_commit=%H %D %s' HEAD
+      - name: Download recorded movie
+        if: inputs.record_movie == true && inputs.movie == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: pas44-dtm
+          path: ${{ runner.temp }}/pas44-dtm
       - name: Resolve emulator and game data
         id: resolve
         shell: bash
         run: |
           set +e
           echo "runner=$(hostname) user=$(whoami) home=$HOME display=${DISPLAY:-<unset>} pwd=$(pwd)"
-          D="${{ inputs.dolphin }}"
+          INPUT_DOLPHIN="${{ inputs.dolphin }}"
           C="${{ inputs.clean_iso }}"
-          echo "--- provided dolphin=$D"; ls -la "$D" 2>&1
+          echo "--- provided dolphin=$INPUT_DOLPHIN"; ls -la "$INPUT_DOLPHIN" 2>&1
           echo "--- provided clean=$C";   ls -la "$C" 2>&1
-          [ -x "$D" ] || D="$(command -v dolphin-emu 2>/dev/null)"
-          [ -n "$D" ] || D="$(command -v dolphin 2>/dev/null)"
-          [ -n "$D" ] || D="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1)"
-          [ -n "$D" ] || D="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu*' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
-          [ -n "$C" ] || C="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
+          D="/usr/bin/dolphin-emu"
+          [ -x "$D" ] || D="$INPUT_DOLPHIN"
+          [ -x "$D" ] || D="$(command -v dolphin-emu 2>/dev/null || true)"
+          [ -n "$D" ] || D="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f \( -iname 'dolphin-emu' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+          [ -n "$D" ] || D="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+          [ -n "$D" ] || { echo 'GUI dolphin-emu binary not found; refusing nogui fallback' >&2; exit 2; }
+          case "$(basename "$D")" in *nogui*) echo "resolved binary is headless-only: $D" >&2; exit 2 ;; esac
+          [ -f "$C" ] || C="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
           echo "resolved dolphin=$D"; ls -la "$D" 2>&1
           echo "resolved clean=$C";   ls -la "$C" 2>&1
+          mkdir -p "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
+          { echo "binary=$D"; echo "path=$D"; echo "version:"; "$D" --version 2>&1 || true; } | tee "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs/resolved-binary.txt"
           { echo "dolphin=$D"; echo "clean=$C"; } >> "$GITHUB_OUTPUT"
+
       - name: Build linked DOL and modified ISO on the runner
         id: build
         shell: bash
@@ -186,8 +254,49 @@ jobs:
           echo "symbol=ftDataLeesinhsd2e" >> "$GITHUB_OUTPUT"
           echo "observation=$OBSERVATION" >> "$GITHUB_OUTPUT"
 
+      - name: Clear stale Dolphin process state
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "--- Dolphin processes before cleanup ---"
+          ps -ef | grep '[d]olphin' || true
+          pkill -9 -u "$(id -u)" -f '[d]olphin-emu' || true
+          sleep 1
+          echo "--- Dolphin processes after cleanup ---"
+          ps -ef | grep '[d]olphin' || true
+          # Zombies (<defunct>, state Z) cannot be killed; only their parent
+          # can reap them. Fail only on live (non-zombie) processes.
+          LEFTOVER="$(ps -u "$(id -u)" -o stat=,args= 2>/dev/null | grep '[d]olphin-emu' | grep -v '<defunct>' | grep -v '^[[:space:]]*Z' || true)"
+          if [ -n "$LEFTOVER" ]; then
+            echo "stale live dolphin-emu process remains after cleanup:" >&2
+            printf '%s\n' "$LEFTOVER" >&2
+            exit 1
+          fi
+
+      - name: Capture Dolphin startup diagnostics
+        shell: bash
+        env:
+          DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
+          CLEAN_ISO: ${{ steps.resolve.outputs.clean }}
+          MODIFIED_ISO: ${{ steps.build.outputs.modified }}
+        run: |
+          set -u
+          echo "--- Dolphin version ---"
+          "$DOLPHIN" --version 2>&1 || true
+          echo "--- DISPLAY ---"
+          printf '%s\n' "${DISPLAY:-<unset>}"
+          echo "--- display geometry ---"
+          xdotool getdisplaygeometry 2>&1 || xdpyinfo 2>&1 || true
+          echo "--- resolved ISO files ---"
+          ls -l "$CLEAN_ISO" "$MODIFIED_ISO" 2>&1
+          echo "--- Dolphin help/backend list ---"
+          mkdir -p "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs"
+          "$DOLPHIN" --help 2>&1 | tee "${RUNNER_TEMP:-/tmp}/pas99-dolphin-logs/dolphin-help.log" || true
+
+
       - name: Run bounded clean/modified Dolphin smoke
         shell: bash
+
         env:
           DOLPHIN: ${{ steps.resolve.outputs.dolphin }}
           CLEAN_ISO: ${{ steps.resolve.outputs.clean }}
@@ -205,14 +314,127 @@ jobs:
           EXPECTED_MATCH_START: ${{ inputs.expected_match_start }}
           MOVIE: ${{ inputs.movie }}
           EXPECTED_INPUT_AUTOMATION_READY: ${{ inputs.expected_input_automation_ready }}
+          SMOKE_LOG_DIR: ${{ runner.temp }}/pas99-dolphin-logs
+          SMOKE_USER_DIR: ${{ runner.temp }}/pas99-dolphin-user
+
 
         run: |
-          set -euo pipefail
-          MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
 
+
+          set -euo pipefail
+          # PAS-165 host root cause: the runner tab exports QT_QPA_PLATFORM=xcb
+          # (plus QT_XCB_NO_XI2/QT_WAYLAND_RECONNECT) for xdotool in the record
+          # job. Dolphin 2606 stalls/SIGILLs during movie playback under that Qt
+          # env, while native Wayland playback passes. Neutralise the xcb vars
+          # for this smoke job only; the record job keeps xcb for xdotool.
+          unset QT_QPA_PLATFORM QT_XCB_NO_XI2 QT_WAYLAND_RECONNECT
+          cleanup_smoke_children() {
+            local children
+            children="$(jobs -pr)"
+            if [ -n "$children" ]; then
+              kill -KILL $children 2>/dev/null || true
+            fi
+          }
+          trap cleanup_smoke_children EXIT
+          trap 'cleanup_smoke_children; exit 143' TERM INT
+          MODIFIED_ISO="${MODIFIED_ISO_IN:-$BUILD_MODIFIED}"
+          MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
+          mkdir -p "$SMOKE_LOG_DIR" "$SMOKE_USER_DIR"
+          if [ -n "${DISPLAY:-}" ]; then
+            XVFB_PREFIX=()
+          else
+            command -v xvfb-run >/dev/null || { echo "DISPLAY is unset and xvfb-run is unavailable" >&2; exit 2; }
+            XVFB_PREFIX=(xvfb-run -a)
+          fi
+          PROBE_FAILED=0
+          MEMCARD_SEED="${MEMCARD_SEED:-$HOME/.cache/meleemod/memcard-seed}"
+          run_probe() {
+            local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
+            local log="$SMOKE_LOG_DIR/${name}.log"
+            local stdout_log="$SMOKE_LOG_DIR/${name}.stdout.log"
+            local stderr_log="$SMOKE_LOG_DIR/${name}.stderr.log"
+            echo "probe_command=${XVFB_PREFIX[*]} timeout 30 $DOLPHIN -b -e $iso -u $user_dir${backend:+ -C $backend}"
+
+
+
+            rm -rf "$user_dir"
+
+
+            mkdir -p "$user_dir"
+            # Seed a pre-primed memory card so Melee's GameCube-BIOS-level
+            # "Create Game Data?" dialog (button-gated, NOT reachable via a
+            # DTM movie -- confirmed by direct testing) and the following
+            # timed "Game Data has been created." banner never appear. See
+            # tooling/prime_memcard.py for how to (re)generate this cache;
+            # it must be produced once, interactively, per runner host and
+            # is intentionally NOT checked into git (real Melee save data).
+            if [ -d "$MEMCARD_SEED/GC" ]; then
+              cp -r "$MEMCARD_SEED/GC" "$user_dir/"
+            else
+              echo "WARN: no memcard seed at $MEMCARD_SEED -- this probe will hit the" \
+                   "first-boot memory-card dialog and likely time out. Run" \
+                   "tooling/prime_memcard.py once on this host." >&2
+            fi
+             set +e
+             # Logger.Options.WriteToConsole (+ BOOT/CORE/OSREPORT logs) is
+             # REQUIRED or Dolphin's stdout/stderr never contains "Active
+             # title: ..." at all, which makes the startup_marker check below
+             # structurally unable to pass regardless of whether boot
+             # actually succeeded -- this was silently failing every probe.
+             LOG_ARGS=(-C Logger.Options.WriteToConsole=True -C Logger.Logs.BOOT=True \
+                       -C Logger.Logs.CORE=True -C Logger.Logs.OSREPORT=True)
+             if [ -n "$backend" ]; then
+               "${XVFB_PREFIX[@]}" timeout --signal=TERM --kill-after=5 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" -C "$backend" -C Core.DSPHLE=True "${LOG_ARGS[@]}" \
+                 >"$stdout_log" 2>"$stderr_log"
+             else
+               "${XVFB_PREFIX[@]}" timeout --signal=TERM --kill-after=5 30 "$DOLPHIN" -b -e "$iso" -u "$user_dir" "${LOG_ARGS[@]}" \
+                 >"$stdout_log" 2>"$stderr_log"
+             fi
+             status=$?
+             cat "$stdout_log" "$stderr_log" >"$log"
+             set -e
+
+             signal_name=""
+             if [ "$status" -eq 139 ]; then signal_name="SIGSEGV"; fi
+             if [ "$status" -eq 135 ]; then signal_name="SIGBUS"; fi
+             if [ "$status" -eq 137 ]; then signal_name="SIGKILL"; fi
+             startup_marker=0
+             # Dolphin's real log format is "Active title: <Game Name> (<ID>)",
+             # e.g. "Active title: Super Smash Bros. Melee (GALE01)" -- the
+             # ID is in parens at the end, NOT immediately after the colon.
+             # The previous regex only matched an ID directly after "Active
+             # title: ", which this real format never produces, so
+             # startup_marker was stuck at 0 on every successful boot too.
+             if grep -Eq 'Active title:.*\([A-Z0-9]{6}\)' "$log"; then startup_marker=1; fi
+             printf 'probe=%s exit_code=%s signal=%s startup_marker=%s timeout_is_bounded_live_process=%s coredumpctl=\n' "$name" "$status" "$signal_name" "$startup_marker" "$([ "$status" -eq 124 ] || [ "$status" -eq 137 ] && echo 1 || echo 0)" >>"$log"
+             coredumpctl --no-pager info "$DOLPHIN" >>"$log" 2>&1 || true
+             printf 'probe=%s exit_code=%s signal=%s startup_marker=%s\n' "$name" "$status" "$signal_name" "$startup_marker"
+             if [ "$status" -eq 135 ] || [ "$status" -eq 139 ] || { [ "$status" -ne 0 ] && [ "$status" -ne 124 ] && [ "$status" -ne 137 ]; } || [ "$startup_marker" -ne 1 ]; then PROBE_FAILED=1; fi
+
+          }
+          run_probe boot-only-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-clean" ""
+          run_probe boot-only-null-clean "$CLEAN_ISO" "$SMOKE_USER_DIR/boot-only-null-clean" "Core.GFXBackend=Null"
+          run_probe boot-only-null-modified "$MODIFIED_ISO" "$SMOKE_USER_DIR/boot-only-null-modified" "Core.GFXBackend=Null"
+          if [ "$PROBE_FAILED" -ne 0 ]; then
+            echo "Dolphin boot probe failed; skipping DTM playback"
+            "${XVFB_PREFIX[@]}" env PYTHONPATH=host/src python tooling/dolphin_smoke.py \
+              --dolphin "$DOLPHIN" --clean "$CLEAN_ISO" --modified "$MODIFIED_ISO" \
+              --log-dir "$SMOKE_LOG_DIR" --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
+              --user-dir "$SMOKE_USER_DIR" --memcard-seed "$MEMCARD_SEED" --timeout 30 \
+              | tee "$RUNNER_TEMP/smoke.json" || true
+            exit 1
+          fi
 
           MODIFIED_ISO="${MODIFIED_ISO:-$CLEAN_ISO}"
+
+          if [ -z "$MOVIE" ] && [ "${{ inputs.record_movie }}" = "true" ]; then
+            MOVIE="$RUNNER_TEMP/pas44-dtm/pas44-menu-to-match.dtm"
+          fi
+          if [ -z "$MOVIE" ]; then
+            MOVIE="$GITHUB_WORKSPACE/tooling/fixtures/tasvideos-2505M-numerics.dtm"
+          fi
           if [ -z "$MODIFIED_ISO_IN" ] && [ -z "$BUILD_MODIFIED" ]; then
+
             echo "PAS-24 build produced no modified ISO; refusing clean-vs-clean smoke" >&2
             exit 1
           fi
@@ -229,16 +451,45 @@ jobs:
           ARGS+=(--expected-symbol "$EXPECTED_SYMBOL" --expected-observation "$EXPECTED_OBSERVATION")
           ARGS+=(--expected-character-select "$EXPECTED_CHARACTER_SELECT" --expected-match-start "$EXPECTED_MATCH_START")
           ARGS+=(--expected-input-automation-ready "$EXPECTED_INPUT_AUTOMATION_READY")
+          SMOKE_TIMEOUT=30
           if [ -n "$MOVIE" ]; then
             test -f "$MOVIE"
+            python3 -c 'import struct,sys; d=open(sys.argv[1],"rb").read(); assert d[:4]==b"DTM\x1a", "movie is not a raw DTM file"; assert d[4:10].rstrip(b"\x00")==b"GALE01", "DTM game id must be GALE01"; assert d[10]==0, "DTM must be a GameCube movie"; assert d[11]&0x01, "DTM must enable GC controller 1"; assert d[12]==0, "DTM must start from boot"; f=struct.unpack_from("<Q",d,13)[0]; assert f>0, "DTM has no frames"; print("dtm ok game=GALE01 controllers=%#04x frames=%d" % (d[11],f))' "$MOVIE"
             ARGS+=(--movie "$MOVIE")
+            SMOKE_TIMEOUT=$(python3 -c 'import struct,sys;d=open(sys.argv[1],"rb").read();f=struct.unpack_from("<Q",d,13)[0];print(max(60,int(f/60)+60))' "$MOVIE")
           fi
 
-          PYTHONPATH=host/src python tooling/dolphin_smoke.py \
+          echo "dolphin_smoke_command=${XVFB_PREFIX[*]} env PYTHONPATH=host/src python tooling/dolphin_smoke.py ${ARGS[*]} --log-dir $SMOKE_LOG_DIR --user-dir $SMOKE_USER_DIR --memcard-seed $MEMCARD_SEED --timeout $SMOKE_TIMEOUT"
+          "${XVFB_PREFIX[@]}" env PYTHONPATH=host/src python tooling/dolphin_smoke.py \
             "${ARGS[@]}" \
-            --timeout 30 | tee /tmp/smoke.json
-          # PAS-31 gate: the modified ISO must boot and emit loader,
-          # character-select, and offline-match markers from the linked DOL.
-          python -c "import json; p=json.load(open('/tmp/smoke.json')); assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('input_automation_ready'), c; print('PAS-24 gate passed:', c['checks'])"
+            --log-dir "$SMOKE_LOG_DIR" \
+            --diagnostics-dir "$SMOKE_LOG_DIR/diagnostics" \
+            --user-dir "$SMOKE_USER_DIR" \
+            --memcard-seed "$MEMCARD_SEED" \
+            --timeout "$SMOKE_TIMEOUT" | tee "$RUNNER_TEMP/smoke.json"
+
+
+
+          # PAS-99 gate: movie playback must be entered (bounded tail is never
+          # silently empty) and the modified ISO must emit loader,
+          # character-select, offline-match, and input-automation markers
+          # from actual Dolphin output. No synthesized bytes or markers.
+          # PAS-154: Dolphin 2606 enters playback via `-e <iso> -m <dtm>`
+
+          # (MainWindow PlayInput path); raw DTM/GALE01 metadata is validated
+          # above and echoed here, so `movie playback not entered` points at
+          # the emulator/boot path rather than a wrapped or mismatched movie.
+          python -c "import json; p=json.load(open('$RUNNER_TEMP/smoke.json')); print('bounded tails:'); [print('---', r.get('game'), 'len=', r.get('output_len'), 'log=', r.get('log_file'), 'log_len=', r.get('log_len'), 'movie=', r.get('movie'), 'exists=', r.get('movie_exists'), 'meta=', r.get('movie_metadata'), 'err=', r.get('movie_error'), 'playback=', r.get('playback')) for r in p['results']]; [print(r.get('output_tail','')[-2000:]) for r in p['results']]; assert all(not r.get('movie_error') for r in p['results'] if r.get('movie')), 'invalid DTM metadata'; assert p['both_started'], p; c=p['custom_fighter']; assert c['passed'] and c['checks'].get('archive_exists') and c['checks'].get('data_exists') and c['checks'].get('character_select_complete') and c['checks'].get('offline_match_started') and c['checks'].get('input_automation_ready'), c; assert all(r.get('log_len', 0) > 0 for r in p['results']), 'empty Dolphin log is a diagnostic failure'; assert all((r.get('playback') or {}).get('movie_playback_entered') for r in p['results'] if r.get('movie')), 'movie playback not entered'; print('PAS-99 gate passed:', c['checks'])"
+
+      - name: Upload raw Dolphin logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pas99-dolphin-logs
+          path: |
+            ${{ runner.temp }}/pas99-dolphin-logs/*
+            ${{ runner.temp }}/smoke.json
+
+          if-no-files-found: error
       - name: Run non-game integration tests
         run: PYTHONPATH=host/src python -m unittest discover -s host/tests -v

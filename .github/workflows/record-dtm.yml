@@ -37,10 +37,12 @@ jobs:
           echo "provided iso=$iso"; ls -la "$iso" 2>&1 || true
           [ -x "$dolphin" ] || dolphin="$(command -v dolphin-emu 2>/dev/null || true)"
           [ -n "$dolphin" ] || dolphin="$(command -v dolphin 2>/dev/null || true)"
-          [ -n "$dolphin" ] || dolphin="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1)"
-          [ -n "$dolphin" ] || dolphin="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu*' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1)"
+          [ -n "$dolphin" ] || dolphin="$(find "$HOME/Downloads" "$HOME/.config/Slippi Launcher" -maxdepth 4 -type f -iname '*.AppImage' 2>/dev/null | head -1 || true)"
+          [ -n "$dolphin" ] || dolphin="$(find /usr /opt /home -maxdepth 6 -type f \( -iname 'dolphin-emu*' -o -iname 'Dolphin*.AppImage' \) 2>/dev/null | head -1 || true)"
+          [ -x "$dolphin" ] || dolphin="/usr/bin/dolphin-emu"
           [ -x "$dolphin" ] || { echo "Dolphin executable not found" >&2; exit 2; }
-          [ -f "$iso" ] || iso="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1)"
+          [ -f "$iso" ] || iso="$(find "$HOME" /home -maxdepth 6 -type f -iname '*.iso' 2>/dev/null | head -1 || true)"
+          [ -f "$iso" ] || iso="$HOME/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso"
           [ -f "$iso" ] || { echo "Melee ISO not found" >&2; exit 2; }
           echo "resolved dolphin=$dolphin"; ls -la "$dolphin"
           echo "resolved iso=$iso"; ls -la "$iso"
@@ -55,16 +57,41 @@ jobs:
           set -euo pipefail
           dtm="$RUNNER_TEMP/pas44-menu-to-match.dtm"
           log="$RUNNER_TEMP/pas44-dolphin.log"
+          hotkeys="$HOME/.config/dolphin-emu/Hotkeys.ini"
           rm -f "$dtm" "$log"
+          dump_state() {
+            printf '%s\n' "--- visible windows ---"
+            xdotool search --onlyvisible --name '' 2>/dev/null | while read -r id; do
+              printf 'window=%s name=' "$id"
+              xdotool getwindowname "$id" 2>/dev/null || true
+            done
+            wmctrl -l 2>/dev/null || true
+            printf '%s\n' "--- dolphin version ---"
+            "$DOLPHIN" --version 2>&1 | head -n 5 || true
+            printf '%s\n' "--- movie hotkeys ---"
+            grep -iE 'movie|record|playback' "$hotkeys" 2>/dev/null || true
+            printf '%s\n' "--- dolphin log tail ---"
+            tail -n 80 "$log" 2>/dev/null || true
+          }
           "$DOLPHIN" -e "$ISO" >"$log" 2>&1 &
           dolphin_pid=$!
-          finish() { kill "$dolphin_pid" 2>/dev/null || true; wait "$dolphin_pid" 2>/dev/null || true; }
+          finish() { dump_state; kill "$dolphin_pid" 2>/dev/null || true; wait "$dolphin_pid" 2>/dev/null || true; }
           trap finish EXIT
-          window="$(xdotool search --sync --onlyvisible --class dolphin-emu | head -1)"
-          xdotool windowactivate --sync "$window"
+          sleep 5
+          window=""
+          for _ in $(seq 1 30); do
+            window="$(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null | while read -r id; do xdotool getwindowname "$id" 2>/dev/null | grep -q . && printf '%s' "$id" && break; done)"
+            [ -n "$window" ] && break
+            sleep 1
+          done
+          [ -n "$window" ] || { dump_state; exit 1; }
+          timeout 5s xdotool windowactivate --sync "$window"
+          dump_state
           sleep 3
+          printf '%s\n' 'Recording real menu input movie through Dolphin'
+          rm -f "$dtm"
           xdotool key ctrl+F11
-          sleep 2
+          sleep 12
           xdotool key Return
           sleep 4
           xdotool key Return
@@ -72,22 +99,51 @@ jobs:
           xdotool key Return
           sleep 4
           xdotool key Return
-          sleep 4
+          sleep 8
           xdotool key ctrl+F11
           sleep 2
           xdotool key ctrl+s
-          sleep 2
+          dialog=""
+          for _ in $(seq 1 30); do
+            dialog="$(xdotool search --onlyvisible --name 'Save Recording File As' 2>/dev/null | head -1 || true)"
+            [ -n "$dialog" ] || dialog="$(xdotool search --onlyvisible --name 'Save' 2>/dev/null | head -1 || true)"
+            [ -n "$dialog" ] && break
+            sleep 1
+          done
+          [ -n "$dialog" ] || { dump_state; echo 'Save Recording File As dialog not found' >&2; exit 1; }
+          timeout 5s xdotool windowactivate --sync "$dialog"
           xdotool key ctrl+a
           xdotool type --delay 20 "$dtm"
           xdotool key Return
-          sleep 3
-          test -s "$dtm"
+          sleep 8
+          test -s "$dtm" || { dump_state; echo 'Dolphin recording did not produce a DTM' >&2; exit 1; }
+          replay_log="$RUNNER_TEMP/pas44-dolphin-replay.log"
+          state_snapshot="$RUNNER_TEMP/pas44-dolphin-state.txt"
+          dump_state >"$state_snapshot"
+          test -s "$state_snapshot"
+          frame_count=$(python3 -c 'import struct,sys; print(struct.unpack_from("<Q", open(sys.argv[1], "rb").read(29), 13)[0])' "$dtm")
+          replay_budget=$(( (frame_count + 59) / 60 + 10 ))
+          replay_status=0
+          timeout "$replay_budget" "$DOLPHIN" -b -e "$ISO" -m "$dtm" >"$replay_log" 2>&1 || replay_status=$?
+          printf 'replay_status=%s frame_count=%s replay_budget_seconds=%s\n' "$replay_status" "$frame_count" "$replay_budget"
+          grep -Eiq 'movie|DTM|GALE01|Starting' "$replay_log" || { cat "$replay_log"; exit 1; }
+          test "$replay_status" -eq 0 -o "$replay_status" -eq 124 || {
+            printf '%s\n' 'Dolphin replay exited before the bounded movie budget' >&2
+            tail -n 80 "$replay_log"
+            exit 1
+          }
+          printf '%s\n' 'Movie replay ran through the complete authored frame budget; runtime character/match markers are observed separately.'
+          grep -Ei 'movie|DTM|GALE01|Starting' "$replay_log" | tail -n 80
           printf '%s\n' 'Recorded DTM:'
-          ls -l "$dtm"
+          ls -l "$dtm" "$state_snapshot"
           printf '%s\n' 'Bounded Dolphin log tail:'
           tail -n 80 "$log"
       - uses: actions/upload-artifact@v4
         with:
           name: pas44-dtm
-          path: ${{ runner.temp }}/pas44-menu-to-match.dtm
+          path: |
+            ${{ runner.temp }}/pas44-menu-to-match.dtm
+            ${{ runner.temp }}/pas44-dolphin-state.txt
+            ${{ runner.temp }}/pas44-dolphin.log
+            ${{ runner.temp }}/pas44-dolphin-replay.log
           if-no-files-found: error

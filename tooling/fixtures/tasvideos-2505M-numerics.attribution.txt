@@ -1,0 +1,5 @@
+Source: TASVideos publication https://tasvideos.org/2505M
+Movie: Super Smash Bros. Melee (USA) (En,Ja) (v1.02), Dolphin r7719
+Author: numerics
+Downloaded with the TASVideos publication page as referer; see source page for republication terms.
+SHA-256: d89c948edff8350003e004e41b1a3cb999d6d9bd8eb738090a25c2e2a87dfa09
