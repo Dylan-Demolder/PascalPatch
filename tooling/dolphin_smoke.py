@@ -14,7 +14,10 @@ DTM_FRAME_COUNT_OFFSET = 13
 
 
 def read_dtm_metadata(movie_path):
-    data = movie_path.read_bytes()
+    try:
+        data = movie_path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"cannot read DTM: {movie_path}: {exc}") from exc
     if len(data) < DTM_HEADER_SIZE:
         raise ValueError(f"DTM is shorter than the 256-byte header: {movie_path}")
     if data[:4] != b"DTM\x1a":
@@ -80,6 +83,12 @@ def run_one(dolphin, game, timeout, movie=None, log_file=None, user_dir=None, di
     platform=os.environ.get("PAS_DOLPHIN_PLATFORM")
     if platform:
         command.extend(["-p", platform])
+    video_backend=os.environ.get("PAS_DOLPHIN_VIDEO_BACKEND")
+    if video_backend:
+        command.extend(["-v", video_backend])
+    audio_emulation=os.environ.get("PAS_DOLPHIN_AUDIO_EMULATION")
+    if audio_emulation:
+        command.extend(["-a", audio_emulation])
     if movie_path:
         command.extend(["-m", str(movie_path)])
     run_user_dir = Path(user_dir).expanduser() if user_dir else None

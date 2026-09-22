@@ -395,9 +395,11 @@ jobs:
              set -e
 
              signal_name=""
+             timeout_phase="none"
+             if [ "$status" -eq 124 ]; then signal_name="TIMEOUT"; timeout_phase="TERM"; fi
              if [ "$status" -eq 139 ]; then signal_name="SIGSEGV"; fi
              if [ "$status" -eq 135 ]; then signal_name="SIGBUS"; fi
-             if [ "$status" -eq 137 ]; then signal_name="SIGKILL"; fi
+             if [ "$status" -eq 137 ]; then signal_name="SIGKILL"; timeout_phase="KILL"; fi
              startup_marker=0
              # Dolphin's real log format is "Active title: <Game Name> (<ID>)",
              # e.g. "Active title: Super Smash Bros. Melee (GALE01)" -- the
@@ -406,9 +408,20 @@ jobs:
              # title: ", which this real format never produces, so
              # startup_marker was stuck at 0 on every successful boot too.
              if grep -Eq 'Active title:.*\([A-Z0-9]{6}\)' "$log"; then startup_marker=1; fi
-             printf 'probe=%s exit_code=%s signal=%s startup_marker=%s timeout_is_bounded_live_process=%s coredumpctl=\n' "$name" "$status" "$signal_name" "$startup_marker" "$([ "$status" -eq 124 ] || [ "$status" -eq 137 ] && echo 1 || echo 0)" >>"$log"
-             coredumpctl --no-pager info "$DOLPHIN" >>"$log" 2>&1 || true
-             printf 'probe=%s exit_code=%s signal=%s startup_marker=%s\n' "$name" "$status" "$signal_name" "$startup_marker"
+             {
+               printf 'probe=%s exit_code=%s signal=%s timeout_phase=%s startup_marker=%s timeout_is_bounded_live_process=%s coredumpctl=\n' "$name" "$status" "$signal_name" "$timeout_phase" "$startup_marker" "$([ "$status" -eq 124 ] || [ "$status" -eq 137 ] && echo 1 || echo 0)"
+               printf '%s\n' '--- process snapshot ---'
+               ps -eo pid,ppid,stat,etime,rss,cmd | grep '[d]olphin' || true
+               printf '%s\n' '--- memory/cgroup snapshot ---'
+               free -h 2>&1 || true
+               for f in /sys/fs/cgroup/memory.current /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.events; do [ -r "$f" ] && { printf '%s: ' "$f"; tr '\n' ' ' <"$f"; printf '\n'; }; done
+               printf '%s\n' '--- kernel evidence ---'
+               dmesg --level=err,warn 2>&1 | tail -n 80 || true
+               journalctl -k --since '-2 minutes' --no-pager 2>&1 | tail -n 80 || true
+               printf '%s\n' '--- coredump evidence ---'
+               coredumpctl --no-pager info "$DOLPHIN" 2>&1 || true
+             } >>"$log"
+             printf 'probe=%s exit_code=%s signal=%s timeout_phase=%s startup_marker=%s\n' "$name" "$status" "$signal_name" "$timeout_phase" "$startup_marker"
              if [ "$status" -eq 135 ] || [ "$status" -eq 139 ] || { [ "$status" -ne 0 ] && [ "$status" -ne 124 ] && [ "$status" -ne 137 ]; } || [ "$startup_marker" -ne 1 ]; then PROBE_FAILED=1; fi
 
           }

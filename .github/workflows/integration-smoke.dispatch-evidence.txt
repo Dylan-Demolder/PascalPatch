@@ -1,0 +1,10 @@
+integration-smoke dispatch attempt
+repository: Dylan-Demolder/MeleeMod
+ref: pas28-runtime-playability-boundary
+commit: f5bc9cca3227a82dc4b1397d7adbd7e5516a460e
+endpoint: POST /repos/Dylan-Demolder/MeleeMod/actions/workflows/integration-smoke.yml/dispatches
+request: {"ref":"pas28-runtime-playability-boundary","inputs":{}}
+response_status: 422
+response_body: {"message":"Required input 'decomp_repo' not provided","documentation_url":"https://docs.github.com/rest/actions/workflows#create-a-workflow-dispatch-event","status":422}
+
+No integration-smoke run was created. No smoke.json or runner logs are available from this attempt.
