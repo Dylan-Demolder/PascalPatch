@@ -36,6 +36,7 @@ class CoreTests(unittest.TestCase):
   x={"id":"x-profile","name":"x","game_version":"GALE01-1.02","base_game":"x","plugins":["a","a"],"mods":[],"mode":"offline","online_safe":False,"extra":1}
   errors=validate_profile(x); self.assertTrue(any(e.code=="unknown_field" for e in errors)); self.assertTrue(any(e.code=="duplicate" for e in errors))
  def test_build_is_atomic_and_composes_exact_target(self):
+  if not DOL.exists(): self.skipTest("local user DOL unavailable")
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); base=t/"base"; (base/"sys").mkdir(parents=True); shutil.copy2(DOL,base/"sys/main.dol"); (base/"files").mkdir(); (base/"files/original.bin").write_bytes(b"old")
    modsrc=t/"mods/skin"; (modsrc/"files").mkdir(parents=True); (modsrc/"files/original.bin").write_bytes(b"new")
