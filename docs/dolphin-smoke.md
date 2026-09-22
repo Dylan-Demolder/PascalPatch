@@ -12,6 +12,6 @@ PYTHONPATH=host/src python tooling/dolphin_smoke.py \
   --timeout 20
 ```
 
-When a supplied movie file exists and Dolphin starts, the JSON includes `tooling_markers: ["INPUT_AUTOMATION_READY"]`; this is a bounded tooling signal that movie playback was requested, not a runtime gameplay marker. Menu/title and plugin behavior still require the Dolphin log and runtime markers.
+Set `PAS_DOLPHIN_PLATFORM=headless` to force Dolphin's headless platform in the smoke subprocess. Pass `--diagnostics-dir` to capture per-ISO `launcher.txt`, `stdout.log`, `stderr.log`, and `coredumpctl.txt`; the launcher records the resolved binary, SHA-256, version, help output, and dynamic linkage. These files are diagnostic evidence only; gameplay claims still require real runtime markers.
 
 The manual `.github/workflows/integration-smoke.yml` workflow is self-hosted and accepts all game/emulator paths as inputs. It never uploads or stores game data.
