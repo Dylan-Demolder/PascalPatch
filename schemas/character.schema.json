@@ -43,6 +43,29 @@
     },
     "dependencies": {
       "type": "array"
+    },
+    "description": {
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "attributes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "attribute_scales": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "maximum": 10
+      }
     }
   }
 }

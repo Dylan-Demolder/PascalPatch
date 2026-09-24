@@ -86,6 +86,33 @@ class NativeTests(unittest.TestCase):
             plan = validate_character_entry({"package": str(package), "slot": "falco", "fighter_file": str(fighter), "animation_file": str(anim)}, "offline")
             self.assertEqual(sorted(plan["overlays"]), ["PlFc.dat", "PlFcAJ.dat"])
 
+    def test_roster_profile_overlays_every_slot(self):
+        # Mirrors the profile Character Studio's build-roster writes: one entry per slot.
+        slots = {"donkey-kong": "PlDk", "captain-falcon": "PlCa", "jigglypuff": "PlPr", "link": "PlLk", "fox": "PlFx",
+                 "bowser": "PlKp", "marth": "PlMs", "samus": "PlSs", "mewtwo": "PlMt", "ganondorf": "PlGn"}
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td); (root / "profiles").mkdir(); (root / "base.iso").write_bytes(b"disc")
+            entries = []
+            for slot, code in slots.items():
+                d = root / "build" / slot; d.mkdir(parents=True)
+                package = _package(d)
+                entry = {"package": str(package), "slot": slot, "fighter_file": str(_fighter(d, code + ".dat"))}
+                costume = _fighter(d, code + "Nr.dat")
+                costume.with_name(code + "Nr.dat.slot.json").rename(costume.with_name(code + "Nr.dat.costume.json"))
+                entry["costume_file"] = str(costume); entries.append(entry)
+            doc = {"id": "custom-roster", "name": "Roster", "game_version": "GALE01-1.02", "base_game": "../base.iso", "plugins": [], "mods": [],
+                   "mode": "offline", "online_safe": False, "characters": entries}
+            (root / "profiles/custom-roster.json").write_text(json.dumps(doc))
+            seen = {}
+            def fake_overlay(base, replacements, output):
+                seen.update(replacements); Path(output).write_bytes(b"overlaid")
+            with patch("meleemod.store.inspect_game", return_value=SimpleNamespace(kind="iso", main_dol_sha1="x")), patch("meleemod.store.overlay_iso_files", side_effect=fake_overlay):
+                BuildStore(root / "data").build(load_profile(root / "profiles/custom-roster.json", root))
+            self.assertEqual(sorted(seen), sorted(n for c in slots.values() for n in (c + ".dat", c + "Nr.dat")))
+            doc["characters"].append(dict(entries[0])); (root / "profiles/custom-roster.json").write_text(json.dumps(doc))
+            with self.assertRaises((ManifestError, CompositionError)):
+                BuildStore(root / "data").build(load_profile(root / "profiles/custom-roster.json", root))
+
     def test_native_command_shape(self):
         self.assertEqual(native_command("melee_port.exe", "g.iso", ["--frames", 10]), ["melee_port.exe", "--iso", "g.iso", "--frames", "10"])
 
