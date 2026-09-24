@@ -25,6 +25,13 @@ def load_profile(path, catalog_root=None):
  root=Path(catalog_root or source.parent).resolve()
  for k in ("decomp_repo","decomp_orig","plugin_source_root","runtime_root"):
   if k in data and not Path(data[k]).is_absolute(): data[k]=str((root / data[k]).resolve())
+ chars=[]
+ for c in data.get("characters",[]):
+  c=dict(c)
+  for k in ("package","fighter_file","costume_file","animation_file"):
+   if k in c and not Path(c[k]).is_absolute(): c[k]=str((source.parent / c[k]).resolve())
+  chars.append(c)
+ if chars: data["characters"]=chars
  plugins=[]; mods=[]; errors=[]
  for i,ident in enumerate(data["plugins"]):
   try:
@@ -41,5 +48,10 @@ def load_profile(path, catalog_root=None):
   for dep in p.get("dependencies",[]):
    if dep not in ids: errors.append(ValidationError(f"plugins.{p['id']}.dependencies","missing_dependency",f"plugin dependency {dep!r} is not selected"))
  eff,safety_errors=validate_safety(data,plugins,mods); errors.extend(safety_errors)
+ if chars:
+  # Custom characters change simulation state and would desync Slippi
+  # netplay, so they are offline-only regardless of package claims.
+  if data.get("mode")!="offline": errors.append(ValidationError("profile.characters","offline_required","character packages require mode=offline"))
+  if eff=="online-safe": eff="offline-only"
  if errors: raise ManifestError("profile validation failed",errors)
  return ResolvedProfile(data,tuple(plugins),tuple(mods),eff,source)

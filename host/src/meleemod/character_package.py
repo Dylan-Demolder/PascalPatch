@@ -15,7 +15,7 @@ def _names(path):
   out=[]
   for x in path.rglob("*"):
    if x.is_symlink(): raise ManifestError("unsafe character package",[ValidationError(str(x),"symlink","symlinks are forbidden")])
-   if x.is_file(): out.append(str(x.relative_to(path)))
+   if x.is_file(): out.append(x.relative_to(path).as_posix())
   return out
  with zipfile.ZipFile(path) as z:
   names=z.namelist()

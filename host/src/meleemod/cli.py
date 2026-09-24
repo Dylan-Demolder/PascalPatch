@@ -6,6 +6,7 @@ from .store import BuildStore
 from .discovery import find_dolphin
 from .errors import MeleeModError
 from .launcher import launch
+from .native import find_melee_port, native_command
 
 def _root(args): return Path(args.root).expanduser().resolve()
 def _profile(args): return _root(args)/"profiles"/(args.id+".json")
@@ -27,7 +28,14 @@ def _launch_target(store,profile_id):
 def cmd_launch(args):
  p=resolve(args); store=BuildStore(args.data); output=store.build(p).output if not args.no_build else _launch_target(store,p.data["id"])
  if p.compatibility != "online-safe" and not args.allow_unsafe: raise MeleeModError(f"profile is {p.compatibility}; pass --allow-unsafe to launch it")
- dolphin=find_dolphin(args.dolphin); logdir=BuildStore(args.data).root/"logs"/p.data["id"]; logdir.mkdir(parents=True,exist_ok=True); log=logdir/(datetime.datetime.now().strftime("%Y%m%dT%H%M%S")+".log")
+ logdir=BuildStore(args.data).root/"logs"/p.data["id"]; logdir.mkdir(parents=True,exist_ok=True); log=logdir/(datetime.datetime.now().strftime("%Y%m%dT%H%M%S")+".log")
+ if args.runtime=="native":
+  exe=find_melee_port(args.port); cmd=native_command(exe,output,args.port_arg)
+  if args.dry_run: print(json.dumps({"command":cmd,"log":str(log),"compatibility":p.compatibility,"runtime":"native"},indent=2)); return 0
+  # The port resolves scripts, settings and melee_port.log relative to its working directory.
+  result=launch(exe,output,log,wait=args.wait,timeout=args.timeout,command=cmd,cwd=args.port_cwd); print(f"launched {p.data['id']} with {exe}; log={log}; pid={result.pid}" + (f"; exit={result.exit_code}" if result.exit_code is not None else ""))
+  return 0
+ dolphin=find_dolphin(args.dolphin)
  cmd=[str(dolphin),"-e",str(output)]
  if args.dry_run: print(json.dumps({"command":cmd,"log":str(log),"compatibility":p.compatibility},indent=2)); return 0
  result=launch(dolphin,output,log,wait=args.wait,timeout=args.timeout); print(f"launched {p.data['id']} with {dolphin}; log={log}; pid={result.pid}" + (f"; exit={result.exit_code}" if result.exit_code is not None else ""))
@@ -41,7 +49,7 @@ def main(argv=None):
  profile=sub.add_parser("profile"); ps=profile.add_subparsers(dest="profile_command",required=True); x=ps.add_parser("list"); x.set_defaults(func=cmd_list); x=ps.add_parser("validate"); x.add_argument("id"); x.set_defaults(func=cmd_validate)
  for name,fn in [("build",cmd_build),("launch",cmd_launch)]:
   x=sub.add_parser(name); x.add_argument("id"); x.set_defaults(func=fn)
- x=sub.choices["launch"]; x.add_argument("--dolphin"); x.add_argument("--allow-unsafe",action="store_true"); x.add_argument("--no-build",action="store_true"); x.add_argument("--dry-run",action="store_true"); x.add_argument("--wait",action="store_true"); x.add_argument("--timeout",type=float,default=None)
+ x=sub.choices["launch"]; x.add_argument("--dolphin"); x.add_argument("--allow-unsafe",action="store_true"); x.add_argument("--no-build",action="store_true"); x.add_argument("--dry-run",action="store_true"); x.add_argument("--wait",action="store_true"); x.add_argument("--timeout",type=float,default=None); x.add_argument("--runtime",choices=("native","dolphin"),default="native"); x.add_argument("--port"); x.add_argument("--port-cwd"); x.add_argument("--port-arg",action="append",default=[],help="extra melee_port.exe argument (repeatable)")
  x=sub.add_parser("logs"); x.add_argument("id"); x.set_defaults(func=cmd_logs)
  args=ap.parse_args(argv)
  try: return args.func(args)

@@ -84,6 +84,7 @@ class CoreTests(unittest.TestCase):
   ordered=resolve_plugin_order([p("bb",["aa"]),p("aa",[])]); self.assertEqual([x["id"] for x in ordered],["aa","bb"]); self.assertEqual(compose_static_manifest(ordered)["link_status"],"deferred-until-runtime-integration")
   with self.assertRaises(Exception): resolve_plugin_order([p("aa",["bb"]),p("bb",["aa"])])
 
+ @unittest.skipIf(os.name=="nt","POSIX shell/socket fixture")
  def test_dolphin_discovery_accepts_real_help_wording(self):
   with tempfile.TemporaryDirectory() as td:
    fake=Path(td)/"dolphin-emu"; fake.write_text("#!/bin/sh\nif [ \"$1\" = \"--help\" ]; then echo 'Load the specified file'; echo '--batch'; fi\n"); fake.chmod(0o755)
@@ -91,11 +92,11 @@ class CoreTests(unittest.TestCase):
 
  def test_launch_helper_records_exit(self):
   with tempfile.TemporaryDirectory() as td:
-   t=Path(td); fake=t/"emu"; fake.write_text("#!/bin/sh\necho booted\nexit 7\n"); fake.chmod(0o755); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=2); self.assertEqual(r.exit_code,7); self.assertIn("booted",(t/"run.log").read_text()); self.assertIn("exit_code: 7",(t/"run.log").read_text())
+   t=Path(td); fake=t/"emu.py"; fake.write_text("print('booted', flush=True)\nraise SystemExit(7)\n"); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=10,command=[sys.executable,str(fake)]); self.assertEqual(r.exit_code,7); self.assertIn("booted",(t/"run.log").read_text()); self.assertIn("exit_code: 7",(t/"run.log").read_text())
 
  def test_launch_helper_hard_stops_on_timeout(self):
   with tempfile.TemporaryDirectory() as td:
-   t=Path(td); fake=t/"emu"; fake.write_text("#!/bin/sh\ntrap '' TERM\nsleep 30\n"); fake.chmod(0o755); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=0.1); self.assertTrue(r.timed_out); self.assertIsNotNone(r.exit_code)
+   t=Path(td); fake=t/"emu.py"; fake.write_text("import signal, time\nif hasattr(signal,'SIGTERM'): signal.signal(signal.SIGTERM, signal.SIG_IGN)\ntime.sleep(30)\n"); r=launch(fake,"game.iso",t/"run.log",wait=True,timeout=0.5,command=[sys.executable,str(fake)]); self.assertTrue(r.timed_out); self.assertIsNotNone(r.exit_code)
 
  def test_launch_no_build_resolves_iso_game_target(self):
   import io, contextlib
@@ -105,7 +106,7 @@ class CoreTests(unittest.TestCase):
    with patch("meleemod.store.inspect_game",return_value=SimpleNamespace(kind="iso",main_dol_sha1=EXPECTED_DOL_SHA1)): built=BuildStore(t/"data").build(load_profile(t/"profiles/iso-profile.json",t)).output
    current=Path(td)/"data/builds/iso-profile/current/game/game.iso"; self.assertTrue(built.is_file()); self.assertTrue(current.is_file()); self.assertEqual(built.resolve(),current.resolve())
    out=io.StringIO()
-   with patch("meleemod.cli.find_dolphin",return_value=Path("/usr/bin/dolphin-emu")), contextlib.redirect_stdout(out): code=cli.main(["--root",td,"--data",str(t/"data"),"launch","iso-profile","--no-build","--dry-run"])
+   with patch("meleemod.cli.find_dolphin",return_value=Path("/usr/bin/dolphin-emu")), contextlib.redirect_stdout(out): code=cli.main(["--root",td,"--data",str(t/"data"),"launch","iso-profile","--no-build","--dry-run","--runtime","dolphin"])
    self.assertEqual(code,0); planned=json.loads(out.getvalue())["command"][2]; self.assertTrue(planned.endswith("game.iso")); self.assertTrue(Path(planned).is_file()); self.assertEqual(Path(planned).resolve(),built.resolve())
 
  def test_iso_static_profile_recomposes_staged_output(self):
@@ -163,6 +164,7 @@ class CoreTests(unittest.TestCase):
    raw[0x500:0x504]=b"file"; raw[0x600:0x604]=b"data"; base.write_bytes(raw); dol.write_bytes(b"D"*0x280); recompose_iso(base,dol,out)
    self.assertEqual(base.read_bytes(),bytes(raw)); self.assertEqual(out.read_bytes()[0x100:0x380],b"D"*0x280); self.assertEqual(out.read_bytes()[0x580:0x584],b"file"); self.assertEqual(int.from_bytes(out.read_bytes()[0x424:0x428],"big"),0x380)
 
+ @unittest.skipIf(os.name=="nt","POSIX shell/socket fixture")
  def test_dolphin_smoke_hard_timeout(self):
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); fake=t/"dolphin"; fake.write_text("#!/bin/sh\nsleep 30\n"); fake.chmod(0o755); result=run_one(fake,t/"game.iso",0.05); self.assertTrue(result["timed_out"]); self.assertTrue(result["started"]); self.assertIsNotNone(result["exit_code"])
@@ -324,6 +326,7 @@ class BridgeTransportTests(unittest.TestCase):
    with self.assertRaises(BridgeTransportError): receive(left)
   finally: left.close()
 
+ @unittest.skipIf(os.name=="nt","POSIX shell/socket fixture")
  def test_unix_bridge_server_is_private_and_cleans_up(self):
   import socket, threading
   from meleemod.bridge_transport import receive, send

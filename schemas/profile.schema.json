@@ -73,6 +73,21 @@
     "runtime_root": {
       "type": "string",
       "minLength": 1
+    },
+    "characters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["package", "slot", "fighter_file"],
+        "properties": {
+          "package": {"type": "string", "minLength": 1},
+          "slot": {"type": "string", "minLength": 1},
+          "fighter_file": {"type": "string", "minLength": 1},
+          "costume_file": {"type": "string", "minLength": 1},
+          "animation_file": {"type": "string", "minLength": 1}
+        }
+      }
     }
   }
 }

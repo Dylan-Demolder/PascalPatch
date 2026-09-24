@@ -49,7 +49,7 @@ def validate_mod(obj,path="mod"):
  return e
 
 def validate_profile(obj,path="profile"):
- e=[]; _base(obj,path,{"id","name","game_version","base_game","plugins","mods","mode","online_safe"},e,optional=("allow_priority","decomp_repo","decomp_orig","plugin_source_root","runtime_root",))
+ e=[]; _base(obj,path,{"id","name","game_version","base_game","plugins","mods","mode","online_safe"},e,optional=("allow_priority","decomp_repo","decomp_orig","plugin_source_root","runtime_root","characters",))
  if isinstance(obj,dict):
   if obj.get("game_version")!=GAME_VERSION: e.append(ValidationError(path+".game_version","game_version","must be GALE01-1.02"))
   if not isinstance(obj.get("base_game"),str) or not obj.get("base_game"): e.append(ValidationError(path+".base_game","base_game","must be a path"))
@@ -60,6 +60,10 @@ def validate_profile(obj,path="profile"):
   if not isinstance(obj.get("online_safe"),bool): e.append(ValidationError(path+".online_safe","online_safe","must be boolean metadata"))
   for k in ("decomp_repo","decomp_orig","plugin_source_root","runtime_root"):
    if k in obj and (not isinstance(obj[k],str) or not obj[k]): e.append(ValidationError(path+"."+k,"path","must be a non-empty path"))
+  chars=obj.get("characters",[])
+  if not isinstance(chars,list) or any(not isinstance(c,dict) or not {"package","slot","fighter_file"}<=set(c)<={"package","slot","fighter_file","costume_file","animation_file"} or not all(isinstance(v,str) and v for v in c.values()) for c in chars):
+   e.append(ValidationError(path+".characters","characters","each entry needs package, slot and fighter_file paths (optional costume_file, animation_file)"))
+  elif len({c["slot"].lower() for c in chars})!=len(chars): e.append(ValidationError(path+".characters","duplicate","one character per slot"))
  return e
 
 def require_valid(obj,kind,path="manifest"):

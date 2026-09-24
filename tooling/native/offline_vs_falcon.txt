@@ -1,0 +1,33 @@
+# Offline, no Slippi: VS. Mode -> P1 picks C. Falcon slot (top row, far right), P2 picks below its card, stage, match.
+# Offline, no Slippi: create save -> title -> Main Menu -> VS. Mode -> Melee -> CSS.
+# P1 picks Fox (row 2, col 1), P2 picks from above its card, START -> stage select.
+130 A
+140
+300 A
+310
+500 START
+510
+700 START
+710
+900 sy=-127
+906
+960 A
+970
+1080 A
+1090
+1200 sy=127
+1230
+1232 sx=127
+1272
+1300 A
+1310
+1330 p=2 sy=127
+1358 p=2
+1370 p=2 A
+1380 p=2
+1450 START
+1460
+1590 sx=50 sy=127
+1610
+1630 A
+1640

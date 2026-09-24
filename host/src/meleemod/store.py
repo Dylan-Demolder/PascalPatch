@@ -8,6 +8,8 @@ from .errors import CompositionError, ValidationError
 from .profile import ResolvedProfile
 from .static_integration import build_in_worktree
 from .recompose_iso import recompose_iso
+from .iso_files import overlay_iso_files
+from .native import validate_character_entry
 
 @dataclass(frozen=True)
 class BuildResult:
@@ -30,6 +32,10 @@ class BuildStore:
   pid=profile.data["id"]; target_root=self.builds/pid; target_root.mkdir(parents=True,exist_ok=True)
   stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")+"-"+uuid.uuid4().hex[:8]; stage=Path(tempfile.mkdtemp(prefix=pid+"-",dir=self.staging)); output=stage/"game"; report={"profile_id":pid,"profile_name":profile.data["name"],"game_version":profile.data["game_version"],"base_game":str(game),"base_kind":info.kind,"base_main_dol_sha1":info.main_dol_sha1,"plugins":[{k:p.get(k) for k in ("id","version","api_version")} for p in profile.plugins],"mods":[{k:m.get(k) for k in ("id","version","priority")} for m in profile.mods],"compatibility":profile.compatibility,"tool_version":"meleemod-host/0.1.0"}
   try:
+   characters=[validate_character_entry(c,profile.data["mode"],i) for i,c in enumerate(profile.data.get("characters",[]))]
+   if characters:
+    report["characters"]=characters
+    if info.kind!="iso" or profile.plugins: raise CompositionError("character slot overlays currently require an ISO base and no static plugins (native Tier B)")
    if info.kind=="directory":
     if profile.plugins:
      required=("decomp_repo","decomp_orig","plugin_source_root")
@@ -60,13 +66,24 @@ class BuildStore:
      static=build_in_worktree(profile.data["decomp_repo"],profile.data["decomp_orig"],profile.plugins,generated,source_root=profile.data["plugin_source_root"],runtime_root=profile.data.get("runtime_root"))
      recompose_iso(game,generated,output/"game.iso")
      report["static_plugin_dol_sha1"]=static.sha1; report["plugin_composition"]="static-source-overlay+iso-recomposition"
+    elif characters:
+     # Tier B: data files replaced, DOL copied verbatim so the native
+     # recompiler's vanilla-DOL invariant still holds.
+     overlay_iso_files(game,{k:v for c in characters for k,v in c["overlays"].items()},output/"game.iso")
+     report["plugin_composition"]="native-tier-b-data-overlay"
     else:
      (output/"game.iso").symlink_to(game)
     report["composition"]={"mods":[],"replacements":[],"conflicts":[]}; launch=output/"game.iso"
    report["output_hash"]=_tree_hash(output) if output.is_dir() else hashlib.sha256(output.read_bytes()).hexdigest()
    (output.parent/"build.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
    final=target_root/stamp; os.replace(output.parent,final)
-   current=target_root/"current"; tmp=target_root/(".current-"+stamp); tmp.symlink_to(final, target_is_directory=True); os.replace(tmp,current)
+   current=target_root/"current"; tmp=target_root/(".current-"+stamp); tmp.symlink_to(final, target_is_directory=True)
+   try: os.replace(tmp,current)
+   except PermissionError:
+    # Windows cannot rename over an existing directory symlink; the
+    # previous build stays on disk, only the pointer is briefly absent.
+    if os.name!="nt" or not current.is_symlink(): raise
+    current.unlink(); os.replace(tmp,current)
    return BuildResult(pid,final/"game/game.iso" if info.kind=="iso" else final/"game",final/"build.json",profile.compatibility)
   except Exception:
    shutil.rmtree(stage,ignore_errors=True); raise

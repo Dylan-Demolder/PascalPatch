@@ -8,11 +8,11 @@ class FighterLoaderError(ValueError):
 
 
 FIGHTER_CODES = {
-    "bowser": "Bo", "captain-falcon": "Ca", "donkey-kong": "Dk", "dr-mario": "Dr",
+    "bowser": "Kp", "captain-falcon": "Ca", "donkey-kong": "Dk", "dr-mario": "Dr",
     "falco": "Fc", "fox": "Fx", "ganondorf": "Gn", "mr-game-and-watch": "Gw",
-    "ice-climbers": "Nn", "jigglypuff": "Pr", "kirby": "Kb", "link": "Lk",
+    "ice-climbers": "Pp", "jigglypuff": "Pr", "kirby": "Kb", "link": "Lk",
     "luigi": "Lg", "mario": "Mr", "marth": "Ms", "mewtwo": "Mt", "ness": "Ns",
-    "peach": "Pe", "pichu": "Pp", "pikachu": "Pk", "roy": "Fe", "samus": "Ss",
+    "peach": "Pe", "pichu": "Pc", "pikachu": "Pk", "roy": "Fe", "samus": "Ss",
     "sheik": "Sk", "yoshi": "Ys", "young-link": "Cl", "zelda": "Zd",
 }
 

@@ -1,3 +1,4 @@
+import os
 import json, tempfile, unittest, sys
 from pathlib import Path
 from unittest.mock import patch
@@ -24,6 +25,7 @@ class ToolTests(unittest.TestCase):
   result=custom_fighter_assertion({"output_tail":"INPUT_AUTOMATION_READY"}, input_automation_ready="INPUT_AUTOMATION_READY")
   self.assertTrue(result["checks"]["input_automation_ready"])
   self.assertTrue(result["passed"])
+ @unittest.skipIf(os.name=="nt","POSIX shell/socket fixture")
  def test_movie_is_forwarded_to_dolphin(self):
   with tempfile.TemporaryDirectory() as td:
    dolphin=Path(td)/"dolphin"; movie=Path(td)/"input.dtm"

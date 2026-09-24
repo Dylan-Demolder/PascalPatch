@@ -65,6 +65,8 @@ class IsoFilesTests(unittest.TestCase):
             self.assertEqual(extract_iso_file(out, "files/PlCo.dat"), b"C" * 32)
             self.assertEqual(extract_iso_file(out, "boot.bin"), b"B" * 16)
             self.assertEqual(Path(out).read_bytes()[0x500:0x900], b"D" * 0x400)
+            self.assertGreaterEqual(Path(out).stat().st_size, Path(base).stat().st_size)
+            self.assertEqual(Path(out).stat().st_size % 0x8000, 0)
             with self.assertRaises(FileNotFoundError):
                 overlay_iso_files(base, {"files/Nope.dat": b"x"}, t / "bad.iso")
             with self.assertRaises(ValueError):
@@ -124,6 +126,12 @@ class FighterLoaderTests(unittest.TestCase):
         ambiguous = listing + [{"path": "extra/PlMr.dat", "offset": 0x400, "size": 8}]
         with self.assertRaises(FighterLoaderError):
             find_clone_slot(ambiguous, "mario")
+
+    def test_clone_slot_codes_match_ntsc_102_disc(self):
+        # Codes that differ from the fighter name on GALE01.
+        self.assertEqual(clone_slot_basename("bowser"), "PlKp.dat")
+        self.assertEqual(clone_slot_basename("ice-climbers"), "PlPp.dat")
+        self.assertEqual(clone_slot_basename("pichu"), "PlPc.dat")
 
     def test_loader_plugin_source(self):
         source = fighter_loader_plugin_source("ftDataLeesinhsd2e", "CUSTOM_FIGHTER_VISIBLE")

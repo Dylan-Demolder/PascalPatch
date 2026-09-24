@@ -1,0 +1,32 @@
+# Offline, no Slippi: create save -> title -> Main Menu -> VS. Mode -> Melee -> CSS.
+# P1 picks Fox (row 2, col 1), P2 picks from above its card, START -> stage select.
+130 A
+140
+300 A
+310
+500 START
+510
+700 START
+710
+900 sy=-127
+906
+960 A
+970
+1080 A
+1090
+1200 sx=21 sy=127
+1230
+1260 A
+1270
+1300 p=2 sy=127
+1328 p=2
+1340 p=2 A
+1350 p=2
+1420 START
+1430
+1560 sx=50 sy=127
+1580
+1600 A
+1610
+1900 X
+1904

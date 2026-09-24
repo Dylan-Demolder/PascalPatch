@@ -209,7 +209,10 @@ def overlay_iso_files(base_iso, replacements, output):
         cursor = _align(cursor)
         layout.append((entry, full, data, cursor, size))
         cursor += size
-    total = max(cursor, files_start)
+    # Keep at least the source disc size (GameCube discs are fixed-size) so
+    # sector-rounded DVD reads of the last file stay inside the image; a
+    # tightly packed image fails such reads on the native runtime.
+    total = _align(max(cursor, files_start, iso_size), 0x8000)
     for entry, _, _, new_offset, new_size in layout:
         pos = entry["index"] * 12
         new_fst[pos + 4:pos + 8] = new_offset.to_bytes(4, "big")
