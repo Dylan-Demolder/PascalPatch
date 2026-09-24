@@ -2,6 +2,28 @@
 
 This tracker separates implemented contracts from features that still need game/runtime evidence. A feature is not marked complete merely because a schema or stub exists.
 
+## Native-first tasks (added 2026-09-24)
+
+Retarget: melee-unlocked (native Windows port, GPL-2.0-or-later, pinned
+revision) is the primary runtime. Tiers are defined in `architecture.md`.
+All rows start NOT STARTED; the pivot itself is a spec change and proves
+nothing. Nothing above or below is reclassified by these rows existing.
+
+| Task | Status | Evidence / next proof |
+|---|---|---|
+| N1 pin + native build spike | NOT STARTED | Pin a melee-unlocked revision, build it from the user's ISO on this Windows host, boot to the Melee menu |
+| N2 native log evidence | NOT STARTED | Confirm guest `OSReport` markers and the port's gecko/texture log lines land in `melee_port.log`; this is the replacement for GDB-stub reads |
+| N3 Tier A packaging | NOT STARTED | A profile installs a user-gecko INI + texture pack beside `melee_port.exe`; port logs show code classification and texture matched/lookups counters |
+| N4 Tier B bake | NOT STARTED | Profile `sys-dir` GCT + recomposed ISO; the recomp bake summary prints the profile codes and one baked data code is observed in game |
+| N5 Tier C recompiler fork | NOT STARTED (requires GPL-compatible terms, agreed in `architecture.md`) | Fork accepts a profile-modified DOL under base-hash + delta validation; `demo-mod` observed natively |
+| N6 in-process host bridge | NOT STARTED (blocked on N5) | Replaces Task 11's production transport: a live host↔runtime control/observe exchange from the host CLI |
+| N7 online smoke | NOT STARTED | `online_pair.py` completes a full game with a `slippi`-mode profile; log shows no `DESYNC` |
+| N8 verification harness | NOT STARTED | `validate_native.py` 2400 checkpoints run against clean vs profile build; wired into release evidence |
+
+Dolphin-era rows (spikes 001–004, Task 3 discovery, Task 6 launch, smoke and
+roster verification) keep their recorded Dolphin evidence; N1–N8 are their
+native replacements and are additive.
+
 ## MeleeMod
 
 | Task | Status | Evidence / next proof |
@@ -45,6 +67,6 @@ This tracker separates implemented contracts from features that still need game/
 | Deterministic package export | MVP COMPLETE | Repeated export hashes match |
 | MeleeMod package validation | MVP COMPLETE | Cross-project package validation passes |
 | Melee composition | OFFLINE AUTHORING STAGING OBSERVED / GAME CONVERSION PENDING | Validated package is atomically staged outside game files with `game_integration: false`; source-backed HSD/`ftData` research is recorded in `docs/character-conversion-research.md`; asset/code conversion remains pending |
-| Playable round trip | NOT STARTED | Requires Dolphin/game integration |
+| Playable round trip | NOT STARTED | Native-first: profile ISO + baked Gecko on the pinned port (N-series), with PAS-28 gate 5 restated in MeleeCharacterStudio's `docs/authoring.md`; Dolphin path retained as secondary cross-check |
 
 The next gating milestone is production bridge/payload validation and direct validation of the remaining GUI, conversion, and release requirements. Safety policy now fails closed for arbitrary future capabilities, but real Slippi smoke remains unverified. Development GDB mailbox handshake, plugin initialization, and frame/input callbacks are now directly observed before the memory-card prompt is dismissed.

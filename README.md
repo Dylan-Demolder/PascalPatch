@@ -2,6 +2,20 @@
 
 MeleeMod is a separate host-side project for building isolated Super Smash Bros. Melee profiles. It never distributes Nintendo game data. Users provide their own GALE01 Rev.02 / Melee 1.02 ISO or extracted game directory.
 
+## Runtime targets (native-first, retarget 2026-09-24)
+
+The primary runtime is now [melee-unlocked](https://github.com/hero88go/melee-unlocked) (GPL-2.0-or-later): a native Windows port that statically recompiles the vanilla NTSC 1.02 `main.dol` together with Slippi's Gecko tables into C++, runs it on D3D12/D3D11, and includes Slippi netplay. Dolphin remains available as a secondary runtime for cross-checks; it is no longer the evidence path of record. This is a specification change only — no MeleeMod feature has been verified on the native runtime, and no pending gate below is promoted by it.
+
+Profile builds feed the native runtime in three tiers (full design in `docs/architecture.md`):
+
+| Tier | What the profile produces | How it runs | Status |
+|---|---|---|---|
+| A — runtime, no rebuild | user Gecko file (Dolphin `[Gecko]` INI) + texture pack folders (`tex1_*.png`) | dropped beside `melee_port.exe`; the port classifies each code at load and logs why unsupported codes cannot run | upstream mechanisms exist; MeleeMod packaging not started |
+| B — recompile (primary) | profile ISO (data files composed, DOL untouched) + profile `sys-dir` Gecko list | `recomp.py` bakes the Gecko table into the translated build; `melee_port.exe --iso <profile.iso>` | not started |
+| C — GPL fork (planned) | profile-modified DOL from static C plugins | pinned fork of the recompiler that accepts a modified DOL under base-hash + delta validation, plus an in-process host bridge | not started; requires GPL-2.0-or-later-compatible distribution terms |
+
+The recompiler refuses any input DOL that is not the verified vanilla one (SHA-1 enforced), so Tier B is the primary target: every code change rides in the baked Gecko table (hooks, C0 caves, data writes) and every asset change rides in the recomposed ISO. MeleeMod's static source-to-DOL composition (below) becomes a Tier C input.
+
 ## Verified today
 
 - GALE01 Rev.02 identification and embedded `main.dol` SHA-1 validation.
@@ -13,6 +27,20 @@ MeleeMod is a separate host-side project for building isolated Super Smash Bros.
 - Capability-based safety classification.
 - Initial C runtime event ABI, host-compiled tests, SDK sample manifest, dependency-ordered static plugin manifests, and disposable static source-to-DOL composition.
 - Character-package path safety and checksum validation.
+
+All of the above is host-side or Dolphin-observed evidence. None of it has been exercised against the native runtime.
+
+## Native evidence path (planned)
+
+Nothing in this section is verified for MeleeMod. These are the upstream mechanisms each Dolphin-era evidence path will be replaced by, to be exercised against profile outputs in the native-first tasks (`docs/plan-tracker.md`, N-series):
+
+| Dolphin-era evidence | Native replacement |
+|---|---|
+| `.dtm` movie input automation | the port's input-automation scripts (`port/scripts/*.txt`, e.g. `to_css.txt`, `vs_match.txt`, `online_bot.txt`) |
+| Dolphin GDB stub fighter reads (`verify_fighters.py`) | guest `OSReport` markers in `melee_port.log` via the port's OS HLE (verify in the first spike) and the port's own log lines (gecko classification, texture-pack counters) |
+| `prime_memcard.py` first-boot dialog priming | plain `.gci` memory-card folder (Dolphin GCI format) dropped in beside the game |
+| clean/modified `dolphin_smoke.py` comparisons | `tools/validate_native.py` (2400 simulation checkpoints across headless/hidden/threaded/authored modes), `tools/online_pair.py`, `tools/replay_compare.py` |
+| GDB mailbox / EXI production bridge (Task 11, pending) | in-process host bridge in the port runtime (Tier C, planned) |
 
 ## Run
 
@@ -34,16 +62,17 @@ python tooling/extract_disc.py /path/to/GALE01.iso /path/to/extracted-game \
   --dtk /path/to/dtk
 ```
 
-PPC static profiles require an extracted game directory and explicit decompilation/runtime/source paths. Plugin entrypoints are initialized on the first game-loop frame; in-game behavior still requires emulator observation. The optional Tk GUI is a thin view over the same validated core APIs.
+PPC static profiles require an extracted game directory and explicit decompilation/runtime/source paths. Plugin entrypoints are initialized on the first game-loop frame; in-game behavior still requires runtime observation. The optional Tk GUI is a thin view over the same validated core APIs.
 
 ## Launcher dashboard and mod catalog
 
 The Tk launcher provides the profile-first workflow: choose a profile, inspect
 its enabled mods, browse the installed/roadmap catalog, enable or disable
-installed entries, validate, build and launch with standalone Dolphin. Planned
-entries are shown as roadmap items but cannot be enabled until their manifests
-are installed. See `docs/mod-catalog.md` for the current catalog and support
-rules.
+installed entries, validate, build and launch with standalone Dolphin (current
+behavior; a native `melee_port.exe` launch target is planned — see the
+N-series rows in `docs/plan-tracker.md`). Planned entries are shown as
+roadmap items but cannot be enabled until their manifests are installed. See
+`docs/mod-catalog.md` for the current catalog, tiers, and support rules.
 
 Run it with:
 
@@ -65,13 +94,28 @@ gcc -std=c99 -Wall -Wextra -Werror -Iruntime/include \
 
 This repository contains tooling, schemas and original sample code only. Do not commit, distribute or fetch Nintendo ISO, DOL, extracted assets or copyrighted game data.
 
+Tier C plans GPL-compatible reuse of melee-unlocked (GPL-2.0-or-later):
+forking, vendoring, or linking its recompiler/runtime. This repository is
+private and undistributed today; any distributed build that includes
+melee-unlocked code must ship under GPL-2.0-or-later-compatible terms and
+retain its notices. The posture is recorded in `docs/architecture.md`.
+
 
 ## Static code profiles
 
 A code profile must explicitly provide `decomp_repo`, `decomp_orig` and `plugin_source_root`. Plugins using the SDK context ABI also require `runtime_root`. Each selected plugin must declare a relative `.c` `source` and a C entrypoint. The host creates a disposable worktree and stages the generated DOL. Static code profiles can also recompose a staged ISO with `tooling/recompose_disc.py`; the source ISO is never modified. Filesystem asset mods still require an extracted game directory.
 
+The staged DOL is a Tier C input for the native runtime: upstream `recomp.py`
+refuses any input whose SHA-1 is not the verified vanilla DOL, so static code
+profiles run in Dolphin today and reach the native runtime only through the
+planned recompiler fork. Filesystem asset mods reach the native runtime with
+no fork at all (Tier B: they are composed into the profile ISO).
 
-## Bounded emulator smoke
+
+## Secondary: bounded Dolphin smoke (legacy evidence path)
+
+Retained for cross-checking. The primary evidence path is the native table
+above and is not yet implemented for MeleeMod.
 
 For clean/modified comparisons, use the user-data-only runner:
 
@@ -85,10 +129,10 @@ PYTHONPATH=host/src python tooling/dolphin_smoke.py \
   --timeout 30
 ```
 
-The runner kills the complete emulator process group on timeout. It does not leave a Confirm Stop dialog or orphan process.
+The runner kills the complete emulator process group on timeout. It does not leave a Confirm Stop dialog or orphan child process.
 
 
-## Roster / character verification (old + new characters together)
+## Secondary: roster / character verification in Dolphin (legacy evidence path)
 
 Before any of this: a fresh Dolphin user-dir hits an un-clearable
 "Create Game Data?" memory-card dialog on first boot (it does not respond to
@@ -116,9 +160,14 @@ See `docs/dolphin-control.md` for the full guide: Dolphin control rules
 (SIGKILL only, xcb/movie-playback pitfalls, container `QT_QPA_PLATFORM`
 requirements), driving character-select deterministically with `.dtm` movies,
 and what evidence actually counts as a working character per
-`docs/character-conversion-research.md`'s PAS-28 gates.
+`docs/character-conversion-research.md`'s PAS-28 gates. On the native-first
+path those gates are restated against the native runtime in
+`docs/plan-tracker.md` and MeleeCharacterStudio's `docs/authoring.md`.
 
 
 ## Verified demo mod
 
 The repository includes a harmless `demo-mod` catalog entry at `plugins/demo-mod/plugin.json`. Create a local runnable profile with `python tooling/create_demo_profile.py /path/to/game.iso /path/to/MeleeDecomp/melee`. It is a visual-only static PPC plugin that logs initialization and its first frame callback. Use a temporary profile with your own GALE01 Rev.02 input, then run `profile validate` and `build`; do not commit the ISO or generated game output. Direct loader/Dolphin evidence is in `docs/evidence/demo-mod.md`.
+
+The demo mod is a static source-to-DOL composition, so it is Dolphin-observed
+today and Tier C on the native runtime until the recompiler fork exists.

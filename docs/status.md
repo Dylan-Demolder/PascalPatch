@@ -1,5 +1,24 @@
 # Implementation status
 
+## Native-first retarget (2026-09-24, spec change — no new evidence)
+
+The primary runtime is now melee-unlocked (native Windows port, GPL-2.0-or-later);
+Dolphin is demoted to a secondary cross-check runtime. Build outputs are
+re-tierted (A runtime installs / B recomposed ISO + baked Gecko / C GPL
+recompiler fork) per `architecture.md`, and the evidence paths are retargeted:
+
+| Dolphin-era evidence | Native replacement (planned) |
+|---|---|
+| DTM movie automation | port input-automation scripts |
+| GDB stub fighter reads | `OSReport`/log markers in `melee_port.log` |
+| memcard priming | seeded `.gci` folder |
+| `dolphin_smoke.py` clean/modified runs | `validate_native.py` / `online_pair.py` / `replay_compare.py` |
+| GDB mailbox production bridge (Task 11, pending) | in-process host bridge (Tier C, planned) |
+
+**This change promotes nothing.** Every row below keeps its current state and
+evidence; only the target runtime and the path to future evidence changed.
+New native work is tracked as N-series rows in `plan-tracker.md`.
+
 ## Completed and verified
 
 | Plan area | State | Evidence |
@@ -16,6 +35,9 @@
 | Character package security | Validator + offline staging | Checksums, unsafe path/executable rejection, and validated-only offline workspace staging |
 
 ## Explicitly pending
+
+Pending items keep their Dolphin-era wording; their evidence paths are
+retargeted by the native-first table above and no item is promoted by it.
 
 - Native crash symbolization is implemented as a bounded, shell-free `addr2line` adapter.
 - A real modified `main.dol` boot in standalone Dolphin 2606: clean, static-plugin, and recomposed runtime-plugin ISOs reach the Melee memory-card prompt. Startup and first-frame hello/frame-probe plugins emit initialization and repeated frame/input callback markers through Dolphin's OSREPORT logger. See `docs/evidence/frame-input-observation.md`.
