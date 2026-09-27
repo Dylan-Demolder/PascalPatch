@@ -1,0 +1,10 @@
+{
+ "schema": "pascalpatch/trust/1",
+ "keys": {
+  "bae2cb542510218e": {
+   "public_key": "1816fc03c9f5228b0e0dbc61b70c6a8337d05e112ed9d39ebe0a4f21364d3e81",
+   "status": "trusted",
+   "label": "PascalPatch plugin index key 1"
+  }
+ }
+}

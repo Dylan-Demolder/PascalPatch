@@ -142,7 +142,7 @@ class DolphinGdbMailbox:
         self.address = address
         header = client.read_memory(address, 16)
         if header[:4] != b"MMBX" or int.from_bytes(header[4:8], "big") != 1:
-            raise DolphinGdbError("invalid MeleeMod bridge mailbox header")
+            raise DolphinGdbError("invalid PascalPatch bridge mailbox header")
 
     def _size(self, offset: int) -> int:
         return int.from_bytes(self.client.read_memory(self.address + offset, 4), "big")

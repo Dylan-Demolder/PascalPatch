@@ -2,12 +2,12 @@ import json, tempfile, unittest
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
-from meleemod.fighter_loader import (
+from pascalpatch.fighter_loader import (
     FighterLoaderError, clone_slot_basename, fighter_loader_plugin_source,
     find_clone_slot, symbol_for_character_id, validate_fighter_symbol,
     write_fighter_loader_plugin,
 )
-from meleemod.iso_files import (
+from pascalpatch.iso_files import (
     extract_iso_file, list_iso_files, overlay_iso_files, recompose_iso_with_fighter,
 )
 
@@ -87,6 +87,27 @@ class IsoFilesTests(unittest.TestCase):
                 self.assertEqual(entry["offset"] % 0x20, 0)
             self.assertEqual(Path(out).read_bytes()[0x500:0x900], b"D" * 0x400)
 
+    def test_overlay_adds_new_root_files(self):
+        with tempfile.TemporaryDirectory() as td:
+            t = Path(td)
+            base = _make_iso(t / "base.iso")
+            out = t / "out.iso"
+            overlay_iso_files(base, {"files/PlMr.dat": b"N" * 64}, out, {"PlX0.dat": b"X" * 100, "PlX0Nr.dat": b"Y" * 7})
+            self.assertEqual([f["path"] for f in list_iso_files(out)],
+                             ["files/PlMr.dat", "files/PlCo.dat", "boot.bin", "PlX0.dat", "PlX0Nr.dat"])
+            self.assertEqual(extract_iso_file(out, "PlX0.dat"), b"X" * 100)
+            self.assertEqual(extract_iso_file(out, "PlX0Nr.dat"), b"Y" * 7)
+            self.assertEqual(extract_iso_file(out, "files/PlMr.dat"), b"N" * 64)
+            self.assertEqual(extract_iso_file(out, "boot.bin"), b"B" * 16)
+            head = Path(out).read_bytes()[0x428:0x430]
+            size, most = int.from_bytes(head[:4], "big"), int.from_bytes(head[4:], "big")
+            self.assertEqual(size, 7 * 12 + 34 + len(b"PlX0.dat\0PlX0Nr.dat\0"))
+            self.assertGreaterEqual(most, size)
+            with self.assertRaises(ValueError):
+                overlay_iso_files(base, {}, t / "bad.iso", {"boot.bin": b"x"})
+            with self.assertRaises(ValueError):
+                overlay_iso_files(base, {}, t / "bad.iso", {"files/new.dat": b"x"})
+
     def test_recompose_with_fighter_end_to_end(self):
         with tempfile.TemporaryDirectory() as td:
             t = Path(td)
@@ -137,7 +158,7 @@ class FighterLoaderTests(unittest.TestCase):
         source = fighter_loader_plugin_source("ftDataLeesinhsd2e", "CUSTOM_FIGHTER_VISIBLE")
         self.assertIn("ftDataLeesinhsd2e", source)
         self.assertIn("CUSTOM_FIGHTER_VISIBLE", source)
-        self.assertIn("meleemod_fighter_loader_init", source)
+        self.assertIn("pascalpatch_fighter_loader_init", source)
         plain = fighter_loader_plugin_source("ftDataLeesinhsd2e")
         self.assertIn("ftDataLeesinhsd2e", plain)
         self.assertNotIn("observation", plain)

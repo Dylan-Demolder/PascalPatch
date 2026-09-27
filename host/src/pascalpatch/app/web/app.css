@@ -1,0 +1,24 @@
+/* PascalPatch app: layout on top of Pascal UI (pascal-ui.css). */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--pp-space-5); align-items: start; }
+.hero .pp-frame { min-height: 280px; }
+.play-row { display: flex; align-items: center; gap: var(--pp-space-3); flex-wrap: wrap; }
+.play-btn { min-height: 52px; padding: 0 44px; font-size: var(--pp-size-xl); }
+.profile-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--pp-space-3); }
+.profile-pick .pp-card { padding: var(--pp-space-3); gap: var(--pp-space-2); }
+.profile-pick .pp-card.is-selected { border-color: var(--pp-accent); box-shadow: 0 0 0 1px var(--pp-accent) inset; }
+.checks { display: flex; flex-direction: column; gap: var(--pp-space-2); }
+.check { display: flex; gap: var(--pp-space-2); align-items: baseline; font-size: var(--pp-size-sm); }
+.check b { width: 16px; flex: none; text-align: center; }
+.check.ok b { color: var(--pp-ok); } .check.bad b { color: var(--pp-danger); }
+.fighters { display: flex; gap: 6px; flex-wrap: wrap; }
+.split { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--pp-space-5); align-items: start; }
+.plugin-icon { width: 44px; height: 44px; flex: none; display: grid; place-items: center; font: italic 800 20px var(--pp-font-display);
+  color: var(--pp-accent-text); background: linear-gradient(160deg, var(--pp-accent-hover), var(--pp-accent)); clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%); }
+.plugin-icon img { width: 100%; height: 100%; object-fit: cover; }
+.plugin-icon.is-builtin { background: linear-gradient(180deg, var(--pp-chrome-hi), var(--pp-chrome-lo)); color: var(--pp-chrome-text); }
+.logview { margin: 0; max-height: 60vh; overflow: auto; padding: var(--pp-space-3); background: var(--pp-sunken); border: 1px solid var(--pp-line);
+  border-radius: var(--pp-radius-md); font: 12px/1.5 var(--pp-font-mono); white-space: pre-wrap; word-break: break-word; }
+.toolbar { display: flex; gap: var(--pp-space-3); align-items: center; flex-wrap: wrap; }
+.toolbar .pp-input { max-width: 280px; }
+.desc { white-space: pre-line; }
+@media (max-width: 980px) { .hero, .split { grid-template-columns: 1fr; } }

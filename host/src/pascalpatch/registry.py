@@ -64,7 +64,7 @@ def install_remote(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, 
     root=Path(destination).expanduser().resolve(); root.mkdir(parents=True,exist_ok=True)
     temporary=None
     try:
-        request=Request(entry["source"],headers={"Accept":"application/octet-stream","User-Agent":"meleemod-registry/1"})
+        request=Request(entry["source"],headers={"Accept":"application/octet-stream","User-Agent":"pascalpatch-registry/1"})
         with opener(request,timeout=timeout) as response:
             declared=response.headers.get("Content-Length")
             if declared is not None and int(declared)>max_bytes: raise ManifestError("remote registry package exceeds size limit")
@@ -88,9 +88,13 @@ def install_remote(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, 
             except FileNotFoundError: pass
 
 
-def install_remote_archive(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, max_extracted_bytes=256 * 1024 * 1024, opener=None, validator=None):
-    """Verify an HTTPS ZIP package, validate every member, then extract atomically."""
-    with tempfile.TemporaryDirectory(prefix="meleemod-registry-archive-") as temporary:
+def install_remote_archive(entry, destination, timeout=5.0, max_bytes=64 * 1024 * 1024, max_extracted_bytes=256 * 1024 * 1024, opener=None, validator=None, allow_executables=()):
+    """Verify an HTTPS ZIP package, validate every member, then extract atomically.
+
+    ``allow_executables`` names root-level members that may be executable anyway: a native
+    plugin package carries exactly one, its own ``<id>.dll``, and only a signed, hash-matched
+    entry reaches this point."""
+    with tempfile.TemporaryDirectory(prefix="pascalpatch-registry-archive-") as temporary:
         downloaded=install_remote(entry,temporary,timeout=timeout,max_bytes=max_bytes,opener=opener)
         archive=downloaded/"package"; root=Path(destination).expanduser().resolve()
         try: zf=zipfile.ZipFile(archive)
@@ -102,7 +106,7 @@ def install_remote_archive(entry, destination, timeout=5.0, max_bytes=64 * 1024 
             for info in infos:
                 name=info.filename; path=Path(name)
                 mode=(info.external_attr >> 16) & 0xffff
-                if path.is_absolute() or (len(name) >= 2 and name[1] == ":") or "\\" in name or ".." in path.parts or "\x00" in name or stat.S_ISLNK(mode) or (path.suffix.lower() in {".exe",".dll",".so",".dylib",".sh",".bat",".cmd",".elf"}):
+                if path.is_absolute() or (len(name) >= 2 and name[1] == ":") or "\\" in name or ".." in path.parts or "\x00" in name or stat.S_ISLNK(mode) or (path.suffix.lower() in {".exe",".dll",".so",".dylib",".sh",".bat",".cmd",".elf"} and name not in allow_executables):
                     raise ManifestError("unsafe remote registry archive",[ValidationError(name,"unsafe_member","traversal, symlink, or executable member")])
                 if info.is_dir(): continue
                 total+=info.file_size

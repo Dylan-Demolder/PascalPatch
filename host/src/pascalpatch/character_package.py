@@ -42,7 +42,7 @@ def validate_package(path):
   if name=="checksums.json" or name not in names: raise ManifestError("invalid character checksum manifest",[ValidationError(name,"reference","checksum references missing or reserved path")])
   actual=hashlib.sha256(_read(p,name)).hexdigest()
   if actual!=expected: raise ManifestError("character asset checksum mismatch",[ValidationError(name,"checksum",f"expected {expected}, got {actual}")])
- return {"id":character["id"],"version":character["version"],"compatibility":character["compatibility"],"target_game_version":character["target_game_version"],"files":len(names)}
+ return {"id":character["id"],"display_name":character.get("display_name") or character["id"],"version":character["version"],"compatibility":character["compatibility"],"target_game_version":character["target_game_version"],"files":len(names)}
 
 
 def installation_plan(path, profile_mode):

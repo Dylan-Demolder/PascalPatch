@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PascalPatch</title>
+  <link rel="icon" href="icon.svg">
+  <link rel="stylesheet" href="pascal-ui.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="pp-root">
+  <div class="pp-app">
+    <header class="pp-titlebar">
+      <a class="pp-brand" href="#play" data-tip="PascalPatch: the mod loader for Melee Unlocked.">
+        <span class="pp-brand-mark">P</span>
+        <span class="pp-brand-name">Pascal<b>Patch</b></span>
+      </a>
+      <span id="runtime-pill" class="pp-tag">checking…</span>
+      <span class="pp-spacer"></span>
+      <button class="pp-btn pp-btn--ghost pp-btn--sm" id="open-studio" data-tip="Open Character Studio: make and edit fighters.">Character Studio</button>
+    </header>
+
+    <nav class="pp-nav" id="nav" aria-label="Sections">
+      <div class="pp-nav-label">Game</div>
+      <a class="pp-nav-item" href="#play" data-tip="Pick a profile and start Melee with your mods (offline).">Play</a>
+      <a class="pp-nav-item" href="#profiles" data-tip="Profiles: which characters, mods and plugins go into a game.">Profiles <span class="pp-count" id="n-profiles"></span></a>
+      <div class="pp-nav-label">Plugins</div>
+      <a class="pp-nav-item" href="#plugins" data-tip="Plugins you have installed. Turn them on or off and change their settings.">Installed <span class="pp-count" id="n-plugins"></span></a>
+      <a class="pp-nav-item" href="#browse" data-tip="Find new plugins on the PascalPatch plugin site.">Browse</a>
+      <div class="pp-nav-label">PascalPatch</div>
+      <a class="pp-nav-item" href="#activity" data-tip="Builds and launches in progress, and the game's logs.">Activity <span class="pp-count" id="n-jobs"></span></a>
+      <a class="pp-nav-item" href="#settings" data-tip="Where the game is, the plugin site, and how PascalPatch looks.">Settings</a>
+    </nav>
+
+    <main class="pp-main"><div class="pp-page" id="page"></div></main>
+
+    <footer class="pp-statusbar">
+      <span id="tip">Choose a profile and press Play.</span>
+      <span class="pp-spacer"></span>
+      <span class="pp-dim pp-mono" id="footer-version"></span>
+    </footer>
+  </div>
+  <div class="pp-toasts" id="toasts" aria-live="polite"></div>
+  <dialog class="pp-dialog" id="dialog"></dialog>
+  <script src="app.js"></script>
+</body>
+</html>

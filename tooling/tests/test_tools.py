@@ -3,7 +3,7 @@ import json, tempfile, unittest, sys
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parents[1]/"../host/src"))
-from meleemod.discovery import _looks_like_emulator
+from pascalpatch.discovery import _looks_like_emulator
 sys.path.insert(0,str(Path(__file__).parents[1]))
 from dolphin_smoke import custom_fighter_assertion, parse_playback_evidence, read_dtm_metadata, run_one
 class ToolTests(unittest.TestCase):
@@ -49,11 +49,11 @@ class ToolTests(unittest.TestCase):
   self.assertIsNone(evidence["last_scene"])
   self.assertEqual(evidence["output_len"],0)
  def test_playback_evidence_tracks_movie_and_scene(self):
-  evidence=parse_playback_evidence("Playing movie input.dtm\n[meleemod] GM:28 SC:00\n[meleemod] GM:02 SC:01")
+  evidence=parse_playback_evidence("Playing movie input.dtm\n[pascalpatch] GM:28 SC:00\n[pascalpatch] GM:02 SC:01")
   self.assertTrue(evidence["movie_playback_entered"])
   self.assertEqual(evidence["last_scene"],"GM:02 SC:01")
   self.assertTrue(evidence["advanced_past_boot"])
-  boot_only=parse_playback_evidence("[meleemod] GM:28 SC:00")
+  boot_only=parse_playback_evidence("[pascalpatch] GM:28 SC:00")
   self.assertFalse(boot_only["advanced_past_boot"])
 
 

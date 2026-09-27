@@ -61,9 +61,12 @@ def validate_profile(obj,path="profile"):
   for k in ("decomp_repo","decomp_orig","plugin_source_root","runtime_root"):
    if k in obj and (not isinstance(obj[k],str) or not obj[k]): e.append(ValidationError(path+"."+k,"path","must be a non-empty path"))
   chars=obj.get("characters",[])
-  if not isinstance(chars,list) or any(not isinstance(c,dict) or not {"package","slot","fighter_file"}<=set(c)<={"package","slot","fighter_file","costume_file","animation_file"} or not all(isinstance(v,str) and v for v in c.values()) for c in chars):
-   e.append(ValidationError(path+".characters","characters","each entry needs package, slot and fighter_file paths (optional costume_file, animation_file)"))
-  elif len({c["slot"].lower() for c in chars})!=len(chars): e.append(ValidationError(path+".characters","duplicate","one character per slot"))
+  if not isinstance(chars,list) or any(not isinstance(c,dict) or not {"package","slot","fighter_file"}<=set(c)<={"package","slot","fighter_file","costume_file","animation_file","move_graft","portrait","icon","stock","install"} or not all(isinstance(v,str) and v for v in c.values()) or c.get("install","replace") not in ("replace","new") for c in chars):
+   e.append(ValidationError(path+".characters","characters","each entry needs package, slot and fighter_file paths (optional costume_file, animation_file, move_graft, portrait, icon, stock; install: replace or new)"))
+  else:
+   replaced=[c["slot"].lower() for c in chars if c.get("install","replace")=="replace"]
+   if len(set(replaced))!=len(replaced): e.append(ValidationError(path+".characters","duplicate","one character per replaced slot"))
+   if sum(1 for c in chars if c.get("install")=="new")>40: e.append(ValidationError(path+".characters","install","at most 40 new fighters"))
  return e
 
 def require_valid(obj,kind,path="manifest"):

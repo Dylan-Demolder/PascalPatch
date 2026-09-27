@@ -4,30 +4,30 @@ from types import SimpleNamespace
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).parents[1]/"src"))
-from meleemod.discovery import inspect_iso, inspect_game, EXPECTED_DOL_SHA1
-from meleemod.manifest import validate_profile, validate_plugin, validate_mod
-from meleemod.profile import load_profile
-from meleemod.store import BuildStore
-from meleemod.errors import ManifestError, CompositionError, DiscoveryError
-from meleemod.character_package import validate_package, installation_plan, compose_validated_package
-from meleemod.plugin_composer import resolve_plugin_order, compose_static_manifest
-from meleemod.launcher import launch
-from meleemod.discovery import find_dolphin
-from meleemod.bridge import Message, encode, decode
-from meleemod.bridge_transport import UnixBridgeServer
-from meleemod.dolphin_gdb import DolphinGdbClient, DolphinGdbMailbox, DolphinGdbError, MAX_TRANSFER, RUNTIME_FRAME_CAPACITY
-from meleemod.diagnostics import report, symbolize_native
-from meleemod.safety import validate_safety
-from meleemod.registry import install_local, install_remote, install_remote_archive, install_remote_character_package
-from meleemod.registry_signing import public_key, key_id, make_trust, sign, sign_index, verify_index, sign_trust_update, verify_trust_update, fetch_index, fetch_https_index, update_https_index
-from meleemod.static_integration import make_bundle, apply_overlay
+from pascalpatch.discovery import inspect_iso, inspect_game, EXPECTED_DOL_SHA1
+from pascalpatch.manifest import validate_profile, validate_plugin, validate_mod
+from pascalpatch.profile import load_profile
+from pascalpatch.store import BuildStore
+from pascalpatch.errors import ManifestError, CompositionError, DiscoveryError
+from pascalpatch.character_package import validate_package, installation_plan, compose_validated_package
+from pascalpatch.plugin_composer import resolve_plugin_order, compose_static_manifest
+from pascalpatch.launcher import launch
+from pascalpatch.discovery import find_dolphin
+from pascalpatch.bridge import Message, encode, decode
+from pascalpatch.bridge_transport import UnixBridgeServer
+from pascalpatch.dolphin_gdb import DolphinGdbClient, DolphinGdbMailbox, DolphinGdbError, MAX_TRANSFER, RUNTIME_FRAME_CAPACITY
+from pascalpatch.diagnostics import report, symbolize_native
+from pascalpatch.safety import validate_safety
+from pascalpatch.registry import install_local, install_remote, install_remote_archive, install_remote_character_package
+from pascalpatch.registry_signing import public_key, key_id, make_trust, sign, sign_index, verify_index, sign_trust_update, verify_trust_update, fetch_index, fetch_https_index, update_https_index
+from pascalpatch.static_integration import make_bundle, apply_overlay
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
-from meleemod.recompose_iso import recompose_iso
+from pascalpatch.recompose_iso import recompose_iso
 sys.path.insert(0,str(Path(__file__).parents[2]/"tooling"))
 from dolphin_smoke import custom_fighter_assertion, run_one
 
-ISO=Path(os.environ.get("MELEEMOD_TEST_ISO","/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")).expanduser()
-DOL=Path(os.environ.get("MELEEMOD_TEST_DOL","/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")).expanduser()
+ISO=Path(os.environ.get("PASCALPATCH_TEST_ISO","/home/dyland/Downloads/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso")).expanduser()
+DOL=Path(os.environ.get("PASCALPATCH_TEST_DOL","/home/dyland/Documents/MeleeDecomp/melee/build/GALE01/main.dol")).expanduser()
 class CoreTests(unittest.TestCase):
  def test_real_iso_revision_and_hash(self):
   if not ISO.exists(): self.skipTest("local user ISO unavailable")
@@ -47,7 +47,7 @@ class CoreTests(unittest.TestCase):
    prof={"id":"offline","name":"Offline","game_version":"GALE01-1.02","base_game":"../base","plugins":[],"mods":["skin"],"mode":"offline","online_safe":False}; (t/"profiles/offline.json").write_text(json.dumps(prof))
    p=load_profile(t/"profiles/offline.json",t); r=BuildStore(t/"data").build(p); self.assertEqual((r.output/"files/original.bin").read_bytes(),b"new"); self.assertTrue((r.metadata).exists()); self.assertTrue((t/"data/builds/offline/current").exists())
  def test_conflicting_targets_fail(self):
-  from meleemod.composer import compose_assets
+  from pascalpatch.composer import compose_assets
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"base").mkdir(); (t/"a").mkdir(); (t/"b").mkdir(); (t/"a/x").write_bytes(b"a"); (t/"b/x").write_bytes(b"b")
    mods=[{"id":"a","source":str(t/"a"),"targets":["x"],"priority":0},{"id":"b","source":str(t/"b"),"targets":["x"],"priority":0}]
@@ -100,22 +100,22 @@ class CoreTests(unittest.TestCase):
 
  def test_launch_no_build_resolves_iso_game_target(self):
   import io, contextlib
-  from meleemod import cli
+  from pascalpatch import cli
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"profiles").mkdir(); (t/"base.iso").write_bytes(b"disc"); (t/"profiles/iso-profile.json").write_text(json.dumps({"id":"iso-profile","name":"Iso","game_version":"GALE01-1.02","base_game":"../base.iso","plugins":[],"mods":[],"mode":"offline","online_safe":False}))
-   with patch("meleemod.store.inspect_game",return_value=SimpleNamespace(kind="iso",main_dol_sha1=EXPECTED_DOL_SHA1)): built=BuildStore(t/"data").build(load_profile(t/"profiles/iso-profile.json",t)).output
+   with patch("pascalpatch.store.inspect_game",return_value=SimpleNamespace(kind="iso",main_dol_sha1=EXPECTED_DOL_SHA1)): built=BuildStore(t/"data").build(load_profile(t/"profiles/iso-profile.json",t)).output
    current=Path(td)/"data/builds/iso-profile/current/game/game.iso"; self.assertTrue(built.is_file()); self.assertTrue(current.is_file()); self.assertEqual(built.resolve(),current.resolve())
    out=io.StringIO()
-   with patch("meleemod.cli.find_dolphin",return_value=Path("/usr/bin/dolphin-emu")), contextlib.redirect_stdout(out): code=cli.main(["--root",td,"--data",str(t/"data"),"launch","iso-profile","--no-build","--dry-run","--runtime","dolphin"])
+   with patch("pascalpatch.cli.find_dolphin",return_value=Path("/usr/bin/dolphin-emu")), contextlib.redirect_stdout(out): code=cli.main(["--root",td,"--data",str(t/"data"),"launch","iso-profile","--no-build","--dry-run","--runtime","dolphin"])
    self.assertEqual(code,0); planned=json.loads(out.getvalue())["command"][2]; self.assertTrue(planned.endswith("game.iso")); self.assertTrue(Path(planned).is_file()); self.assertEqual(Path(planned).resolve(),built.resolve())
 
  def test_iso_static_profile_recomposes_staged_output(self):
   if not ISO.exists(): self.skipTest("local user ISO unavailable")
   with tempfile.TemporaryDirectory() as td:
-   t=Path(td); data={"id":"code-iso","name":"Code ISO","game_version":"GALE01-1.02","base_game":str(ISO),"plugins":[],"mods":[],"mode":"offline","online_safe":False,"decomp_repo":"repo","decomp_orig":"orig","plugin_source_root":"plugins","runtime_root":"runtime"}; plugin={"id":"p","version":"1.0.0","api_version":1,"entrypoint":"plugin_init","source":"p.c","static_signature":"context"}; profile=__import__("meleemod.profile",fromlist=["ResolvedProfile"]).ResolvedProfile(data,(plugin,),(),"offline-gameplay",t/"profile.json")
+   t=Path(td); data={"id":"code-iso","name":"Code ISO","game_version":"GALE01-1.02","base_game":str(ISO),"plugins":[],"mods":[],"mode":"offline","online_safe":False,"decomp_repo":"repo","decomp_orig":"orig","plugin_source_root":"plugins","runtime_root":"runtime"}; plugin={"id":"p","version":"1.0.0","api_version":1,"entrypoint":"plugin_init","source":"p.c","static_signature":"context"}; profile=__import__("pascalpatch.profile",fromlist=["ResolvedProfile"]).ResolvedProfile(data,(plugin,),(),"offline-gameplay",t/"profile.json")
    def fake_build(*args,**kwargs): Path(args[3]).write_bytes(b"dol"); return SimpleNamespace(sha1="deadbeef")
    def fake_recompose(base,dol,output): Path(output).write_bytes(b"recomposed")
-   with patch("meleemod.store.build_in_worktree",side_effect=fake_build), patch("meleemod.store.recompose_iso",side_effect=fake_recompose): result=BuildStore(t/"data").build(profile)
+   with patch("pascalpatch.store.build_in_worktree",side_effect=fake_build), patch("pascalpatch.store.recompose_iso",side_effect=fake_recompose): result=BuildStore(t/"data").build(profile)
    self.assertFalse(result.output.is_symlink()); self.assertEqual(result.output.read_bytes(),b"recomposed"); self.assertEqual(json.loads(result.metadata.read_text())["plugin_composition"],"static-source-overlay+iso-recomposition")
  def test_iso_build_uses_safe_reference_not_copy(self):
   if not ISO.exists(): self.skipTest("local user ISO unavailable")
@@ -143,10 +143,10 @@ class CoreTests(unittest.TestCase):
 
  def test_static_bundle_overlay_is_deterministic_and_has_hook(self):
   with tempfile.TemporaryDirectory() as td:
-   t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\nvoid plugin_shutdown(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    OSReport(\"#\\n\\n\");\n    gm_801A4510();\n    return 0;\n}\n"); (t/"src/melee/gm/gm_1A45.c").write_text("void frame(void) {\n        lb_800195D0();\n\n        if (HSD_PadGetResetSwitch()) {\n        }\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","shutdown":"plugin_shutdown","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t,runtime_root=Path(__file__).parents[2]); result=(t/"src/melee/gm/gmmain.c").read_text(); loop=(t/"src/melee/gm/gm_1A45.c").read_text(); bundle=(t/"src/melee/gm/meleemod_static_bundle.c").read_text(); self.assertIn("mm_meleemod_static_init",result); self.assertIn("mm_meleemod_static_shutdown",result); self.assertIn("plugin_shutdown",bundle); self.assertIn("mm_meleemod_frame();",loop); self.assertIn("mm_input_history_push",bundle); self.assertIn("mm_meleemod_frame_init",bundle); self.assertIn("if (mm_meleemod_shutdown_done) return;",bundle); self.assertTrue((t/"src/melee/gm/meleemod_static_bundle.c").exists())
+   t=Path(td); (t/"src/melee/gm").mkdir(parents=True); (t/"plugin.c").write_text("void plugin_init(void) {}\nvoid plugin_shutdown(void) {}\n"); (t/"src/melee/gm/gmmain.c").write_text("int main(void)\n{\n    char* unused;\n    u32 _[2];\n    OSReport(\"#\\n\\n\");\n    gm_801A4510();\n    return 0;\n}\n"); (t/"src/melee/gm/gm_1A45.c").write_text("void frame(void) {\n        lb_800195D0();\n\n        if (HSD_PadGetResetSwitch()) {\n        }\n}\n"); plugins=[{"id":"boot-log","entrypoint":"plugin_init","shutdown":"plugin_shutdown","source":"plugin.c"}]; first=make_bundle(plugins,t); second=make_bundle(plugins,t); self.assertEqual(first,second); apply_overlay(t,plugins,t,runtime_root=Path(__file__).parents[2]); result=(t/"src/melee/gm/gmmain.c").read_text(); loop=(t/"src/melee/gm/gm_1A45.c").read_text(); bundle=(t/"src/melee/gm/pascalpatch_static_bundle.c").read_text(); self.assertIn("mm_pascalpatch_static_init",result); self.assertIn("mm_pascalpatch_static_shutdown",result); self.assertIn("plugin_shutdown",bundle); self.assertIn("mm_pascalpatch_frame();",loop); self.assertIn("mm_input_history_push",bundle); self.assertIn("mm_pascalpatch_frame_init",bundle); self.assertIn("if (mm_pascalpatch_shutdown_done) return;",bundle); self.assertTrue((t/"src/melee/gm/pascalpatch_static_bundle.c").exists())
  def test_static_bundle_emits_scene_markers_from_runtime_state(self):
   with tempfile.TemporaryDirectory() as td:
-   t=Path(td); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); plugins=[{"id":"m","entrypoint":"plugin_init","source":"plugin.c"}]; plain=make_bundle(plugins,t); hooked=make_bundle(plugins,t,runtime_root=Path(__file__).parents[2]); self.assertIn("CHARACTER_SELECT_COMPLETE",plain); self.assertIn("OFFLINE_MATCH_STARTED",plain); self.assertIn("mm_meleemod_scene_markers();",plain); self.assertIn("mm_meleemod_scene_markers();",hooked); self.assertIn("gm_GetCurrentSceneIndex",plain); self.assertIn("gm_GetCurrentGameMode",plain); self.assertEqual(plain.count("CHARACTER_SELECT_COMPLETE"),1); self.assertEqual(plain.count("OFFLINE_MATCH_STARTED"),1); self.assertIn("scene GM:",plain); self.assertEqual(plain.count("scene GM:"),1); self.assertIn("gm_GetCurrentSceneEnterData",plain); self.assertIn("pending_scene_change",plain); self.assertIn("css->match_type==0x00u",plain); self.assertNotIn("u && scene==0x00u",plain)
+   t=Path(td); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); plugins=[{"id":"m","entrypoint":"plugin_init","source":"plugin.c"}]; plain=make_bundle(plugins,t); hooked=make_bundle(plugins,t,runtime_root=Path(__file__).parents[2]); self.assertIn("CHARACTER_SELECT_COMPLETE",plain); self.assertIn("OFFLINE_MATCH_STARTED",plain); self.assertIn("mm_pascalpatch_scene_markers();",plain); self.assertIn("mm_pascalpatch_scene_markers();",hooked); self.assertIn("gm_GetCurrentSceneIndex",plain); self.assertIn("gm_GetCurrentGameMode",plain); self.assertEqual(plain.count("CHARACTER_SELECT_COMPLETE"),1); self.assertEqual(plain.count("OFFLINE_MATCH_STARTED"),1); self.assertIn("scene GM:",plain); self.assertEqual(plain.count("scene GM:"),1); self.assertIn("gm_GetCurrentSceneEnterData",plain); self.assertIn("pending_scene_change",plain); self.assertIn("css->match_type==0x00u",plain); self.assertNotIn("u && scene==0x00u",plain)
 
 
  def test_symbolizer_rejects_bad_address_and_redacts_missing_elf(self):
@@ -269,13 +269,13 @@ class CoreTests(unittest.TestCase):
 
  def test_static_startup_phase_is_explicit(self):
   with tempfile.TemporaryDirectory() as td:
-   t=Path(td); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); bundle=make_bundle([{"id":"p","entrypoint":"plugin_init","source":"plugin.c","init_phase":"startup"}],t); self.assertIn("mm_meleemod_startup_init",bundle); self.assertIn("plugin_init();",bundle)
+   t=Path(td); (t/"plugin.c").write_text("void plugin_init(void) {}\n"); bundle=make_bundle([{"id":"p","entrypoint":"plugin_init","source":"plugin.c","init_phase":"startup"}],t); self.assertIn("mm_pascalpatch_startup_init",bundle); self.assertIn("plugin_init();",bundle)
 
 
 class BridgeTransportTests(unittest.TestCase):
  def test_socket_pair_round_trip_and_handler(self):
   import socket
-  from meleemod.bridge_transport import receive, send, serve_once
+  from pascalpatch.bridge_transport import receive, send, serve_once
   left,right=socket.socketpair()
   try:
    send(left,Message(1,8,b"ping")); self.assertEqual(serve_once(right,lambda m: Message(2,m.request_id,b"pong")),Message(2,8,b"pong")); self.assertEqual(receive(left),Message(2,8,b"pong"))
@@ -320,7 +320,7 @@ class BridgeTransportTests(unittest.TestCase):
 
  def test_disconnect_is_bounded_error(self):
   import socket
-  from meleemod.bridge_transport import BridgeTransportError, receive
+  from pascalpatch.bridge_transport import BridgeTransportError, receive
   left,right=socket.socketpair(); right.close()
   try:
    with self.assertRaises(BridgeTransportError): receive(left)
@@ -329,7 +329,7 @@ class BridgeTransportTests(unittest.TestCase):
  @unittest.skipIf(os.name=="nt","POSIX shell/socket fixture")
  def test_unix_bridge_server_is_private_and_cleans_up(self):
   import socket, threading
-  from meleemod.bridge_transport import receive, send
+  from pascalpatch.bridge_transport import receive, send
   with tempfile.TemporaryDirectory() as td:
    path=Path(td)/"bridge.sock"; result=[]; ready=threading.Event()
    def serve():
@@ -341,17 +341,17 @@ class BridgeTransportTests(unittest.TestCase):
 
 class GuiTests(unittest.TestCase):
  def test_controller_lists_invalid_profiles_without_tk(self):
-  from meleemod.gui import GuiController
+  from pascalpatch.gui import GuiController
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"profiles").mkdir(); (t/"profiles/bad.json").write_text("{not json")
    rows=GuiController(t,t/"data").list_profiles()
    self.assertEqual(len(rows),1); self.assertEqual(rows[0].id,"bad"); self.assertEqual(rows[0].compatibility,"invalid")
  def test_controller_rejects_profile_path_traversal(self):
-  from meleemod.gui import GuiController
+  from pascalpatch.gui import GuiController
   with tempfile.TemporaryDirectory() as td:
    with self.assertRaises(ValueError): GuiController(td)._path("../bad")
  def test_profile_mod_manager_toggles_catalog_entry(self):
-  from meleemod.mods import catalog, resolve, set_enabled
+  from pascalpatch.mods import catalog, resolve, set_enabled
   with tempfile.TemporaryDirectory() as td:
    t=Path(td); (t/"profiles").mkdir(); (t/"plugins/demo").mkdir(parents=True)
    manifest={"id":"demo","version":"1.0.0","api_version":1,"entrypoint":"plugin_init","capabilities":["visual-only"],"dependencies":[],"game_versions":["GALE01-1.02"],"online_safe":True}

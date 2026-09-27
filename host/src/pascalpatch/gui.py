@@ -84,7 +84,7 @@ def run(project_root, data_root=None, dolphin=None, self_test=False, self_test_l
     from tkinter import filedialog, messagebox, simpledialog, ttk
 
     controller=GuiController(project_root,data_root)
-    app=tk.Tk(); app.title("MeleeMod"); app.geometry("1220x760"); app.minsize(980,620)
+    app=tk.Tk(); app.title("PascalPatch"); app.geometry("1220x760"); app.minsize(980,620)
     style=ttk.Style(app)
     try: style.theme_use("clam")
     except tk.TclError: pass
@@ -99,7 +99,7 @@ def run(project_root, data_root=None, dolphin=None, self_test=False, self_test_l
     center=ttk.Frame(app,padding=(0,12,12,12)); center.pack(side="left",fill="both",expand=True)
     details=ttk.Frame(app,padding=(0,12,12,12),width=315); details.pack(side="right",fill="y"); details.pack_propagate(False)
 
-    ttk.Label(profiles_frame,text="MeleeMod",style="Title.TLabel").pack(anchor="w")
+    ttk.Label(profiles_frame,text="PascalPatch",style="Title.TLabel").pack(anchor="w")
     ttk.Label(profiles_frame,text="Profiles",style="Subtitle.TLabel").pack(anchor="w",pady=(0,8))
     profile_list=tk.Listbox(profiles_frame,width=28,height=28,exportselection=False,activestyle="dotbox",borderwidth=0,highlightthickness=1)
     profile_list.pack(fill="y",expand=True)
@@ -196,12 +196,12 @@ def run(project_root, data_root=None, dolphin=None, self_test=False, self_test_l
             entry=selected_entry()
             if entry.manifest is None: raise CatalogError(f"{entry.name} is {entry.status}; it is not installable yet")
             write(json.dumps(controller.set_mod_enabled(current(),entry.id,enabled),indent=2)); refresh_catalog(); tree.selection_set(entry.id); select_mod()
-        except Exception as exc: messagebox.showerror("MeleeMod",str(exc))
+        except Exception as exc: messagebox.showerror("PascalPatch",str(exc))
     def action(fn):
         try: write(fn(current()))
         except Exception as exc:
             if self_test: write("ERROR: "+str(exc)); app.after(100,app.destroy)
-            else: messagebox.showerror("MeleeMod",str(exc))
+            else: messagebox.showerror("PascalPatch",str(exc))
     def create_new():
         base=filedialog.askopenfilename(title="Choose your Melee 1.02 ISO",filetypes=(("GameCube ISO","*.iso *.gcm"),("All files","*.*")))
         if not base: return
@@ -212,14 +212,14 @@ def run(project_root, data_root=None, dolphin=None, self_test=False, self_test_l
             from .mods import create_profile
             create_profile(controller.project_root,ident,name,base,mode="offline")
             refresh_profiles(); refresh_catalog(); write("Created profile "+ident)
-        except Exception as exc: messagebox.showerror("MeleeMod",str(exc))
+        except Exception as exc: messagebox.showerror("PascalPatch",str(exc))
     def delete_current():
         try:
             pid=current()
             if messagebox.askyesno("Delete profile",f"Delete {pid}?",parent=app):
                 from .mods import delete_profile
                 delete_profile(controller.project_root,pid); refresh_profiles(); refresh_catalog(); write("Deleted profile "+pid)
-        except Exception as exc: messagebox.showerror("MeleeMod",str(exc))
+        except Exception as exc: messagebox.showerror("PascalPatch",str(exc))
     ttk.Button(profile_buttons,text="New profile",command=create_new).pack(side="left",fill="x",expand=True,padx=(0,3))
     ttk.Button(profile_buttons,text="Delete",command=delete_current).pack(side="left",fill="x",expand=True)
     profile_list.bind("<<ListboxSelect>>",refresh_catalog); tree.bind("<<TreeviewSelect>>",select_mod); tree.bind("<Double-Button-1>",lambda _e: toggle(selected_entry().id not in controller.profile_mods(current())[1]))

@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
-from meleemod.errors import CompositionError, ManifestError
-from meleemod.native import native_command, validate_character_entry
-from meleemod.profile import load_profile
-from meleemod.store import BuildStore
+from pascalpatch.errors import CompositionError, ManifestError
+from pascalpatch.native import assign_new_fighters, native_command, stage_native_plugins, validate_character_entry
+from pascalpatch.profile import load_profile
+from pascalpatch.store import BuildStore
 
 
 def _package(root, compatibility="offline-gameplay"):
@@ -62,9 +62,9 @@ class NativeTests(unittest.TestCase):
                    "characters": [{"package": "../ember.melee-character", "slot": "falco", "fighter_file": "../PlFc.dat"}]}
             (root / "profiles/p.json").write_text(json.dumps(doc))
             seen = {}
-            def fake_overlay(base, replacements, output):
+            def fake_overlay(base, replacements, output, additions=None):
                 seen.update(replacements); Path(output).write_bytes(b"overlaid")
-            with patch("meleemod.store.inspect_game", return_value=SimpleNamespace(kind="iso", main_dol_sha1="x")), patch("meleemod.store.overlay_iso_files", side_effect=fake_overlay):
+            with patch("pascalpatch.store.inspect_game", return_value=SimpleNamespace(kind="iso", main_dol_sha1="x")), patch("pascalpatch.store.overlay_iso_files", side_effect=fake_overlay):
                 result = BuildStore(root / "data").build(load_profile(root / "profiles/p.json", root))
             self.assertEqual(list(seen), ["PlFc.dat"])
             meta = json.loads(result.metadata.read_text())
@@ -104,17 +104,72 @@ class NativeTests(unittest.TestCase):
                    "mode": "offline", "online_safe": False, "characters": entries}
             (root / "profiles/custom-roster.json").write_text(json.dumps(doc))
             seen = {}
-            def fake_overlay(base, replacements, output):
+            def fake_overlay(base, replacements, output, additions=None):
                 seen.update(replacements); Path(output).write_bytes(b"overlaid")
-            with patch("meleemod.store.inspect_game", return_value=SimpleNamespace(kind="iso", main_dol_sha1="x")), patch("meleemod.store.overlay_iso_files", side_effect=fake_overlay):
+            with patch("pascalpatch.store.inspect_game", return_value=SimpleNamespace(kind="iso", main_dol_sha1="x")), patch("pascalpatch.store.overlay_iso_files", side_effect=fake_overlay):
                 BuildStore(root / "data").build(load_profile(root / "profiles/custom-roster.json", root))
             self.assertEqual(sorted(seen), sorted(n for c in slots.values() for n in (c + ".dat", c + "Nr.dat")))
             doc["characters"].append(dict(entries[0])); (root / "profiles/custom-roster.json").write_text(json.dumps(doc))
             with self.assertRaises((ManifestError, CompositionError)):
                 BuildStore(root / "data").build(load_profile(root / "profiles/custom-roster.json", root))
 
+    def test_portrait_stages_extra_fighters_with_name_and_photo(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            package, fighter = _package(root), _fighter(root)
+            photo = root / "ember.portrait"; photo.write_bytes((bytes(range(256)) * 200)[:136 * 188 * 2])
+            (root / "ember.portrait.json").write_text(json.dumps({"character": "ember", "output_sha256": hashlib.sha256(photo.read_bytes()).hexdigest()}))
+            icon = root / "ember.icon"; icon.write_bytes(b"\x80\x00" * 64 * 56)
+            (root / "ember.icon.json").write_text(json.dumps({"character": "ember", "output_sha256": hashlib.sha256(icon.read_bytes()).hexdigest()}))
+            stock = root / "ember.stock"; stock.write_bytes(b"\x80\x00" * 24 * 24)
+            (root / "ember.stock.json").write_text(json.dumps({"character": "ember", "output_sha256": hashlib.sha256(stock.read_bytes()).hexdigest()}))
+            entry = {"package": str(package), "slot": "falco", "fighter_file": str(fighter), "portrait": str(photo), "icon": str(icon), "stock": str(stock)}
+            plan = validate_character_entry(entry, "offline")
+            self.assertEqual((plan["display_name"], plan["portrait"]), ("Ember", str(photo.resolve())))
+            plugins = root / "plugins"; plugins.mkdir(); (plugins / "extra-fighters.dll").write_bytes(b"dll")
+            with patch.dict("os.environ", {"PASCALPATCH_NATIVE_PLUGINS": str(plugins)}):
+                report = stage_native_plugins([plan], root / "data", root / "mods")
+            config = json.loads((root / "mods/extra-fighters.json").read_text())
+            self.assertEqual(config["slots"], [{"id": "ember", "ckind": 20, "name": "Ember", "portrait": "ember.portrait", "icon": "ember.icon", "stock": "ember.stock"}])
+            self.assertEqual((root / "mods/ember.icon").read_bytes(), icon.read_bytes())
+            self.assertEqual((root / "mods/ember.portrait").read_bytes(), photo.read_bytes())
+            self.assertEqual((report["plugins"][0]["portraits"], report["plugins"][0]["icons"], report["plugins"][0]["stocks"]), (1, 1, 1))
+            photo.write_bytes(b"short")   # wrong size (and no longer the reported file)
+            with self.assertRaises(CompositionError):
+                validate_character_entry(entry, "offline")
+
+    def test_new_fighter_gets_files_of_its_own(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            package, fighter = _package(root), _fighter(root)
+            anim = root / "PlFcAJ.dat"; anim.write_bytes(b"\0" * 64)
+            (root / "PlFcAJ.dat.anim.json").write_text(json.dumps({"character": "ember", "output_sha256": hashlib.sha256(anim.read_bytes()).hexdigest()}))
+            graft = root / "move-graft.json"
+            graft.write_text(json.dumps({"character": "ember", "grafts": [{"fighter": 22, "slot": "n", "donor": 1, "states": [341, 341]}]}))
+            entry = {"package": str(package), "slot": "falco", "fighter_file": str(fighter), "animation_file": str(anim), "move_graft": str(graft), "install": "new"}
+            plan = assign_new_fighters([validate_character_entry(entry, "offline")])[0]
+            self.assertEqual((plan["base_kind"], plan["overlays"], sorted(plan["additions"])), (22, {}, ["PlX0.dat", "PlX0AJ.dat"]))
+            self.assertEqual(plan["files"], {"dat": "PlX0.dat", "anim": "PlX0AJ.dat"})
+            self.assertEqual(plan["grafts"][0]["character"], "ember")
+            self.assertNotIn("fighter", plan["grafts"][0])
+            plugins = root / "plugins"; plugins.mkdir()
+            for name in ("extra-fighters", "move-graft"): (plugins / f"{name}.dll").write_bytes(b"dll")
+            with patch.dict("os.environ", {"PASCALPATCH_NATIVE_PLUGINS": str(plugins)}):
+                stage_native_plugins([plan], root / "data", root / "mods")
+            config = json.loads((root / "mods/extra-fighters.json").read_text())
+            self.assertEqual((config["slots"], config["fighters"]), ([], [{"id": "ember", "name": "Ember", "base": 22, "base_ckind": 20,
+                                                                             "dat": "PlX0.dat", "anim": "PlX0AJ.dat"}]))
+            self.assertEqual(json.loads((root / "mods/move-graft.json").read_text())["grafts"][0]["character"], "ember")
+            second = assign_new_fighters([validate_character_entry(entry, "offline") for _ in range(2)])[1]
+            self.assertEqual(second["files"]["dat"], "PlX1.dat")
+            with self.assertRaises(CompositionError):
+                validate_character_entry(dict(entry, slot="zelda"), "offline")
+
     def test_native_command_shape(self):
         self.assertEqual(native_command("melee_port.exe", "g.iso", ["--frames", 10]), ["melee_port.exe", "--iso", "g.iso", "--frames", "10"])
+        # Through the launcher the port command is passed on untouched: no port-side flags are added.
+        self.assertEqual(native_command("melee_port.exe", "g.iso", ["--frames", 10], mods="m", launcher="pascalpatch-launch.exe", sandbox="s", log="l"),
+                         ["pascalpatch-launch.exe", "--mods", str(Path("m").resolve()), "--sandbox", str(Path("s").resolve()), "--log", str(Path("l").resolve()), "--", "melee_port.exe", "--iso", "g.iso", "--frames", "10"])
 
 
 if __name__ == "__main__":

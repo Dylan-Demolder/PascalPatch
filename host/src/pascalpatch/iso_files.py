@@ -7,6 +7,7 @@ HEADER_DOL = 0x420
 HEADER_FST = 0x424
 HEADER_FST_SIZE = 0x428
 HEADER_MIN = 0x42C
+HEADER_FST_MAX = 0x42C   # the largest FST size the game reserves memory for
 MAX_REPLACEMENT = 64 * 1024 * 1024
 
 
@@ -145,6 +146,12 @@ def extract_iso_file(base_iso, iso_path):
     raise FileNotFoundError(f"no such file in ISO: {target}")
 
 
+def _fst_max(base):
+    with Path(base).open("rb") as src:
+        src.seek(HEADER_FST_MAX)
+        return int.from_bytes(src.read(4), "big")
+
+
 def _coerce_replacement(value):
     if isinstance(value, (bytes, bytearray)):
         return bytes(value)
@@ -154,18 +161,37 @@ def _coerce_replacement(value):
     return path.read_bytes()
 
 
-def overlay_iso_files(base_iso, replacements, output):
-    """Write a new ISO with existing FST files replaced by new bytes.
+def _add_root_files(fst, names):
+    """The FST with file entries for ``names`` appended to the root directory.
 
-    Only files already present in the FST can be replaced; no entries are
-    added or renamed, so the FST byte size is unchanged. Files are repacked
-    after the FST with 0x20 alignment and the FST offsets/sizes are updated.
-    The DOL/header region is copied verbatim and the input is never modified.
+    New entries go after every existing one, where only the root's range reaches (a
+    directory's range ends at the entry count it was written with), and their names go at
+    the end of the string table; existing name offsets are relative to the table's start,
+    so they stay valid. The entries' offsets and sizes are filled in by the caller.
     """
-    if not replacements:
-        raise ValueError("at least one file replacement is required")
+    count = int.from_bytes(fst[8:12], "big")
+    table, strings = bytearray(fst[:count * 12]), bytearray(fst[count * 12:])
+    for name in names:
+        table += bytes([0]) + len(strings).to_bytes(3, "big") + bytes(8)
+        strings += name.encode("ascii") + b"\0"
+    table[8:12] = (count + len(names)).to_bytes(4, "big")
+    return bytes(table + strings)
+
+
+def overlay_iso_files(base_iso, replacements, output, additions=None):
+    """Write a new ISO with existing FST files replaced by new bytes, and new files added.
+
+    ``replacements`` must name files already in the FST. ``additions`` are new files for
+    the root directory (plain names such as "PlX0.dat"); they get FST entries of their own,
+    so the FST grows and the header's FST size fields follow. Files are repacked after the
+    FST with 0x20 alignment and the FST offsets/sizes are updated. The DOL/header region is
+    copied verbatim and the input is never modified.
+    """
+    additions = additions or {}
+    if not replacements and not additions:
+        raise ValueError("at least one file replacement or addition is required")
     wanted = {}
-    for iso_path, source in replacements.items():
+    for iso_path, source in list(replacements.items()) + list(additions.items()):
         target = _normalize_iso_path(iso_path)
         data = _coerce_replacement(source)
         if len(data) > MAX_REPLACEMENT:
@@ -173,6 +199,12 @@ def overlay_iso_files(base_iso, replacements, output):
         if target in wanted:
             raise ValueError(f"duplicate replacement: {target}")
         wanted[target] = data
+    added = []
+    for iso_path in additions:
+        name = _normalize_iso_path(iso_path)
+        if "/" in name or not name.isascii() or len(name) > 255:
+            raise ValueError(f"added files go in the root directory: {iso_path!r}")
+        added.append(name)
     base, _, fst_offset, fst = _read_fst(base_iso)
     out = Path(output).expanduser().resolve()
     if base == out:
@@ -187,8 +219,12 @@ def overlay_iso_files(base_iso, replacements, output):
         if full in by_path:
             raise ValueError(f"duplicate FST path: {full}")
         by_path[full] = entry
+    taken = {p.lower() for p in by_path} | {p.lower() for p in paths.values()}
     for target in wanted:
-        if target not in by_path:
+        if target in added:
+            if target.lower() in taken:
+                raise ValueError(f"file already in ISO: {target}")
+        elif target not in by_path:
             raise FileNotFoundError(f"no such file in ISO: {target}")
     iso_size = base.stat().st_size
     for entry in entries:
@@ -196,10 +232,13 @@ def overlay_iso_files(base_iso, replacements, output):
             continue
         if entry["offset"] < 0 or entry["size"] < 0 or entry["offset"] + entry["size"] > iso_size:
             raise ValueError("FST file range is outside the ISO")
-    new_fst = bytearray(fst)
-    files_start = _align(fst_offset + len(fst))
+    new_fst = bytearray(_add_root_files(fst, added) if added else fst)
+    files_start = _align(fst_offset + len(new_fst))
     ordered = sorted((entry for entry in entries if not entry["is_dir"]),
                      key=lambda entry: (entry["offset"], entry["index"]))
+    # New files go after the disc's own, reading from nowhere (their bytes are all new).
+    ordered += [{"index": len(entries) + i, "offset": None, "size": 0, "is_dir": False} for i in range(len(added))]
+    paths.update({len(entries) + i: name for i, name in enumerate(added)})
     layout = []
     cursor = files_start
     for entry in ordered:
@@ -232,6 +271,10 @@ def overlay_iso_files(base_iso, replacements, output):
                     raise ValueError("source ISO ended unexpectedly")
                 dst.write(chunk)
                 remaining -= len(chunk)
+            if added:   # the FST grew: its size and the largest size the game reserves for it
+                dst.seek(HEADER_FST_SIZE)
+                dst.write(len(new_fst).to_bytes(4, "big"))
+                dst.write(max(len(new_fst), _fst_max(base)).to_bytes(4, "big"))
             dst.seek(fst_offset)
             dst.write(new_fst)
             for entry, _, data, new_offset, new_size in layout:

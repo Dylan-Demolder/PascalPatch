@@ -112,7 +112,7 @@ def _signed_payload(document: dict) -> bytes:
 def make_trust(keys: dict[str, dict]) -> dict:
     if not isinstance(keys, dict) or not keys:
         raise ValueError("trust store requires keys")
-    return {"schema": "meleemod/trust/1", "keys": keys}
+    return {"schema": "pascalpatch/trust/1", "keys": keys}
 
 
 def sign_document(document: dict, seed: bytes, signer: str | None = None) -> dict:
@@ -125,7 +125,7 @@ def sign_document(document: dict, seed: bytes, signer: str | None = None) -> dic
 
 
 def _trusted_public(trust: dict, kid: str, now: int | None) -> bytes:
-    if not isinstance(trust, dict) or trust.get("schema") != "meleemod/trust/1":
+    if not isinstance(trust, dict) or trust.get("schema") != "pascalpatch/trust/1":
         raise ValueError("unsupported trust metadata")
     record = trust.get("keys", {}).get(kid)
     if not isinstance(record, dict) or record.get("status", "trusted") != "trusted":
@@ -149,12 +149,12 @@ def verify_document(document: dict, trust: dict, now: int | None = None) -> dict
 
 
 def sign_index(entries: list[dict], seed: bytes, signer: str | None = None) -> dict:
-    return sign_document({"schema": "meleemod/registry-index/1", "entries": entries}, seed, signer)
+    return sign_document({"schema": "pascalpatch/registry-index/1", "entries": entries}, seed, signer)
 
 
 def verify_index(document: dict, trust: dict, now: int | None = None) -> list[dict]:
     payload = verify_document(document, trust, now)
-    if payload.get("schema") != "meleemod/registry-index/1" or not isinstance(payload.get("entries"), list):
+    if payload.get("schema") != "pascalpatch/registry-index/1" or not isinstance(payload.get("entries"), list):
         raise ValueError("invalid registry index schema")
     from .registry import validate_entry
     for index, entry in enumerate(payload["entries"]):
@@ -165,12 +165,12 @@ def verify_index(document: dict, trust: dict, now: int | None = None) -> list[di
 
 
 def sign_trust_update(keys: dict[str, dict], seed: bytes, signer: str | None = None) -> dict:
-    return sign_document({"schema": "meleemod/trust/1", "keys": keys}, seed, signer)
+    return sign_document({"schema": "pascalpatch/trust/1", "keys": keys}, seed, signer)
 
 
 def verify_trust_update(document: dict, current: dict, now: int | None = None) -> dict:
     payload = verify_document(document, current, now)
-    if payload.get("schema") != "meleemod/trust/1" or not isinstance(payload.get("keys"), dict) or not payload["keys"]:
+    if payload.get("schema") != "pascalpatch/trust/1" or not isinstance(payload.get("keys"), dict) or not payload["keys"]:
         raise ValueError("invalid trust update schema")
     return payload
 
@@ -191,7 +191,7 @@ def _fetch_https_document(url: str, timeout: float, max_bytes: int) -> dict:
     parsed = urlparse(url)
     if parsed.scheme != "https" or not parsed.netloc:
         raise ValueError("registry updates require an HTTPS URL")
-    request = Request(url, headers={"Accept": "application/json", "User-Agent": "meleemod-registry/1"})
+    request = Request(url, headers={"Accept": "application/json", "User-Agent": "pascalpatch-registry/1"})
     with urlopen(request, timeout=timeout) as response:
         declared = response.headers.get("Content-Length")
         if declared is not None and int(declared) > max_bytes:

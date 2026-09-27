@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import hashlib, json, subprocess, time
-from .errors import MeleeModError
+from .errors import PascalPatchError
 @dataclass(frozen=True)
 class BuildReport:
  command:list[str]; returncode:int; duration_seconds:float; stdout:str; stderr:str; main_dol_sha1:str|None
@@ -18,5 +18,5 @@ def run_decomp_build(repo,toolchain,python="python",ninja="ninja"):
   p=subprocess.run(cmd,cwd=repo,text=True,capture_output=True,check=False); out.append("$ "+" ".join(cmd)+"\n"+p.stdout); err.append(p.stderr)
   if p.returncode: return BuildReport(cmd,p.returncode,time.monotonic()-start,"\n".join(out),"\n".join(err),None)
  dol=repo/"build/GALE01/main.dol"; sha=_sha1(dol) if dol.is_file() else None
- if sha != cfg.get("expected_main_dol_sha1"): raise MeleeModError(f"generated main.dol hash mismatch: {sha}")
+ if sha != cfg.get("expected_main_dol_sha1"): raise PascalPatchError(f"generated main.dol hash mismatch: {sha}")
  return BuildReport([ninja],0,time.monotonic()-start,"\n".join(out),"\n".join(err),sha)

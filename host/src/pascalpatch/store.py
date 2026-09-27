@@ -9,14 +9,17 @@ from .profile import ResolvedProfile
 from .static_integration import build_in_worktree
 from .recompose_iso import recompose_iso
 from .iso_files import overlay_iso_files
-from .native import validate_character_entry
+from .native import assign_new_fighters, stage_native_plugins, validate_character_entry
 
 @dataclass(frozen=True)
 class BuildResult:
     profile_id:str; output:Path; metadata:Path; compatibility:str
 
 def default_data_root():
- return Path(os.environ.get("MELEEMOD_DATA",Path.home()/".local/share/meleemod")).expanduser()
+ env=os.environ.get("PASCALPATCH_DATA") or os.environ.get("MELEEMOD_DATA")
+ if env: return Path(env).expanduser()
+ new,old=Path.home()/".local/share/pascalpatch",Path.home()/".local/share/meleemod"
+ return old if old.is_dir() and not new.exists() else new   # keep a pre-rename data folder working
 
 def _tree_hash(p):
  h=hashlib.sha256()
@@ -30,9 +33,9 @@ class BuildStore:
  def build(self,profile:ResolvedProfile):
   game=Path(profile.data["base_game"]).expanduser().resolve(); info=inspect_game(game)
   pid=profile.data["id"]; target_root=self.builds/pid; target_root.mkdir(parents=True,exist_ok=True)
-  stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")+"-"+uuid.uuid4().hex[:8]; stage=Path(tempfile.mkdtemp(prefix=pid+"-",dir=self.staging)); output=stage/"game"; report={"profile_id":pid,"profile_name":profile.data["name"],"game_version":profile.data["game_version"],"base_game":str(game),"base_kind":info.kind,"base_main_dol_sha1":info.main_dol_sha1,"plugins":[{k:p.get(k) for k in ("id","version","api_version")} for p in profile.plugins],"mods":[{k:m.get(k) for k in ("id","version","priority")} for m in profile.mods],"compatibility":profile.compatibility,"tool_version":"meleemod-host/0.1.0"}
+  stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")+"-"+uuid.uuid4().hex[:8]; stage=Path(tempfile.mkdtemp(prefix=pid+"-",dir=self.staging)); output=stage/"game"; report={"profile_id":pid,"profile_name":profile.data["name"],"game_version":profile.data["game_version"],"base_game":str(game),"base_kind":info.kind,"base_main_dol_sha1":info.main_dol_sha1,"plugins":[{k:p.get(k) for k in ("id","version","api_version")} for p in profile.plugins],"mods":[{k:m.get(k) for k in ("id","version","priority")} for m in profile.mods],"compatibility":profile.compatibility,"tool_version":"pascalpatch-host/0.1.0"}
   try:
-   characters=[validate_character_entry(c,profile.data["mode"],i) for i,c in enumerate(profile.data.get("characters",[]))]
+   characters=assign_new_fighters([validate_character_entry(c,profile.data["mode"],i) for i,c in enumerate(profile.data.get("characters",[]))])
    if characters:
     report["characters"]=characters
     if info.kind!="iso" or profile.plugins: raise CompositionError("character slot overlays currently require an ISO base and no static plugins (native Tier B)")
@@ -69,8 +72,11 @@ class BuildStore:
     elif characters:
      # Tier B: data files replaced, DOL copied verbatim so the native
      # recompiler's vanilla-DOL invariant still holds.
-     overlay_iso_files(game,{k:v for c in characters for k,v in c["overlays"].items()},output/"game.iso")
+     overlay_iso_files(game,{k:v for c in characters for k,v in c["overlays"].items()},output/"game.iso",
+                       {k:v for c in characters for k,v in c.get("additions",{}).items()})
      report["plugin_composition"]="native-tier-b-data-overlay"
+     native=stage_native_plugins(characters,self.root,stage/"mods",unlock_all=profile.data.get("unlock_all_characters",True))
+     if native: report["native_plugins"]=native
     else:
      (output/"game.iso").symlink_to(game)
     report["composition"]={"mods":[],"replacements":[],"conflicts":[]}; launch=output/"game.iso"

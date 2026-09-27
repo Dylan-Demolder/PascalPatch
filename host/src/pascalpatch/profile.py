@@ -28,7 +28,7 @@ def load_profile(path, catalog_root=None):
  chars=[]
  for c in data.get("characters",[]):
   c=dict(c)
-  for k in ("package","fighter_file","costume_file","animation_file"):
+  for k in ("package","fighter_file","costume_file","animation_file","move_graft","portrait","icon"):
    if k in c and not Path(c[k]).is_absolute(): c[k]=str((source.parent / c[k]).resolve())
   chars.append(c)
  if chars: data["characters"]=chars
