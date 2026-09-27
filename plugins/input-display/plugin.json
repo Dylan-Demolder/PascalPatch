@@ -1,0 +1,20 @@
+{
+  "id": "input-display",
+  "name": "Input Display",
+  "version": "1.0.0",
+  "abi": 1,
+  "entry": "input-display.dll",
+  "summary": "Shows a controller's sticks, buttons and triggers on screen, for practice and recordings.",
+  "author": "PascalPatch",
+  "license": "GPL-2.0-or-later",
+  "tags": ["hud", "training"],
+  "settings": [
+    {"key": "port", "type": "choice", "label": "Controller", "default": "1",
+     "options": [{"value": "1", "label": "Port 1"}, {"value": "2", "label": "Port 2"}, {"value": "3", "label": "Port 3"}, {"value": "4", "label": "Port 4"}]},
+    {"key": "corner", "type": "choice", "label": "Position", "default": "bottom-left",
+     "options": [{"value": "bottom-left", "label": "Bottom left"}, {"value": "bottom-right", "label": "Bottom right"},
+                 {"value": "top-left", "label": "Top left"}, {"value": "top-right", "label": "Top right"}]},
+    {"key": "scale", "type": "float", "label": "Size", "default": 1.0, "min": 0.5, "max": 2.0},
+    {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.85, "min": 0.2, "max": 1.0}
+  ]
+}
