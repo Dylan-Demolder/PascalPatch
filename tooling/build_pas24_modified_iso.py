@@ -3,10 +3,10 @@
 
 Builds a generated fighter-loader plugin into a pinned doldecomp worktree,
 rebuilds an executable ``main.dol`` with the OSReport hook, and recomposes a
-bootable modified ISO via ``meleemod.recompose_iso``. It then overlays the
+bootable modified ISO via ``pascalpatch.recompose_iso``. It then overlays the
 Studio-composed custom fighter archive onto its clone-slot file
 (``Pl<Code>.dat`` for the fixture's ``base_fighter``) via
-``meleemod.iso_files`` so the game's fighter loader resolves the custom bytes
+``pascalpatch.iso_files`` so the game's fighter loader resolves the custom bytes
 for that slot. The overlay is verified by reading the file back out of the
 modified ISO and comparing bytes. No Nintendo data is committed or
 transferred; the only repo inputs are the synthetic files under
@@ -20,15 +20,15 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "host/src"))
-from meleemod.recompose_iso import recompose_iso
-from meleemod.iso_files import extract_iso_file, list_iso_files, overlay_iso_files
-from meleemod.fighter_loader import (
+from pascalpatch.recompose_iso import recompose_iso
+from pascalpatch.iso_files import extract_iso_file, list_iso_files, overlay_iso_files
+from pascalpatch.fighter_loader import (
     FighterLoaderError,
     find_clone_slot,
     symbol_for_character_id,
     write_fighter_loader_plugin,
 )
-from meleemod.static_integration import CompositionError, build_in_worktree
+from pascalpatch.static_integration import CompositionError, build_in_worktree
 
 GAME_ID = b"GALE01"
 MARKER = b"PAS24-FIGHTER-LOADER-MARKER-v1:"
@@ -98,7 +98,7 @@ def main(argv=None):
     try:
         build = build_in_worktree(
             x.decomp_repo, x.orig, [{"id": "pas24_fighter_loader",
-                                     "entrypoint": "meleemod_fighter_loader_init",
+                                     "entrypoint": "pascalpatch_fighter_loader_init",
                                      "source": plugin.name,
                                      "static_signature": "none",
                                      "init_phase": "startup"}],

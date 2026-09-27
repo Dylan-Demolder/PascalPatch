@@ -17,7 +17,7 @@ on:
         type: string
 jobs:
   record:
-    runs-on: [self-hosted, meleemod-smoke]
+    runs-on: [self-hosted, pascalpatch-smoke]
     steps:
       - uses: actions/checkout@v4
       - name: Ensure X11 input control

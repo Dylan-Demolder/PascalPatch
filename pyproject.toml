@@ -4,13 +4,14 @@ build-backend = "backend"
 backend-path = ["."]
 
 [project]
-name = "meleemod-host"
+name = "pascalpatch-host"
 version = "0.1.0"
-description = "Safe host-side profile and build tooling for MeleeMod"
+description = "Safe host-side profile and build tooling for PascalPatch"
 requires-python = ">=3.11"
 
 [project.scripts]
-meleemod = "meleemod.cli:main"
+pascalpatch = "pascalpatch.cli:main"
+meleemod = "pascalpatch.cli:main"   # the name before the rename
 
 [tool.pytest.ini_options]
 pythonpath = ["host/src"]

@@ -9,7 +9,7 @@ fighter) actually instantiate correctly in the same running match/demo,
 instead of only checking that the ISO boots.
 
 This is a read-only diagnostic: it never writes game memory. It reuses the
-project's own bounded `host/src/meleemod/dolphin_gdb.py` transport and the
+project's own bounded `host/src/pascalpatch/dolphin_gdb.py` transport and the
 pointer chain proven live in docs/evidence/t10-memory-read-result.md:
 
     0x804D782C -> +0x20 (fighter list head) -> +0x08 (next) ... -> +0x2C (Fighter*)
@@ -41,7 +41,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "host" / "src"))
 
-from meleemod.dolphin_gdb import DolphinGdbClient, DolphinGdbError  # noqa: E402
+from pascalpatch.dolphin_gdb import DolphinGdbClient, DolphinGdbError  # noqa: E402
 
 FIGHTER_LIST_BASE = 0x804D782C
 LIST_HEAD_OFFSET = 0x20

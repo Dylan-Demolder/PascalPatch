@@ -73,7 +73,7 @@ on:
 jobs:
   record:
     if: inputs.record_movie == true
-    runs-on: [self-hosted, meleemod-smoke]
+    runs-on: [self-hosted, pascalpatch-smoke]
     steps:
       - uses: actions/checkout@v4
       - name: Ensure X11 input control
@@ -191,7 +191,7 @@ jobs:
           if-no-files-found: error
 
   smoke:
-    runs-on: [self-hosted, meleemod-smoke]
+    runs-on: [self-hosted, pascalpatch-smoke]
     steps:
       - uses: actions/checkout@v4
       - name: Report executed checkout
@@ -347,7 +347,7 @@ jobs:
             XVFB_PREFIX=(xvfb-run -a)
           fi
           PROBE_FAILED=0
-          MEMCARD_SEED="${MEMCARD_SEED:-$HOME/.cache/meleemod/memcard-seed}"
+          MEMCARD_SEED="${MEMCARD_SEED:-$HOME/.cache/pascalpatch/memcard-seed}"
           run_probe() {
             local name="$1" iso="$2" user_dir="$3" backend="$4" status=0
             local log="$SMOKE_LOG_DIR/${name}.log"

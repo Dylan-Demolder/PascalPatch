@@ -2,7 +2,7 @@
 import argparse, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / "host/src"))
-from meleemod.recompose_iso import recompose_iso
+from pascalpatch.recompose_iso import recompose_iso
 p = argparse.ArgumentParser(description="Recompose a user-owned GameCube ISO with a replacement main.dol")
 p.add_argument("base_iso")
 p.add_argument("main_dol")
@@ -13,7 +13,7 @@ a = p.parse_args()
 if not a.overlay:
     print(recompose_iso(a.base_iso, a.main_dol, a.output))
 else:
-    from meleemod.iso_files import recompose_iso_with_fighter
+    from pascalpatch.iso_files import recompose_iso_with_fighter
     overlays = {}
     for item in a.overlay:
         iso_path, _, host_file = item.partition("=")

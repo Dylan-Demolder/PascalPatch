@@ -47,9 +47,9 @@ directly at the desktop, DISPLAY=:0):
     PYTHONPATH=host/src python tooling/prime_memcard.py \\
         --dolphin /usr/bin/dolphin-emu \\
         --iso "/path/to/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso" \\
-        --output ~/.cache/meleemod/memcard-seed
+        --output ~/.cache/pascalpatch/memcard-seed
 
-Then pass `--memcard-seed ~/.cache/meleemod/memcard-seed` to
+Then pass `--memcard-seed ~/.cache/pascalpatch/memcard-seed` to
 tooling/dolphin_smoke.py (or point the CI workflow's MEMCARD_SEED env var at
 the same path) for every subsequent headless/CI run.
 """
@@ -139,11 +139,11 @@ def prime(dolphin: Path, iso: Path, output: Path, banner_wait: float, hard_timeo
             f"refusing to write a primed memory card under a git repository: {output}\n"
             "This directory contains real Melee-derived save data and must never be "
             "committed (see docs/legal-notice.md). Choose a path outside any repo, "
-            "e.g. ~/.cache/meleemod/memcard-seed."
+            "e.g. ~/.cache/pascalpatch/memcard-seed."
         )
     display = _require_display()
 
-    with tempfile.TemporaryDirectory(prefix="meleemod-memcard-prime-") as td:
+    with tempfile.TemporaryDirectory(prefix="pascalpatch-memcard-prime-") as td:
         user_dir = Path(td) / "user"
         user_dir.mkdir(parents=True, exist_ok=True)
         command = [str(dolphin), "-b", "-e", str(iso), "-u", str(user_dir)]

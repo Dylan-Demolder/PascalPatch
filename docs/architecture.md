@@ -3,7 +3,7 @@
 Native-first retarget: 2026-09-24. Primary runtime is
 [melee-unlocked](https://github.com/hero88go/melee-unlocked) (GPL-2.0-or-later,
 pinned revision); Dolphin is secondary. This document is a specification
-change; no native row below is verified for MeleeMod yet.
+change; no native row below is verified for PascalPatch yet.
 
 ```text
 profile JSON + plugin/mod manifests
@@ -34,7 +34,7 @@ not accepted in Slippi or tournament-safe profiles.
 ## What the native runtime provides (upstream facts)
 
 Read from melee-unlocked source at the pinned revision; each still needs
-direct verification against a MeleeMod profile build (plan-tracker N-series):
+direct verification against a PascalPatch profile build (plan-tracker N-series):
 
 - **Recompiler**: `port/recomp/recomp.py` reads a DOL, bakes Slippi's Gecko
   tables from a `sys-dir` (`GameSettings/GALE01r2.ini`, `codehandler.bin`,
@@ -74,7 +74,7 @@ direct verification against a MeleeMod profile build (plan-tracker N-series):
 | C — GPL fork (planned) | staged modified DOL from static C plugins | recompiler fork that accepts a modified input under base-hash + delta validation; optional in-process host bridge | GPL-2.0-or-later-compatible distribution terms |
 
 Whether Tier A content is *safe* (online-safe vs offline) is never answered by
-the port's classifier — that remains MeleeMod's capability classification
+the port's classifier — that remains PascalPatch's capability classification
 (`docs/compatibility.md`). The port's classifier only answers "can this code
 physically run in a translated build".
 
@@ -97,7 +97,7 @@ physically run in a translated build".
   the recompiler/runtime. Any distributed artifact that includes
   melee-unlocked code (the recompiler fork, a runtime-linked bridge, or a
   packaged native build) must ship under GPL-2.0-or-later-compatible terms
-  with source and notices. MeleeMod's schemas and validators are original
+  with source and notices. PascalPatch's schemas and validators are original
   code; that does not change the combined artifact's terms.
 - Distributing Nintendo data remains prohibited regardless of license.
 

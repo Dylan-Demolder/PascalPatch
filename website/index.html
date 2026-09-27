@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PascalPatch Plugins</title>
+  <meta name="description" content="Plugins for PascalPatch, the mod loader for Melee Unlocked: HUDs, training tools and more, installed from the PascalPatch app.">
+  <link rel="icon" href="assets/icon.svg">
+  <link rel="stylesheet" href="assets/pascal-ui.css">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body class="pp-root">
+  <header class="site-bar">
+    <a class="pp-brand" href="#">
+      <span class="pp-brand-mark">P</span>
+      <span class="pp-brand-name">Pascal<b>Patch</b></span>
+    </a>
+    <nav class="site-nav" aria-label="Site">
+      <a href="#plugins">Plugins</a>
+      <a href="#get">Get PascalPatch</a>
+      <a href="#develop">Make a plugin</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-text">
+      <p class="pp-tag pp-tag--accent">Melee Unlocked · offline</p>
+      <h1 class="pp-h1">Plugins for your Melee</h1>
+      <p class="lead">Input displays, training tools, unlocks and more. Pick one here, then install it with a click in the
+        PascalPatch app. Plugins load into the game at run time, so your game files are never changed. Press
+        <span class="pp-kbd">F2</span> in game to change their settings.</p>
+      <div class="pp-inline">
+        <a class="pp-btn pp-btn--primary" href="#plugins">Browse plugins</a>
+        <a class="pp-btn" href="http://127.0.0.1:8790/#browse" data-app-link>Open the PascalPatch app</a>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="art-frame"><span>PASCALPATCH</span><span>F2</span></div>
+      <div class="art-row"><i class="p1"></i><i class="p2"></i><i class="p3"></i><i class="p4"></i></div>
+    </div>
+  </section>
+
+  <main id="plugins" class="site-main">
+    <div class="pp-page-head">
+      <h2 class="pp-h2">Plugins</h2>
+      <span class="pp-spacer"></span>
+      <input class="pp-input" id="q" type="search" placeholder="Search plugins" aria-label="Search plugins">
+    </div>
+    <div class="pp-tabs" id="tags" role="tablist" aria-label="Filter by tag"></div>
+    <div id="notice"></div>
+    <div class="pp-cards" id="grid" aria-live="polite"></div>
+  </main>
+
+  <section id="get" class="site-section">
+    <h2 class="pp-h2">Get PascalPatch</h2>
+    <ol class="steps">
+      <li><b>Install PascalPatch</b> and point it at your Melee Unlocked build and your own NTSC 1.02 disc.</li>
+      <li><b>Open Browse</b> in the app. It downloads this site's signed index and shows every plugin here.</li>
+      <li><b>Install</b> a plugin, turn it on, and press Play. In game, <span class="pp-kbd">F2</span> opens the plugin window.</li>
+    </ol>
+    <p class="pp-muted">The app only installs what this site's index lists, and only when the download matches the index's
+      SHA-256 and the index's Ed25519 signature checks out against the key built into PascalPatch. Plugins run offline:
+      PascalPatch refuses every network request the game makes.</p>
+  </section>
+
+  <section id="develop" class="site-section">
+    <h2 class="pp-h2">Make a plugin</h2>
+    <p>A plugin is a Windows DLL that exports <code class="pp-mono">pp_plugin_load</code> and talks to the game through
+      <code class="pp-mono">pascalpatch/plugin.h</code>: read and write game memory, call and hook game functions, run code
+      every frame, declare settings for the F2 window, and draw on the HUD.</p>
+<pre class="code"><code>#include "pascalpatch/plugin.h"
+
+static const pp_host* H;
+static void frame(void*) {
+  if (H->setting_number("hello", "show") != 0)
+    H->hud_text(20, 20, 0xF5C542FF, 24, "Hello, Melee");
+}
+
+extern "C" __declspec(dllexport) int pp_plugin_load(const pp_host* host, const char*) {
+  if (!PP_HOST_HAS(host, hud_text)) return 1;
+  H = host;
+  H->declare_setting("hello", R"({"key":"show","type":"bool","label":"Show greeting","default":true})");
+  H->on_frame(frame, nullptr);
+  return 0;
+}</code></pre>
+    <p class="pp-muted">Package it as a ZIP with <code class="pp-mono">plugin.json</code> and
+      <code class="pp-mono">&lt;id&gt;.dll</code>, and open a pull request on this site's repository. Every package is reviewed
+      before its hash goes into the signed index.</p>
+  </section>
+
+  <footer class="site-foot">
+    <span>PascalPatch plugin site · generated <span id="generated">—</span></span>
+    <span class="pp-spacer"></span>
+    <span class="pp-dim">Not affiliated with Nintendo. Bring your own disc.</span>
+  </footer>
+
+  <dialog class="pp-dialog" id="details" aria-labelledby="d-title">
+    <div class="pp-dialog-head"><h3 class="pp-h3" id="d-title"></h3><span class="pp-spacer"></span>
+      <button class="pp-btn pp-btn--ghost pp-btn--icon" id="d-close" aria-label="Close">✕</button></div>
+    <div class="pp-dialog-body" id="d-body"></div>
+    <div class="pp-dialog-foot" id="d-foot"></div>
+  </dialog>
+  <script src="assets/site.js"></script>
+</body>
+</html>

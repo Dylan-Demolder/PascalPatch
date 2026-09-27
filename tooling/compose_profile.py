@@ -3,11 +3,11 @@
 import argparse, json, sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).parents[1]/"host/src"))
-from meleemod.profile import load_profile
-from meleemod.store import BuildStore
-from meleemod.errors import MeleeModError
+from pascalpatch.profile import load_profile
+from pascalpatch.store import BuildStore
+from pascalpatch.errors import PascalPatchError
 a=argparse.ArgumentParser(); a.add_argument("profile"); a.add_argument("--catalog-root"); a.add_argument("--data"); x=a.parse_args()
 try:
  p=load_profile(x.profile,x.catalog_root); r=BuildStore(x.data).build(p); print(json.dumps({"profile":p.data["id"],"output":str(r.output),"metadata":str(r.metadata),"compatibility":r.compatibility},indent=2))
-except MeleeModError as e:
+except PascalPatchError as e:
  print(str(e),file=sys.stderr); [print(f"{x.path}: {x.code}: {x.message}",file=sys.stderr) for x in e.errors]; raise SystemExit(2)

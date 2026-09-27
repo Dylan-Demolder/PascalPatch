@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "meleemod/profile/1",
+  "$id": "pascalpatch/profile/1",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -58,6 +58,11 @@
       "type": "boolean",
       "default": false
     },
+    "unlock_all_characters": {
+      "type": "boolean",
+      "default": true,
+      "description": "offline native builds: stage the unlock-all plugin so every character is selectable"
+    },
     "decomp_repo": {
       "type": "string",
       "minLength": 1
@@ -85,7 +90,12 @@
           "slot": {"type": "string", "minLength": 1},
           "fighter_file": {"type": "string", "minLength": 1},
           "costume_file": {"type": "string", "minLength": 1},
-          "animation_file": {"type": "string", "minLength": 1}
+          "animation_file": {"type": "string", "minLength": 1},
+          "move_graft": {"type": "string", "minLength": 1},
+          "portrait": {"type": "string", "minLength": 1, "description": "select-screen photo: <id>.portrait from Character Studio (136x188 RGB5A3)"},
+          "icon": {"type": "string", "minLength": 1, "description": "select-screen grid icon: <id>.icon from Character Studio (64x56 RGB5A3)"},
+          "stock": {"type": "string", "minLength": 1, "description": "stock icon above the damage in a match: <id>.stock from Character Studio (24x24 RGB5A3)"},
+          "install": {"enum": ["replace", "new"], "default": "replace", "description": "replace: the character takes the slot's place; new: it is added to the game and the select screen as a new fighter built on the slot's fighter, which stays (at most 40)"}
         }
       }
     }

@@ -11,15 +11,15 @@ jobs:
         run: |
           gcc -std=c99 -Wall -Wextra -Werror -Iruntime/include \
             runtime/src/events.c runtime/src/runtime.c runtime/tests/test_events.c \
-            -o /tmp/meleemod-runtime-test
-          /tmp/meleemod-runtime-test
+            -o /tmp/pascalpatch-runtime-test
+          /tmp/pascalpatch-runtime-test
           gcc -std=c99 -Wall -Wextra -Werror -Iruntime/include -Isdk/include \
-            runtime/src/input.c runtime/tests/test_input.c -o /tmp/meleemod-input-test
-          /tmp/meleemod-input-test
+            runtime/src/input.c runtime/tests/test_input.c -o /tmp/pascalpatch-input-test
+          /tmp/pascalpatch-input-test
           gcc -std=c99 -Wall -Wextra -Werror -Iruntime/include \
             runtime/src/bridge.c runtime/tests/test_bridge.c \
-            -o /tmp/meleemod-bridge-test
-          /tmp/meleemod-bridge-test
+            -o /tmp/pascalpatch-bridge-test
+          /tmp/pascalpatch-bridge-test
       - name: Check SDK sample syntax
         run: |
           for f in sdk/examples/*/plugin.c; do

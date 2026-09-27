@@ -15,6 +15,6 @@ def main() -> int:
     if not iso.is_file(): ap.error(f"ISO does not exist: {iso}")
     if not (decomp/"configure.py").is_file(): ap.error(f"not a Melee decompilation checkout: {decomp}")
     out=a.output.expanduser()
-    data={"id":a.id,"name":"MeleeMod demo runtime","game_version":"GALE01-1.02","base_game":str(iso),"plugins":["demo-mod"],"mods":[],"mode":"offline","online_safe":False,"decomp_repo":str(decomp),"decomp_orig":str(decomp/"orig/GALE01"),"plugin_source_root":str(Path(__file__).resolve().parents[1]),"runtime_root":str(Path(__file__).resolve().parents[1])}
+    data={"id":a.id,"name":"PascalPatch demo runtime","game_version":"GALE01-1.02","base_game":str(iso),"plugins":["demo-mod"],"mods":[],"mode":"offline","online_safe":False,"decomp_repo":str(decomp),"decomp_orig":str(decomp/"orig/GALE01"),"plugin_source_root":str(Path(__file__).resolve().parents[1]),"runtime_root":str(Path(__file__).resolve().parents[1])}
     out.parent.mkdir(parents=True,exist_ok=True); out.write_text(json.dumps(data,indent=2)+"\n"); print(out); return 0
 if __name__=="__main__": raise SystemExit(main())

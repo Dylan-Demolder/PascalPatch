@@ -1,4 +1,4 @@
-# MeleeMod mod catalog
+# PascalPatch mod catalog
 
 The launcher shows installed mods and the forward-looking catalog together.
 A roadmap entry is visible for planning but cannot be enabled until it has a
@@ -55,5 +55,5 @@ verified on the native runtime yet.
 - Tier C entries cannot be advertised as installable before the recompiler
   fork exists.
 - Upstream mechanisms (texture packs, run-time optional codes, jukebox) reduce
-  MeleeMod's job to manifest, validation, install, and safety classification —
+  PascalPatch's job to manifest, validation, install, and safety classification —
   they do not discharge those duties.

@@ -47,7 +47,7 @@ def build_dtm() -> bytes:
     struct.pack_into("<Q", header, 29, 0)
     struct.pack_into("<Q", header, 37, 0)
     struct.pack_into("<I", header, 45, 0)
-    author = b"MeleeMod menu input candidate"
+    author = b"PascalPatch menu input candidate"
     header[49 : 49 + len(author)] = author
     header[137] = 1
     header[138] = 1

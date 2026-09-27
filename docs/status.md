@@ -26,7 +26,7 @@ New native work is tracked as N-series rows in `plan-tracker.md`.
 | GALE01 1.02 identification | Complete | Real local ISO: header `GALE01`, revision byte `2`, expected `main.dol` SHA-1 |
 | Reproducible decompilation build | Validated on current Linux host | `spikes/001-reproducible-build/README.md`; wrapper rerun passed in 33.62 s |
 | Profile/mod schemas | MVP complete | `schemas/*.schema.json`, dependency-free semantic validator and tests |
-| Profile isolation | MVP complete | `host/src/meleemod/store.py`, atomic promotion test |
+| Profile isolation | MVP complete | `host/src/pascalpatch/store.py`, atomic promotion test |
 | Static plugin profile builds | MVP complete | Disposable worktree overlay produces and stages a modified DOL; standalone Dolphin directly observes hello initialization and frame/input callback markers |
 | Filesystem asset composition | MVP complete | Exact targets, traversal rejection, conflict test |
 | Dolphin discovery | MVP complete | Explicit executable validation; KDE `/usr/bin/dolphin` is rejected and installed Slippi AppImage is selected; launch helper records PID/exit/timeout |
@@ -56,7 +56,7 @@ Do not label pending features as supported.
 
 ## Latest validation
 
-- MeleeMod host tests: 36 passed.
+- PascalPatch host tests: 36 passed.
 - Character Studio tests: 17 passed.
 - Strict C event/input/bridge tests and all SDK example syntax checks pass.
 - Standalone Dolphin 2606 clean/modified smoke runner reports both processes started and hard-stops them without leftovers.

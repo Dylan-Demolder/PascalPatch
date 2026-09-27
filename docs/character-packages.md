@@ -16,26 +16,26 @@ fighter slot:
 ]
 ```
 
-`meleemod build` validates the package, requires `mode: offline`, checks each
+`pascalpatch build` validates the package, requires `mode: offline`, checks each
 file name against the slot (`PlCa.dat`, default costume `PlCaNr.dat`) and
 checks the Character Studio report beside it (`.slot.json`, `.costume.json`:
 character id and output SHA-256), then overlays the files into the profile ISO
-with the DOL untouched. `meleemod launch --runtime native` runs it on
+with the DOL untouched. `pascalpatch launch --runtime native` runs it on
 melee-unlocked. The character replaces the slot's fighter; it is not a new
 roster entry.
 
 ### Many characters in one profile
 
-A profile can hold one `characters` entry per slot. `meleemod build` rejects two entries that use the same slot. Character Studio's `build-roster` writes a profile like this directly, with one entry per built character:
+A profile can hold one `characters` entry per slot. `pascalpatch build` rejects two entries that use the same slot. Character Studio's `build-roster` writes a profile like this directly, with one entry per built character:
 
 ```sh
 # in MeleeCharacterStudio
 PYTHONPATH=core/src python -m melee_character_studio.cli build-roster roster/roster.json \
   --iso /path/to/GALE01.iso --out ~/melee-roster-build \
   --profile /path/to/MeleeMod/profiles/custom-roster.json
-# in MeleeMod
-meleemod --root /path/to/MeleeMod build custom-roster
-meleemod --root /path/to/MeleeMod launch custom-roster --runtime native --allow-unsafe --port /path/to/melee_port.exe
+# in PascalPatch
+pascalpatch --root /path/to/MeleeMod build custom-roster
+pascalpatch --root /path/to/MeleeMod launch custom-roster --runtime native --allow-unsafe --port /path/to/melee_port.exe
 ```
 
 The generated entries look like this:
@@ -47,4 +47,4 @@ The generated entries look like this:
 
 An entry has `animation_file` (`PlXxAJ.dat` plus its `.anim.json` report) only when the character borrows moves from another fighter. The build output and your ISO stay outside this repository. `profiles/custom-roster.json` is ignored by git for that reason (see `.gitignore`).
 
-A character's `character.json` may carry `description`, `features`, `attributes` and `attribute_scales`. They are recorded in `schemas/character.schema.json`, and MeleeMod only passes them through.
+A character's `character.json` may carry `description`, `features`, `attributes` and `attribute_scales`. They are recorded in `schemas/character.schema.json`, and PascalPatch only passes them through.

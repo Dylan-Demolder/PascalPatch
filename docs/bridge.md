@@ -1,6 +1,6 @@
 # Host/runtime bridge
 
-The bridge wire frame is versioned (`MMB1`), bounded to 64 KiB, and protected by a truncated SHA-256 payload checksum. `host/src/meleemod/bridge_transport.py` provides the host-side stream adapter:
+The bridge wire frame is versioned (`MMB1`), bounded to 64 KiB, and protected by a truncated SHA-256 payload checksum. `host/src/pascalpatch/bridge_transport.py` provides the host-side stream adapter:
 
 - reads exactly one complete frame, including fragmented socket reads;
 - rejects invalid lengths, versions, checksums, and disconnected peers;
@@ -9,7 +9,7 @@ The bridge wire frame is versioned (`MMB1`), bounded to 64 KiB, and protected by
 
 The transport is intentionally request/response and does not assume gameplay state. A future runtime endpoint can use the same frame format. Heartbeat messages should use a reserved message kind and monotonically increasing request IDs; a timeout or disconnect must tear down the session and leave gameplay unchanged.
 
-This is a host transport contract, not proof of a physical in-game transport endpoint. The PPC runtime now also contains `runtime/include/meleemod/bridge.h` and `runtime/src/bridge.c`: a transport-neutral bounded endpoint that validates the same `MMB1` framing and truncated SHA-256 checksum, negotiates `MM_BRIDGE_VERSION`, handles heartbeat/ack messages, dispatches bounded data callbacks, and resets on disconnect. Its read/write callbacks are deliberately supplied by a future platform adapter; the callback layer itself is covered by `runtime/tests/test_bridge.c`.
+This is a host transport contract, not proof of a physical in-game transport endpoint. The PPC runtime now also contains `runtime/include/pascalpatch/bridge.h` and `runtime/src/bridge.c`: a transport-neutral bounded endpoint that validates the same `MMB1` framing and truncated SHA-256 checksum, negotiates `MM_BRIDGE_VERSION`, handles heartbeat/ack messages, dispatches bounded data callbacks, and resets on disconnect. Its read/write callbacks are deliberately supplied by a future platform adapter; the callback layer itself is covered by `runtime/tests/test_bridge.c`.
 
 
 ## Bounded emulator shutdown

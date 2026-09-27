@@ -1,0 +1,66 @@
+/* PascalPatch plugin site: page layout on top of Pascal UI (pascal-ui.css). */
+body.pp-root { display: flex; flex-direction: column; }
+.site-bar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: var(--pp-space-5);
+  padding: var(--pp-space-3) max(16px, calc((100vw - 1120px) / 2));
+  background: color-mix(in srgb, var(--pp-base) 88%, transparent);
+  border-bottom: 2px solid var(--pp-line);
+  backdrop-filter: blur(6px);
+}
+.site-nav { display: flex; gap: var(--pp-space-4); margin-left: auto; flex-wrap: wrap; }
+.pp-root .site-nav a { color: var(--pp-text-muted); text-decoration: none; font: italic 700 var(--pp-size-md) var(--pp-font-display); letter-spacing: .04em; }
+.pp-root .site-nav a:hover { color: var(--pp-accent); }
+
+.hero, .site-main, .site-section, .site-foot { width: min(1120px, calc(100vw - 32px)); margin: 0 auto; }
+.hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--pp-space-6); align-items: center; padding: var(--pp-space-7) 0 var(--pp-space-6); }
+.hero-text { display: flex; flex-direction: column; gap: var(--pp-space-4); align-items: flex-start; }
+.lead { font-size: var(--pp-size-lg); color: var(--pp-text-muted); max-width: 60ch; margin: 0; }
+.hero-art { display: flex; flex-direction: column; gap: var(--pp-space-4); }
+.art-frame {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--pp-space-5); border: 2px solid var(--pp-line-strong); border-radius: 14px;
+  background: linear-gradient(160deg, var(--pp-raised), var(--pp-panel));
+  font: italic 700 var(--pp-size-xl) var(--pp-font-display); letter-spacing: .08em; color: var(--pp-accent);
+  box-shadow: 0 12px 40px var(--pp-shadow); transform: skewX(calc(-1 * var(--pp-slant-deg)));
+}
+.art-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--pp-space-2); }
+.art-row i { height: 14px; transform: skewX(calc(-1 * var(--pp-slant-deg))); }
+.art-row .p1 { background: var(--pp-p1); } .art-row .p2 { background: var(--pp-p2); }
+.art-row .p3 { background: var(--pp-p3); } .art-row .p4 { background: var(--pp-p4); }
+
+.site-main { display: flex; flex-direction: column; gap: var(--pp-space-4); padding-bottom: var(--pp-space-6); }
+.site-main .pp-page-head { display: flex; align-items: center; gap: var(--pp-space-3); flex-wrap: wrap; }
+#q { width: min(320px, 100%); }
+.plugin-card .pp-card-head { align-items: flex-start; }
+.plugin-icon {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center;
+  border-radius: 10px; border: 1px solid var(--pp-line-strong); background: var(--pp-sunken);
+  font: italic 700 20px var(--pp-font-display); color: var(--pp-accent);
+}
+.plugin-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.plugin-summary { margin: 0; color: var(--pp-text-muted); }
+.meta { color: var(--pp-text-dim); font-size: var(--pp-size-sm); }
+
+.site-section { padding: var(--pp-space-6) 0; border-top: 1px solid var(--pp-line); display: flex; flex-direction: column; gap: var(--pp-space-3); }
+.steps { margin: 0; padding-left: 1.3em; display: grid; gap: var(--pp-space-2); }
+.code {
+  margin: 0; padding: var(--pp-space-4); overflow: auto;
+  background: var(--pp-sunken); border: 1px solid var(--pp-line); border-radius: var(--pp-radius-md);
+  font: 13px/1.5 var(--pp-font-mono); color: var(--pp-text);
+}
+.site-foot { display: flex; gap: var(--pp-space-3); flex-wrap: wrap; padding: var(--pp-space-5) 0 var(--pp-space-6); border-top: 1px solid var(--pp-line); color: var(--pp-text-muted); font-size: var(--pp-size-sm); }
+
+.detail-grid { display: grid; grid-template-columns: max-content 1fr; gap: 4px var(--pp-space-4); margin: 0; }
+.detail-grid dt { color: var(--pp-text-dim); }
+.detail-grid dd { margin: 0; overflow-wrap: anywhere; }
+.readme { white-space: pre-wrap; color: var(--pp-text-muted); margin: 0; }
+#details { width: min(640px, calc(100vw - 32px)); max-width: none; }
+#details .pp-dialog-head { display: flex; align-items: center; gap: var(--pp-space-3); }
+
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; padding-top: var(--pp-space-5); }
+  .hero-art { display: none; }
+  .site-bar { flex-wrap: wrap; }
+  .site-nav { margin-left: 0; }
+}

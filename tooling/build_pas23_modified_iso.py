@@ -4,7 +4,7 @@
 Reads the runner-local clean GALE01 ISO, extracts its main.dol (pure python,
 no toolkit required), appends a synthetic PAS-23 marker trailer (game code
 sections are left untouched), and recomposes a bootable modified ISO via
-``meleemod.recompose_iso``. No Nintendo data is committed or transferred; the
+``pascalpatch.recompose_iso``. No Nintendo data is committed or transferred; the
 only repo inputs are the synthetic files under ``tooling/fixtures/pas23/``.
 """
 import argparse
@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "host/src"))
-from meleemod.recompose_iso import recompose_iso
+from pascalpatch.recompose_iso import recompose_iso
 
 GAME_ID = b"GALE01"
 MARKER = b"PAS23-SYNTHETIC-FIXTURE-MARKER-v1:"

@@ -2,7 +2,7 @@
 
 **Verdict: HOST TRANSPORT VALIDATED; PPC ENDPOINT DEFERRED.**
 
-The host-side protocol is implemented and tested in `host/src/meleemod/bridge.py` and `bridge_transport.py`:
+The host-side protocol is implemented and tested in `host/src/pascalpatch/bridge.py` and `bridge_transport.py`:
 
 - frames use `MMB1`, version 1, bounded payloads (64 KiB), request IDs, and a truncated SHA-256 payload checksum;
 - fragmented stream reads are reassembled and invalid headers, lengths, versions, checksums, timeouts, and disconnects fail closed;

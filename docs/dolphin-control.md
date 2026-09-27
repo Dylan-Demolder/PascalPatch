@@ -11,7 +11,7 @@ otherwise documented in one place:
 
 - `tooling/dolphin_smoke.py` — bounded clean-vs-modified **boot** smoke test
   (process-level: did Dolphin start, run to timeout, not crash).
-- `host/src/meleemod/dolphin_gdb.py` + `tooling/verify_fighters.py` — live
+- `host/src/pascalpatch/dolphin_gdb.py` + `tooling/verify_fighters.py` — live
   **memory-level** verification that specific characters (by `FighterKind`)
   actually exist as `Fighter` instances in emulated RAM, with real weight
   values. Read-only, never writes game memory.
@@ -80,7 +80,7 @@ a one-time, per-host, interactive priming pass:
 DISPLAY=:0 PYTHONPATH=host/src python tooling/prime_memcard.py \
   --dolphin /usr/bin/dolphin-emu \
   --iso "/path/to/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso" \
-  --output ~/.cache/meleemod/memcard-seed
+  --output ~/.cache/pascalpatch/memcard-seed
 ```
 
 It requires a real display (must be run at the desktop, not headless/
@@ -107,12 +107,12 @@ xdotool key --clearmodifiers x               # GCPad1 Buttons/A default
 data (the game bakes icon/banner graphics into it). Per `docs/legal-notice.md`
 it must **never** be committed to this repository or distributed —
 `prime_memcard.py` refuses to write under any path containing a `.git`
-folder as a guard rail. Cache it somewhere like `~/.cache/meleemod/
+folder as a guard rail. Cache it somewhere like `~/.cache/pascalpatch/
 memcard-seed` outside any repo, once per host.
 
 Every subsequent run — `dolphin_smoke.py` via `--memcard-seed <dir>`, or the
 CI workflow via the `MEMCARD_SEED` env var (defaults to
-`~/.cache/meleemod/memcard-seed`) — copies that cached `GC/` tree into the
+`~/.cache/pascalpatch/memcard-seed`) — copies that cached `GC/` tree into the
 fresh `user_dir` **before** boot, so the whole two-stage prompt never
 appears on any headless/CI run again.
 
@@ -124,9 +124,9 @@ PYTHONPATH=host/src python tooling/dolphin_smoke.py \
   --clean "/path/to/Super Smash Bros. Melee (USA) (En,Ja) (v1.02).iso" \
   --modified /path/to/generated-modified.iso \
   --movie tooling/fixtures/pas44-menu-to-match.dtm \
-  --memcard-seed ~/.cache/meleemod/memcard-seed \
-  --log-dir /tmp/meleemod-smoke-logs \
-  --user-dir /tmp/meleemod-smoke-user \
+  --memcard-seed ~/.cache/pascalpatch/memcard-seed \
+  --log-dir /tmp/pascalpatch-smoke-logs \
+  --user-dir /tmp/pascalpatch-smoke-user \
   --timeout 30
 ```
 
@@ -141,7 +141,7 @@ tail of Dolphin's own log for each. `--expected-archive`/`--expected-data`/
 `--expected-match-start`/`--expected-input-automation-ready` turn on
 marker-string assertions against Dolphin's log output when your build
 prints them (see `custom_fighter_assertion` in the script and the CI job's
-usage for the full marker set MeleeMod itself expects at the PAS-99 gate).
+usage for the full marker set PascalPatch itself expects at the PAS-99 gate).
 
 This tells you the emulator ran without crashing. It does **not** tell you
 a character actually loaded correctly in memory — for that, go live with
