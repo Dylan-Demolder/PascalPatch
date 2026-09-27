@@ -1,5 +1,5 @@
-#include "meleemod/events.h"
-#include "meleemod/runtime.h"
+#include "pascalpatch/events.h"
+#include "pascalpatch/runtime.h"
 #include <stdio.h>
 #include <time.h>
 static void callback(const mm_event *event, void *user) { (void)event; *(volatile unsigned*)user += 1; }

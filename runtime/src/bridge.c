@@ -1,4 +1,4 @@
-#include "meleemod/bridge.h"
+#include "pascalpatch/bridge.h"
 #include <string.h>
 
 typedef struct { uint32_t h[8]; uint32_t bits; uint32_t used; unsigned char data[64]; } mm_sha256;

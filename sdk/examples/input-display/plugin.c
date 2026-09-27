@@ -1,5 +1,5 @@
-#include "meleemod/api.h"
-#include "meleemod/input.h"
+#include "pascalpatch/api.h"
+#include "pascalpatch/input.h"
 static uint32_t token;
 static uint32_t frames_seen;
 static void on_frame(const mm_event *event, void *user) { (void)user; if (!event) return; if (!frames_seen++) mm_log(MM_LOG_DEBUG, "input-display: frame callback active"); if (mm_input_history_get(0) && (mm_input_history_get(0)->buttons != 0)) mm_log(MM_LOG_DEBUG, "input-display: button activity"); }

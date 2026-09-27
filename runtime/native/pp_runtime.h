@@ -1,0 +1,58 @@
+// State the runtime shares between the simulation thread (plugins, runtime.cpp) and the render
+// thread (the F2 overlay, overlay.cpp). Everything here is guarded by pp::mutex().
+// SPDX-License-Identifier: GPL-2.0-or-later
+#pragma once
+#include <cstdint>
+#include <deque>
+#include <mutex>
+#include <string>
+#include <vector>
+
+namespace pp {
+
+constexpr const char* VERSION = "0.2.0";
+
+struct Setting {
+  std::string key, label, type = "bool", help;   // type: bool int float choice text
+  double num = 0, def = 0, min = 0, max = 1, step = 0;
+  std::vector<std::string> options, option_labels;
+  std::string text, def_text;
+};
+
+struct Plugin {
+  std::string id, name, version, file, source = "profile", status;
+  bool loaded = false;
+  std::vector<Setting> settings;
+  std::deque<std::string> log;   // this plugin's recent log lines
+};
+
+struct HudCmd {
+  enum Kind : uint8_t { Text, Rect, Circle } kind;
+  float a, b, c, d, f;   // text: x y - - size; rect: x0 y0 x1 y1 rounding; circle: x y r - -
+  uint32_t rgba;
+  bool filled;
+  std::string text;
+};
+
+std::mutex& mutex();
+std::vector<Plugin>& plugins();            // in load order
+Plugin* find(const std::string& id);        // caller holds mutex()
+std::deque<std::string>& console();         // every runtime log line (recent)
+void save_settings(const Plugin& p);        // caller holds mutex(); writes PASCALPATCH_SETTINGS/<id>.json
+bool set_next_launch(const std::string& id, bool enabled);   // downloaded plugins: plugins.json
+bool next_launch(const std::string& id, bool* enabled);
+
+// HUD: plugins draw during a frame (sim thread); hud_publish() at the frame's end hands the list to
+// the overlay, which draws the latest published list every present.
+std::vector<HudCmd>& hud_building();        // sim thread only
+void hud_publish();
+std::vector<HudCmd> hud_latest();
+
+void log(const char* fmt, ...);
+std::string settings_dir();
+
+}  // namespace pp
+
+namespace overlay {
+void install();   // hooks presentation once the port has a window; safe to call more than once
+}

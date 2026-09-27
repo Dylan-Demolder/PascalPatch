@@ -1,5 +1,5 @@
-#include "meleemod/api.h"
-#include "meleemod/input.h"
+#include "pascalpatch/api.h"
+#include "pascalpatch/input.h"
 static uint32_t token;
 static uint32_t frames;
 static void on_frame(const mm_event *event, void *user) {

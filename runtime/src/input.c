@@ -1,4 +1,4 @@
-#include "meleemod/input.h"
+#include "pascalpatch/input.h"
 #include <string.h>
 static mm_input_sample history[MM_INPUT_HISTORY_CAPACITY];
 static uint32_t head=0;

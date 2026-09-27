@@ -1,4 +1,4 @@
-#include "meleemod/events.h"
+#include "pascalpatch/events.h"
 #include <string.h>
 typedef struct { unsigned char used; mm_event_type type; mm_event_callback callback; void *user; uint32_t token; } mm_slot;
 static mm_slot slots[MM_EVENT_QUEUE_CAPACITY];
