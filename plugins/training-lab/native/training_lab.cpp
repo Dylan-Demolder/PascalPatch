@@ -585,15 +585,57 @@ void dpad(bool& save, bool& load) {
   }
 }
 
-void request_load() {
-  if (saved_in != match_id) { H->toast(ID, "No state saved in this match: save one first (D-pad right or End)"); return; }
+// automatic reloads: an exchange with the dummy's port, over and over
+struct Drill {
+  int since_load = 0;   // frames since the state was saved or loaded
+  bool engaged = false; // the partner has been hit (or hit on shield) since
+  int free_for = 0;     // frames the partner has been free since
+  int dead_for = 0;
+  int attempts = 0;
+} R;
+
+void request_load(bool quiet = false) {
+  if (saved_in != match_id) { if (!quiet) H->toast(ID, "No state saved in this match: save one first (D-pad right or End)"); return; }
   if (H->state_load(0)) {
-    H->toast(ID, "State loaded");
+    if (!quiet) H->toast(ID, "State loaded");
+    ++R.attempts;
+    R.since_load = R.free_for = R.dead_for = 0;
+    R.engaged = false;
     D.macro.act = ACT_NONE;
     D.after_hit = D.after_shield = false;
     D.prev_state = 0;
     D.prev_hitlag = 0;
   }
+}
+
+// Loads the state again once the exchange is over: the partner (the dummy's port) was hit and has
+// been free for 40 frames, or was KO'd; or after a set time.
+void auto_reload() {
+  int mode = choice("reload");   // 0 off, 1 when the exchange ends, 2 after 3 s, 3 after 5 s
+  if (!mode || saved_in != match_id) return;
+  ++R.since_load;
+  bool go = (mode == 2 && R.since_load >= 180) || (mode == 3 && R.since_load >= 300);
+  if (uint32_t fp = pp_fighter(H, dummy_port())) {
+    uint32_t s = H->rd32(fp + PP_FT_STATE);
+    bool pressed = pp_state_is_punished(s) || pp_hitlag(H, fp) > 0 || s == PP_ST_GUARD_SET_OFF;
+    if (pp_state_is_dead(s) || s == PP_ST_REBIRTH || s == PP_ST_REBIRTH_WAIT) {
+      if (++R.dead_for >= 40) go = true;
+    } else if (pressed) {
+      R.engaged = true;
+      R.free_for = 0;
+    } else if (R.engaged && ++R.free_for >= 40 && mode == 1) {
+      go = true;
+    }
+  }
+  if (go) request_load(true);
+  // the attempt count, bottom left
+  char line[48];
+  std::snprintf(line, sizeof line, "DRILL  try %d", R.attempts + 1);
+  float w = 18 + 4.3f * (float)std::strlen(line), h = 18, x = 8, y = 300 - h;
+  if (PP_HOST_HAS(H, hud_place)) H->hud_place(PP_CORNER_BOTTOM_LEFT, w, h, &x, &y);
+  H->hud_rect(x, y, x + w, y + h, pp_rgba(0x111838, 0.75f), 5, 1);
+  H->hud_rect(x, y, x + 3, y + h, pp_rgba(0xF2C200, 1.0f), 1.5f, 1);
+  H->hud_text(x + 9, y + 3, pp_rgba(0xF2F4FA, 1.0f), 11, line);
 }
 
 void states(bool in_match) {
@@ -603,8 +645,12 @@ void states(bool in_match) {
   if (!in_match) return;
   bool save = k_save.pressed(), load = k_load.pressed();
   dpad(save, load);
-  if (save && H->state_save(0)) { saved_in = match_id; H->toast(ID, "State saved: D-pad left (or Delete) to load it"); }
-  else if (load) request_load();
+  if (save && H->state_save(0)) {
+    saved_in = match_id;
+    R = Drill{};
+    H->toast(ID, choice("reload") ? "State saved: it comes back on its own after each try" : "State saved: D-pad left (or Delete) to load it");
+  } else if (load) request_load();
+  auto_reload();
 }
 
 // ---------------------------------------------------------------- the frame
@@ -685,6 +731,7 @@ extern "C" __declspec(dllexport) int pp_plugin_load(const pp_host* host, const c
   if (PP_HOST_HAS(H, state_load)) {
     H->declare_setting(ID, R"J({"key":"save_key","type":"key","label":"Save state","default":"End"})J");
     H->declare_setting(ID, R"J({"key":"load_key","type":"key","label":"Load state","default":"Delete"})J");
+    H->declare_setting(ID, R"J({"key":"reload","type":"choice","label":"Load the state again on its own","default":"off","options":[{"value":"off","label":"Never"},{"value":"exchange","label":"When the exchange is over (the dummy's port is free again, or KO'd)"},{"value":"3s","label":"After 3 seconds"},{"value":"5s","label":"After 5 seconds"}]})J");
     H->declare_setting(ID, R"J({"key":"state_dpad","type":"bool","label":"D-pad right saves, D-pad left loads (as in UnclePunch)","default":true})J");
   }
   if (PP_HOST_HAS(H, pad_set)) {

@@ -22,6 +22,7 @@
     {"key": "endless_stocks", "type": "bool", "label": "Endless stocks", "default": false},
     {"key": "save_key", "type": "key", "label": "Save state", "default": "End"},
     {"key": "load_key", "type": "key", "label": "Load state", "default": "Delete"},
+    {"key": "reload", "type": "choice", "label": "Load the state again on its own", "default": "off", "options": [{"value": "off", "label": "Never"}, {"value": "exchange", "label": "When the exchange is over (the dummy's port is free again, or KO'd)"}, {"value": "3s", "label": "After 3 seconds"}, {"value": "5s", "label": "After 5 seconds"}]},
     {"key": "state_dpad", "type": "bool", "label": "D-pad right saves, D-pad left loads (as in UnclePunch)", "default": true},
     {"key": "dummy", "type": "bool", "label": "Dummy on when a match starts", "default": false},
     {"key": "dummy_key", "type": "key", "label": "Dummy on / off", "default": "Home"},
@@ -40,5 +41,5 @@
     {"key": "record_port", "type": "choice", "label": "Record the inputs of", "default": "p1", "options": [{"value": "p1", "label": "Port 1"}, {"value": "p2", "label": "Port 2"}, {"value": "p3", "label": "Port 3"}, {"value": "p4", "label": "Port 4"}]},
     {"key": "loop", "type": "bool", "label": "Loop the playback", "default": true}
   ],
-  "changes": "Savestates and a practice dummy (both need PascalPatch 0.5). Savestates: D-pad right (or End) saves the moment, D-pad left (or Delete) puts it back, as often as you like. The dummy: pick a human port and it stands, crouches, shields or jumps; DIs (survival, combo, in, out, random) and SDIs; techs in place, toward or away, or misses and gets up the way you choose; answers the end of hitstun or shield stun with an action on the first possible frame (out-of-shield grabs, jump-cancelled up-Bs, spot dodges, nairs...); recovers to the stage when knocked off; mashes out of grabs; and plays back inputs you record (PageUp to record, PageDown to play, Home to switch the dummy on and off)."
+  "changes": "Savestates and a practice dummy (both need PascalPatch 0.5). Savestates: D-pad right (or End) saves the moment, D-pad left (or Delete) puts it back, as often as you like, or have it come back on its own after each try, as a drill. The dummy: pick a human port and it stands, crouches, shields or jumps; DIs (survival, combo, in, out, random) and SDIs; techs in place, toward or away, or misses and gets up the way you choose; answers the end of hitstun or shield stun with an action on the first possible frame (out-of-shield grabs, jump-cancelled up-Bs, spot dodges, nairs...); recovers to the stage when knocked off; mashes out of grabs; and plays back inputs you record (PageUp to record, PageDown to play, Home to switch the dummy on and off)."
 }

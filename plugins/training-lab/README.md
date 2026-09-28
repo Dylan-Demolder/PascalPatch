@@ -11,6 +11,9 @@ Practice tools for any match, on hotkeys (rebind them in the F2 window):
   (or **Delete**) puts it back: both fighters, their percents, the stage, the timer, everything.
   Set up a situation once and replay it as often as you like, as in UnclePunch's Training Mode.
   A state belongs to the match it was saved in.
+- **Drills**: have the state come back on its own, when the exchange is over (the dummy's port
+  is free again, or KO'd) or after 3 or 5 seconds, with a try counter. Save the moment before
+  your pressure, your edge-guard or your tech chase starts, and run it again and again.
 
 Percent, shield and stock options apply to the player you pick: port 1, port 2 (the default, your
 practice partner), everyone, or only CPU players. Hotkeys only work while the game window has
