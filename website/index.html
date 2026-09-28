@@ -83,9 +83,12 @@ extern "C" __declspec(dllexport) int pp_plugin_load(const pp_host* host, const c
   H->on_frame(frame, nullptr);
   return 0;
 }</code></pre>
-    <p class="pp-muted">Package it as a ZIP with <code class="pp-mono">plugin.json</code> and
-      <code class="pp-mono">&lt;id&gt;.dll</code>, and open a pull request on this site's repository. Every package is reviewed
-      before its hash goes into the signed index.</p>
+    <p>PascalPatch is community developed: anyone can build a plugin and share it here.
+      <a href="https://github.com/Dylan-Demolder/PascalPatch/blob/master/docs/plugins/README.md">The plugin guide</a>
+      goes from the SDK template to your plugin running in game in about 15 minutes, and covers the whole API.</p>
+    <p class="pp-muted">To list a plugin, open a pull request that adds its source as
+      <code class="pp-mono">community/&lt;id&gt;/</code> in <a href="https://github.com/Dylan-Demolder/pascalpatch-plugins/blob/main/CONTRIBUTING.md">this
+      site's repository</a>. Every plugin is reviewed and built from its source before its hash goes into the signed index.</p>
   </section>
 
   <footer class="site-foot">

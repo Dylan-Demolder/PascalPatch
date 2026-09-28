@@ -92,6 +92,8 @@ def main(argv=None):
     ap.add_argument("--seed", required=True, help="the index signing seed (32 bytes, kept off GitHub)")
     ap.add_argument("--dlls", required=True, help="folder with the built <id>.dll files (build_plugins.py's output)")
     ap.add_argument("--plugin", action="append", default=[], help="plugin id to publish (repeatable; default: none, pages only)")
+    ap.add_argument("--plugins-root", default=str(REPO / "plugins"),
+                    help="folder holding <id>/plugin.json (default: this repo's plugins/; community plugins: the site's community/)")
     ap.add_argument("--host", choices=("releases", "pages"), default="releases")
     ap.add_argument("--site", default=SITE)
     ap.add_argument("--replace", action="store_true",
@@ -115,7 +117,7 @@ def main(argv=None):
     uploads = []
 
     for pid in a.plugin:
-        pdir = REPO / "plugins" / pid
+        pdir = Path(a.plugins_root) / pid
         manifest = json.loads((pdir / "plugin.json").read_text(encoding="utf-8"))
         errors = validate_manifest(manifest)
         if errors or manifest["id"] != pid:

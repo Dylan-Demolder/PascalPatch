@@ -6,11 +6,13 @@ PascalPatch is a separate host-side project for building isolated Super Smash Br
 
 PascalPatch is a mod loader for [melee-unlocked](https://github.com/hero88go/melee-unlocked), the native Windows port of Melee 1.02. It works like BakkesMod: the game is never modified. `pascalpatch-launch.exe` starts the port and injects `pascalpatch_runtime.dll`, which loads plugins into the running game. Everything is offline: never Slippi, never netplay.
 
+**Build your own plugin:** PascalPatch is community developed. Start with [docs/plugins](docs/plugins/README.md): a 15-minute tutorial from the SDK template to your plugin in game, the full API reference, and how to get it listed on the plugin site.
+
 | Part | What it does | Where |
 |---|---|---|
 | **The app** | Pick a profile and Play; turn plugins on and off; browse and install plugins from the plugin site; settings; activity and logs | `pascalpatch app` (below) |
 | **F2 overlay** | In game: the plugin list, each plugin's settings tab (saved between runs), a console | `runtime/native/overlay.cpp` (D3D12 renderer) |
-| **Plugins** | DLLs with a `plugin.json`; settings, status line and HUD drawing through the host table | [docs/plugin-authoring.md](docs/plugin-authoring.md), `sdk/include/pascalpatch/plugin.h` |
+| **Plugins** | DLLs with a `plugin.json`; settings, status line and HUD drawing through the host table | [docs/plugins](docs/plugins/README.md), `sdk/include/pascalpatch/plugin.h`, `sdk/template/` |
 | **Plugin site** | Signed index, packages on GitHub Releases, a website on GitHub Pages | [docs/plugin-site.md](docs/plugin-site.md), `tooling/site/publish.py`, `website/` |
 | **Character Studio** | Make fighters from your own 3D models: projects, save/autosave, rosters | the MeleeCharacterStudio repo; the app's Character Studio button opens it |
 | **Pascal UI** | One look for the app, the overlay, the site and the studio | `design/` |

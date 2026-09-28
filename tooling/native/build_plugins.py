@@ -26,18 +26,29 @@ def main(argv=None):
     ap.add_argument("--json-include", required=True, help="folder containing nlohmann/json.hpp")
     ap.add_argument("--cmake", default=shutil.which("cmake") or r"C:\Program Files\CMake\bin\cmake.exe")
     ap.add_argument("--only", action="append", default=[], help="plugin id (repeatable)")
+    ap.add_argument("--plugins-root", action="append", default=[],
+                    help="another folder of <id>/native/CMakeLists.txt plugins to build, such as the plugin site's community/ (repeatable)")
     a = ap.parse_args(argv)
     out = Path(a.data).expanduser().resolve() / "native-plugins"; out.mkdir(parents=True, exist_ok=True)
     work = Path(a.data).expanduser().resolve() / "staging" / "native-plugin-build"
     built = []
     projects = [REPO / "runtime/native/CMakeLists.txt", *sorted(REPO.glob("plugins/*/native/CMakeLists.txt"))]
+    for root in a.plugins_root:
+        projects += sorted(Path(root).expanduser().resolve().glob("*/native/CMakeLists.txt"))
     for src in projects:
         pid = src.parent.parent.name
         if a.only and pid not in a.only:
             continue
         build = work / pid
+        cache = build / "CMakeCache.txt"
+        if cache.is_file():   # a build folder made from another checkout (moved or renamed): start over
+            home = next((l.split("=", 1)[1].strip() for l in cache.read_text(errors="replace").splitlines()
+                         if l.startswith("CMAKE_HOME_DIRECTORY:")), "")
+            if home and Path(home).resolve() != src.parent.resolve():
+                shutil.rmtree(build)
         subprocess.run([a.cmake, "-S", str(src.parent), "-B", str(build), "-A", "x64",
-                        f"-DNLOHMANN_JSON_INCLUDE={a.json_include}"], check=True, stdout=subprocess.DEVNULL)
+                        f"-DNLOHMANN_JSON_INCLUDE={a.json_include}", f"-DPASCALPATCH_SDK={REPO / 'sdk' / 'include'}",
+                        "--no-warn-unused-cli"], check=True, stdout=subprocess.DEVNULL)
         subprocess.run([a.cmake, "--build", str(build), "--config", "Release"], check=True)
         outputs = ["pascalpatch-launch.exe", "pascalpatch_runtime.dll"] if pid == "runtime" else [f"{pid}.dll"]
         for name in outputs:

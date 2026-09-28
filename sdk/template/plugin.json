@@ -1,0 +1,16 @@
+{
+  "id": "my-plugin",
+  "name": "My Plugin",
+  "version": "0.1.0",
+  "abi": 1,
+  "entry": "my-plugin.dll",
+  "summary": "Shows port 1's current move and animation frame.",
+  "author": "your name",
+  "license": "GPL-2.0-or-later",
+  "tags": ["hud"],
+  "min_runtime": "0.5",
+  "settings": [
+    {"key": "toggle_key", "type": "key", "label": "Show / hide", "default": "Numpad0"},
+    {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.9, "min": 0.2, "max": 1.0}
+  ]
+}
