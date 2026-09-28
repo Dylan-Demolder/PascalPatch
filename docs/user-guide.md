@@ -85,8 +85,10 @@ Plugins from Browse update from the app: when a new version is out, its card on 
 
 ## Play
 
-1. **Make a profile** (once): **Profiles > New profile**. Give it a name and point it at your Melee 1.02 `.iso`. A profile with no custom fighters is plain Melee plus your plugins.
+1. **Make a profile** (once): **Profiles > New profile**. Give it a name and **Browse…** to your Melee 1.02 `.iso`. A profile with no custom fighters is plain Melee plus your plugins.
 2. On the **Play** page, pick the profile and press **Play**.
+
+The very first time, Melee asks whether to create game data on its memory card. Choose **Yes**; it never asks again.
 
 Play prepares the profile (its fighters and plugins), then starts the game. **Activity** shows the progress. **Build** does only the preparing, which is handy for checking a profile after changing its fighters.
 
