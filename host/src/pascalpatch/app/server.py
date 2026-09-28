@@ -31,6 +31,8 @@ from ..native import BUNDLED_BIN, PORT_NAMES, check_melee_port, find_melee_port,
 from ..plugin_store import SITE_URL, PluginStore
 
 WEB = Path(__file__).with_name("web")
+# Character Studio as the release download carries it: studio/ beside host/ (its python/ imports it too)
+BUNDLED_STUDIO = Path(__file__).resolve().parents[4] / "studio"
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
          ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json"}
 # Built-in plugins that Play loads by itself when a profile needs them (characters, unlocks, a
@@ -247,17 +249,37 @@ class App:
                            capture_output=True, text=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         return {"path": str(Path(r.stdout.strip())) if r.stdout.strip() else ""}
 
+    def studio_folder(self):
+        """The Character Studio to open: the one set in Settings, else the one this download carries."""
+        chosen = self.settings()["studio_repo"]
+        if chosen:
+            return Path(chosen)
+        return BUNDLED_STUDIO if (BUNDLED_STUDIO / "core" / "src").is_dir() else None
+
+    def profile_disc(self):
+        """A Melee disc one of the profiles uses, so the studio need not ask for it again."""
+        for f in sorted((self.root / "profiles").glob("*.json")):
+            try:
+                disc = json.loads(f.read_text(encoding="utf-8")).get("base_game", "")
+            except (OSError, ValueError):
+                continue
+            if disc and Path(disc).is_file():
+                return str(Path(disc).resolve())
+        return None
+
     def open_studio(self):
-        repo = self.settings()["studio_repo"]
-        if not repo or not Path(repo).is_dir():
+        repo = self.studio_folder()
+        if repo is None or not repo.is_dir():
             raise PascalPatchError("set the Character Studio folder in Settings first")
-        env = dict(os.environ, PYTHONPATH=str(Path(repo) / "core" / "src"))
+        env = dict(os.environ, PYTHONPATH=str(repo / "core" / "src"))
         s = self.settings()
         # the studio builds rosters into this PascalPatch and launches the game through it
         args = ["app", "--pascalpatch-repo", str(Path(__file__).resolve().parents[4]), "--pascalpatch-root", str(self.root),
                 "--pascalpatch-data", str(self.data)]
         if s["port"]: args += ["--port", s["port"]]
         if s["port_cwd"]: args += ["--port-cwd", s["port_cwd"]]
+        disc = self.profile_disc()
+        if disc: args += ["--pascalpatch-iso", disc]
         subprocess.Popen([sys.executable, "-m", "melee_character_studio.cli", *args], cwd=repo, env=env,
                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         return {"ok": True}

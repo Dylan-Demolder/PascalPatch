@@ -330,7 +330,7 @@ async function pageSettings(root) {
       f('port_cwd', 'Game folder', 'Where the game keeps its settings and saves. Leave it empty to use the exe\'s folder.', {}, ['folder', 'Choose the game folder']),
       f('port_args', 'Extra game options', 'Passed to melee_port.exe, separated by spaces.', { placeholder: '--fps unlocked' }))),
     frame(['Plugins'], h('div', { class: 'pp-row-form' }, f('site', 'Plugin site', 'Where Browse downloads the plugin list. Downloads are checked against PascalPatch\'s signing key whatever the site.'))),
-    frame(['Character Studio'], h('div', { class: 'pp-row-form' }, f('studio_repo', 'Character Studio folder', 'The MeleeCharacterStudio folder, for the Character Studio button.', {}, ['folder', 'Choose the MeleeCharacterStudio folder']))),
+    frame(['Character Studio'], h('div', { class: 'pp-row-form' }, f('studio_repo', 'Character Studio folder', 'Leave empty to use the Character Studio that comes with PascalPatch. Set it to a MeleeCharacterStudio checkout to use that one instead.', {}, ['folder', 'Choose the MeleeCharacterStudio folder']))),
     frame(['Look'], h('div', { class: 'pp-row-form' }, h('div', { class: 'pp-field' }, h('label', {}, 'Theme'), theme))),
     h('div', { class: 'play-row' }, h('button', { class: 'pp-btn pp-btn--primary', onclick: async () => {
       const body = { theme: theme.value };

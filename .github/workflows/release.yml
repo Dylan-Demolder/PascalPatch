@@ -22,6 +22,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
+      - name: Which Character Studio to bundle
+        shell: bash
+        run: echo "STUDIO_REF=$(tr -d '[:space:]' < tooling/release/studio.ref)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          repository: Dylan-Demolder/MeleeCharacterStudio
+          ref: ${{ env.STUDIO_REF }}
+          path: studio-src
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -35,7 +43,7 @@ jobs:
           test "v$ver" = "$TAG" || { echo "tag $TAG but the runtime says $ver"; exit 1; }
       - name: Build the zip
         shell: bash
-        run: python tooling/release/package.py --out dist
+        run: python tooling/release/package.py --out dist --studio studio-src
       - name: Smoke-test the zip's own Python
         shell: pwsh
         run: |
@@ -43,7 +51,9 @@ jobs:
           $root = (Get-ChildItem smoke)[0].FullName
           & "$root/python/python.exe" -m pascalpatch.cli --root $root --help | Out-Null
           if ($LASTEXITCODE) { throw "the bundled Python cannot run PascalPatch" }
-          foreach ($f in "bin/pascalpatch-launch.exe", "bin/pascalpatch_runtime.dll", "bin/quick-match.dll", "pascalpatch.cmd") {
+          & "$root/python/python.exe" -c "from melee_character_studio import projects; import sys; sys.exit(len(projects.examples()) == 0)"
+          if ($LASTEXITCODE) { throw "the bundled Python cannot run Character Studio or finds no examples" }
+          foreach ($f in "bin/pascalpatch-launch.exe", "bin/pascalpatch_runtime.dll", "bin/quick-match.dll", "pascalpatch.cmd", "studio/examples/roster.json") {
             if (-not (Test-Path "$root/$f")) { throw "missing $f" }
           }
       - name: Attach to the release

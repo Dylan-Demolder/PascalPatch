@@ -72,6 +72,28 @@ class AppServerTests(unittest.TestCase):
         problems = App(root, Path(self.tmp.name) / "data").status()["problems"]
         self.assertTrue(any("Make a profile" in p for p in problems), problems)
 
+    def test_the_studio_button_opens_the_bundled_studio_with_a_known_disc(self):
+        import subprocess
+        from unittest import mock
+        from pascalpatch.app import server
+        root = Path(self.tmp.name) / "install"; (root / "profiles").mkdir(parents=True)
+        studio = Path(self.tmp.name) / "studio"; (studio / "core" / "src").mkdir(parents=True)
+        disc = Path(self.tmp.name) / "melee.iso"; disc.write_bytes(b"GALE01")
+        (root / "profiles" / "a.json").write_text(json.dumps({"base_game": str(Path(self.tmp.name) / "gone.iso")}))
+        (root / "profiles" / "b.json").write_text(json.dumps({"base_game": str(disc)}))
+        app = App(root, Path(self.tmp.name) / "data")
+        with mock.patch.object(server, "BUNDLED_STUDIO", studio), mock.patch.object(subprocess, "Popen") as popen:
+            self.assertEqual(app.studio_folder(), studio)
+            app.open_studio()
+        cmd = popen.call_args.args[0]; kw = popen.call_args.kwargs
+        self.assertEqual(cmd[1:4], ["-m", "melee_character_studio.cli", "app"])
+        self.assertEqual(cmd[cmd.index("--pascalpatch-iso") + 1], str(disc.resolve()))   # the disc that exists
+        self.assertEqual((kw["cwd"], kw["env"]["PYTHONPATH"]), (studio, str(studio / "core" / "src")))
+        with mock.patch.object(server, "BUNDLED_STUDIO", Path(self.tmp.name) / "none"):
+            self.assertIsNone(app.studio_folder())
+            with self.assertRaisesRegex(PascalPatchError, "Character Studio folder"):
+                app.open_studio()
+
 
 if __name__ == "__main__":
     unittest.main()

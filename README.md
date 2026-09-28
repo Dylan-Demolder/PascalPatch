@@ -18,7 +18,7 @@ PascalPatch is a mod loader for [melee-unlocked](https://github.com/hero88go/mel
 | **F2 overlay** | In game: the plugin list, each plugin's settings tab (saved between runs), a console | `runtime/native/overlay.cpp` (D3D12 renderer) |
 | **Plugins** | DLLs with a `plugin.json`; settings, status line and HUD drawing through the host table | [docs/plugins](docs/plugins/README.md), `sdk/include/pascalpatch/plugin.h`, `sdk/template/` |
 | **Plugin site** | Signed index, packages on GitHub Releases, a website on GitHub Pages | [docs/plugin-site.md](docs/plugin-site.md), `tooling/site/publish.py`, `website/` |
-| **Character Studio** | Make fighters from your own 3D models: projects, save/autosave, rosters | the MeleeCharacterStudio repo; the app's Character Studio button opens it |
+| **Character Studio** | Make fighters from your own 3D models: projects, save/autosave, rosters | [MeleeCharacterStudio](https://github.com/Dylan-Demolder/MeleeCharacterStudio), bundled in the download (`studio/`) with six example characters; the app's Character Studio button opens it |
 | **Pascal UI** | One look for the app, the overlay, the site and the studio | `design/` |
 
 ```sh

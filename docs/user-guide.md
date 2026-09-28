@@ -278,7 +278,10 @@ Rebind any plugin key in its F2 tab: click the key, then press the new one. Esc 
 
 ## Character Studio: make your own fighters
 
-Character Studio turns your own 3D model into a Melee fighter. The model takes over a base fighter's skeleton and animations, and gets its own moves and stats. It is a separate app, MeleeCharacterStudio, which is not public yet. Once you have a copy, set its folder in PascalPatch's **Settings > Character Studio folder**, and the **Character Studio** button at the top of the app opens it.
+Character Studio turns your own 3D model into a Melee fighter. The model takes over a base fighter's skeleton and animations, and gets its own moves and stats. It comes with PascalPatch: press **Character Studio** at the top of the app. It reads the base fighters from the disc your profile uses, so make a profile first.
+
+It comes with six example characters: Glacier, Sir Nova, Bolt-9, Umbra, Cinder and Chungus. To play them, open **Roster** in the studio, press **+ All examples**, then **Build & play**. To see how one is made, click it under **Examples** on the start screen: that opens your own copy, and the original stays as it came.
+
 
 1. **New project**: drop in a `.glb`, an `.obj`, or a `.zip` of a `.gltf` with its textures. Pick a name, the base fighter whose skeleton and moves it uses, and which way the model faces.
 2. Work through the modes (keys 1 to 7):

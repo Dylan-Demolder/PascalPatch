@@ -10,6 +10,9 @@ uses (DEV_ONLY), plus:
              (unlock-all, extra-fighters, move-graft, quick-match), built here with
              tooling/native/build_plugins.py, or taken from --bin
     python/  the official Windows embeddable Python from python.org, checked against its SHA-256
+    studio/  Character Studio with its example characters, from a MeleeCharacterStudio checkout
+             (--studio; by default the one beside this repository), so the app's Character Studio
+             button works with nothing else installed
 
 Every other plugin comes from Browse in the app, signed, as before. The build needs Visual Studio
 2022 (or Build Tools) and CMake, unless --bin points at binaries built already.
@@ -36,6 +39,7 @@ BUILT_IN = ("unlock-all", "extra-fighters", "move-graft", "quick-match")
 # Kept out of the download so its folder shows players little more than pascalpatch.cmd; they
 # stay in the repository, which the release's tag points at.
 DEV_ONLY = (".github/", "design/", "spikes/", "website/", "tools/", ".gitignore", "backend.py", "package.json", "pyproject.toml")
+STUDIO_DEV_ONLY = (".github/", ".gitignore")
 BINARIES = ("pascalpatch-launch.exe", "pascalpatch_runtime.dll", *(f"{p}.dll" for p in BUILT_IN))
 
 
@@ -73,10 +77,20 @@ def python_embed(cache):
     return blob
 
 
-def tracked_files():
-    out = subprocess.run(["git", "-C", str(REPO), "ls-files", "-z"], check=True, capture_output=True).stdout
+def tracked_files(repo=REPO, skip=DEV_ONLY):
+    out = subprocess.run(["git", "-C", str(repo), "ls-files", "-z"], check=True, capture_output=True).stdout
     return [f for f in out.decode("utf-8").split("\0")
-            if f and (REPO / f).is_file() and not f.startswith(DEV_ONLY)]
+            if f and (repo / f).is_file() and not f.startswith(skip)]
+
+
+def studio_checkout(path):
+    """The Character Studio checkout to bundle, with its version and commit."""
+    studio = Path(path).resolve()
+    if not (studio / "core" / "src" / "melee_character_studio").is_dir() or not (studio / "examples" / "roster.json").is_file():
+        raise SystemExit(f"no Character Studio checkout with examples at {studio} (pass --studio)")
+    ver = re.search(r'^version = "([^"]+)"', (studio / "pyproject.toml").read_text(encoding="utf-8"), re.M).group(1)
+    commit = subprocess.run(["git", "-C", str(studio), "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
+    return studio, ver, commit
 
 
 def main(argv=None):
@@ -84,9 +98,11 @@ def main(argv=None):
     ap.add_argument("--out", default=str(REPO / "dist"), help="folder for the zip (default: dist/)")
     ap.add_argument("--bin", help="folder with the built binaries, instead of building them")
     ap.add_argument("--python-cache", help="folder to keep the downloaded embeddable Python in")
+    ap.add_argument("--studio", default=str(REPO.parent / "MeleeCharacterStudio"), help="the MeleeCharacterStudio checkout to bundle")
     a = ap.parse_args(argv)
     ver = version()
     top = f"PascalPatch-{ver}"
+    studio, studio_ver, studio_commit = studio_checkout(a.studio)
     out = Path(a.out).resolve(); out.mkdir(parents=True, exist_ok=True)
     zpath = out / f"{top}-windows.zip"
     with tempfile.TemporaryDirectory() as tmp:
@@ -100,11 +116,15 @@ def main(argv=None):
                 z.write(REPO / f, f"{top}/{f}")
             for b in BINARIES:
                 z.write(binaries / b, f"{top}/bin/{b}")
+            for f in tracked_files(studio, STUDIO_DEV_ONLY):
+                z.write(studio / f, f"{top}/studio/{f}")
+            z.writestr(f"{top}/studio/VERSION.txt", f"Character Studio {studio_ver} ({studio_commit})\r\n")
             for info in py.infolist():
                 data = py.read(info)
                 if info.filename.endswith("._pth"):
                     # the embeddable Python ignores PYTHONPATH: its ._pth file is the whole import path
-                    data = data.replace(b".\r\n", b".\r\n..\\host\\src\r\n", 1) if b".\r\n" in data else data + b"\r\n..\\host\\src\r\n"
+                    paths = b"..\\host\\src\r\n..\\studio\\core\\src\r\n"
+                    data = data.replace(b".\r\n", b".\r\n" + paths, 1) if b".\r\n" in data else data + b"\r\n" + paths
                 z.writestr(f"{top}/python/{info.filename}", data)
             z.writestr(f"{top}/python/README.txt",
                        f"Python {PYTHON_VERSION} (Windows embeddable package, python.org), so PascalPatch runs\r\n"
@@ -112,7 +132,7 @@ def main(argv=None):
     digest = hashlib.sha256(zpath.read_bytes()).hexdigest()
     (out / f"{zpath.name}.sha256").write_bytes(f"{digest}  {zpath.name}\n".encode("ascii"))   # LF: sha256sum -c reads it
     print(zpath)
-    print(f"sha256 {digest}  {zpath.stat().st_size / 1e6:.1f} MB")
+    print(f"sha256 {digest}  {zpath.stat().st_size / 1e6:.1f} MB  (Character Studio {studio_ver}, {studio_commit[:7]})")
     return 0
 
 
