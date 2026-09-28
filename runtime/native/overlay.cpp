@@ -24,6 +24,7 @@
 #include "pp_runtime.h"
 
 #include <algorithm>
+#include <cmath>
 #include <atomic>
 #include <cfloat>
 #include <cstdio>
@@ -265,6 +266,27 @@ void draw_hud(const std::vector<pp::HudCmd>& cmds) {
         if (c.filled) dl->AddCircleFilled(P(c.a, c.b), c.c * s, rgba(c.rgba));
         else dl->AddCircle(P(c.a, c.b), c.c * s, rgba(c.rgba), 0, std::max(1.0f, s));
         break;
+      case pp::HudCmd::Capsule: {
+        // Hull of two circles: the far arc of the first, the near arc of the second, joined by
+        // their outer tangents (tilted by phi when the radii differ).
+        ImVec2 a = P(c.a, c.b), b = P(c.d, c.f);
+        float ra = std::max(0.0f, c.c * s), rb = std::max(0.0f, c.g * s);
+        float dx = b.x - a.x, dy = b.y - a.y, dist = std::sqrt(dx * dx + dy * dy);
+        if (dist <= std::fabs(ra - rb) + 0.01f) {   // one circle holds the other
+          ImVec2 at = ra >= rb ? a : b;
+          float r = std::max(ra, rb);
+          if (c.filled) dl->AddCircleFilled(at, r, rgba(c.rgba));
+          else dl->AddCircle(at, r, rgba(c.rgba), 0, std::max(1.0f, s));
+          break;
+        }
+        float ang = std::atan2(dy, dx), side = 1.5707963f + std::asin((ra - rb) / dist);
+        int seg_b = std::clamp((int)(rb * 0.6f) + 6, 6, 32), seg_a = std::clamp((int)(ra * 0.6f) + 6, 6, 32);
+        dl->PathArcTo(b, rb, ang - side, ang + side, seg_b);
+        dl->PathArcTo(a, ra, ang + side, ang + 6.2831853f - side, seg_a);
+        if (c.filled) dl->PathFillConvex(rgba(c.rgba));
+        else dl->PathStroke(rgba(c.rgba), ImDrawFlags_Closed, std::max(1.0f, s));
+        break;
+      }
     }
   }
 }

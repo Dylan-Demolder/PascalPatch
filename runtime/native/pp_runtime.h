@@ -10,7 +10,7 @@
 
 namespace pp {
 
-constexpr const char* VERSION = "0.3.0";
+constexpr const char* VERSION = "0.4.0";
 
 struct Setting {
   std::string key, label, type = "bool", help;   // type: bool int float choice text
@@ -27,13 +27,15 @@ struct Plugin {
 };
 
 struct HudCmd {
-  enum Kind : uint8_t { Text, Rect, Circle } kind;
-  float a, b, c, d, f;   // text: x y - - size; rect: x0 y0 x1 y1 rounding; circle: x y r - -
+  enum Kind : uint8_t { Text, Rect, Circle, Capsule } kind;
+  float a, b, c, d, f;   // text: x y - - size; rect: x0 y0 x1 y1 rounding; circle: x y r - -;
+                         // capsule: x0 y0 r0 x1 y1, and r1 in g
   uint32_t rgba;
   bool filled;
   std::string text;
   uint8_t align = 0;      // text: 0 left, 1 centre, 2 right
   bool outline = false;   // text: dark outline (hud_label)
+  float g = 0;            // capsule: r1
 };
 
 struct Toast {

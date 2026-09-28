@@ -126,6 +126,12 @@ typedef struct pp_host {
     /* HUD text with a dark outline, readable over any stage. `align`: 0 left, 1 centred on x,
      * 2 right-aligned to x. */
     void (*hud_label)(float x, float y, uint32_t rgba, float size, int align, const char *text);
+
+    /* ---- Since PascalPatch 0.4 (check PP_HOST_HAS). ---- */
+
+    /* A capsule: the hull of a circle of radius r0 at (x0, y0) and one of radius r1 at (x1, y1),
+     * in HUD units. Hitboxes, hurtboxes, swept shapes; equal points draw a circle. */
+    void (*hud_capsule)(float x0, float y0, float r0, float x1, float y1, float r1, uint32_t rgba, int filled);
 } pp_host;
 
 /* True when `host` serves `field` (the runtime may be older than this header). */

@@ -452,6 +452,11 @@ void api_hud_rect(float x0, float y0, float x1, float y1, uint32_t rgba, float r
 void api_hud_circle(float x, float y, float r, uint32_t rgba, int filled) {
   pp::hud_building().push_back({pp::HudCmd::Circle, x, y, r, 0, 0, rgba, filled != 0, {}});
 }
+void api_hud_capsule(float x0, float y0, float r0, float x1, float y1, float r1, uint32_t rgba, int filled) {
+  pp::HudCmd c{pp::HudCmd::Capsule, x0, y0, r0, x1, y1, rgba, filled != 0, {}};
+  c.g = r1;
+  pp::hud_building().push_back(std::move(c));
+}
 void api_hud_label(float x, float y, uint32_t rgba, float size, int align, const char* text) {
   if (!text) return;
   pp::HudCmd c{pp::HudCmd::Text, x, y, 0, 0, size > 0 ? size : 16, rgba, true, text};
@@ -489,6 +494,7 @@ const pp_host g_host = {
   api_declare_setting, api_setting_number, api_setting_text, api_set_status,
   api_hud_text, api_hud_rect, api_hud_circle,
   api_toast, api_key_down, api_overlay_open, api_hud_label,
+  api_hud_capsule,
 };
 
 // A plugin's record. Its id is the DLL's name; a downloaded plugin's staged config carries its

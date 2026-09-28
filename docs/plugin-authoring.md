@@ -45,6 +45,8 @@ Export `pp_plugin_load(const pp_host *host, const char *config_path)` and return
   - `toast`: a short message at the top of the screen, shown even with the overlay closed;
   - `key_down`: whether a key is held, only while the game window has focus and the overlay is closed (so typing in the overlay never fires a plugin's hotkey);
   - `overlay_open`.
+- since 0.4:
+  - `hud_capsule`: the hull of two circles, for hitboxes, hurtboxes and swept shapes.
 
 Callbacks run on the game's simulation thread, inside the frame: don't do file or network I/O per frame. Blocking stops the game (and only the game: the window, the overlay and presentation carry on, and the port's pacer resumes at 60 Hz afterwards), which is exactly how Training Lab pauses and slows the game; anything else should return promptly.
 
@@ -84,6 +86,7 @@ Every plugin in `plugins/` is a complete, tested example:
 | `combo-counter` | detect hits from percent changes and group them with the "punished" test |
 | `training-lab` | write game memory (percent, shield, stocks) and hold the frame for pause and slow motion |
 | `match-stats` | summarise a match when it ends and append a history file beside the DLL |
+| `hitbox-viewer` | project world positions onto the screen with the game's camera and draw capsules (falling back to circles on 0.3) |
 | `unlock-all` | change the game's save flags only while a screen that reads them is up |
 
 ## What makes a plugin useful

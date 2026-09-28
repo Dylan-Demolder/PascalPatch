@@ -1,0 +1,18 @@
+{
+  "id": "hitbox-viewer",
+  "name": "Hitbox Viewer",
+  "version": "1.0.0",
+  "abi": 1,
+  "entry": "hitbox-viewer.dll",
+  "summary": "Draws every fighter's hitboxes and hurtboxes over the game, with invincibility and intangibility shown in colour.",
+  "author": "PascalPatch",
+  "license": "GPL-2.0-or-later",
+  "tags": ["hud", "training", "frame data"],
+  "min_runtime": "0.3",
+  "settings": [
+    {"key": "hitboxes", "type": "bool", "label": "Hitboxes", "default": true},
+    {"key": "hurtboxes", "type": "bool", "label": "Hurtboxes", "default": true},
+    {"key": "toggle_key", "type": "key", "label": "Show / hide", "default": "F3"},
+    {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.9, "min": 0.2, "max": 1.0}
+  ]
+}
