@@ -21,6 +21,7 @@
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
 
 namespace {
 
@@ -255,6 +256,27 @@ void step(Player& p) {
 
 uint32_t grade_rgb(Grade g) { return g == G_PERFECT || g == G_GOOD ? GOOD : g == G_OK ? OK : BAD; }
 
+// Splits `text` into lines of at most `width` characters at spaces; returns how many.
+int wrap(const char* text, int width, char out[][96], int max_lines) {
+  int n = 0;
+  const char* p = text;
+  while (*p && n < max_lines) {
+    while (*p == ' ') ++p;
+    int len = (int)std::strlen(p), cut = len;
+    if (len > width) {
+      cut = width;
+      while (cut > 0 && p[cut] != ' ') --cut;
+      if (cut == 0) cut = width;
+    }
+    if (cut > 95) cut = 95;
+    std::memcpy(out[n], p, (size_t)cut);
+    out[n][cut] = 0;
+    ++n;
+    p += cut;
+  }
+  return n;
+}
+
 void seg(float x0, float y0, float x1, float y1, float w, uint32_t rgba) {
   if (PP_HOST_HAS(H, hud_capsule)) { H->hud_capsule(x0, y0, w, x1, y1, w, rgba, 1); return; }
   for (int i = 0; i <= 8; ++i) {   // 0.3: a dotted line
@@ -302,10 +324,18 @@ void strip(float x, float y, const Attempt& a, float op) {
   }
 }
 
+// A spot for a panel: stacked in its corner with other plugins' panels on PascalPatch 0.5
+// (hud_place), or the fixed spot given on older runtimes.
+void place(int corner, float w, float h, float fixed_x, float fixed_y, float& x, float& y) {
+  if (PP_HOST_HAS(H, hud_place)) H->hud_place(corner, w, h, &x, &y);
+  else { x = fixed_x; y = fixed_y; }
+}
+
 void draw(int port, Player& p, float op) {
   if (!p.has_last) {
     if (on("panel")) {
-      float x0 = 452, y0 = 70;
+      float x0, y0;
+      place(port % 2 == 0 ? PP_CORNER_TOP_RIGHT : PP_CORNER_TOP_LEFT, 180, 34, 452, 70, x0, y0);   // across from the port's own panels
       H->hud_rect(x0, y0, x0 + 180, y0 + 34, pp_rgba(0x111838, 0.78f * op), 6, 1);
       H->hud_rect(x0, y0, x0 + 3, y0 + 34, pp_rgba(pp_port_rgb[port], op), 1, 1);
       char t[40];
@@ -317,7 +347,11 @@ void draw(int port, Player& p, float op) {
   }
   const Attempt& a = p.last;
   if (on("panel")) {
-    float x0 = 452, y0 = 70, w = 180, h = 128;
+    // the verdict and the tip go under the breakdown, wrapped to the panel
+    char head[2][96], tip[3][96];
+    int nh = wrap(a.headline, 36, head, 2), nt = wrap(a.tip, 44, tip, 3);
+    float x0, y0, w = 250, h = 128 + 6 + nh * 15.0f + nt * 12.5f;
+    place(port % 2 == 0 ? PP_CORNER_TOP_RIGHT : PP_CORNER_TOP_LEFT, w, h, 382, 70, x0, y0);
     H->hud_rect(x0, y0, x0 + w, y0 + h, pp_rgba(0x111838, 0.82f * op), 6, 1);
     H->hud_rect(x0, y0, x0 + 3, y0 + h, pp_rgba(pp_port_rgb[port], op), 1, 1);
     char t[64];
@@ -343,9 +377,13 @@ void draw(int port, Player& p, float op) {
     }
     // history: newest on the left
     for (int i = 0; i < p.hist_n; ++i)
-      H->hud_rect(x0 + 9 + i * 10.5f, y0 + h - 14, x0 + 17 + i * 10.5f, y0 + h - 6, pp_rgba(grade_rgb(p.history[i]), (i ? 0.7f : 1) * op), 1.5f, 1);
+      H->hud_rect(x0 + 9 + i * 10.5f, y0 + 114, x0 + 17 + i * 10.5f, y0 + 122, pp_rgba(grade_rgb(p.history[i]), (i ? 0.7f : 1) * op), 1.5f, 1);
+    float vy = y0 + 132;
+    for (int i = 0; i < nh; ++i, vy += 15) H->hud_text(x0 + 9, vy, pp_rgba(grade_rgb(a.grade), op), 12.5f, head[i]);
+    for (int i = 0; i < nt; ++i, vy += 12.5f) H->hud_text(x0 + 9, vy, pp_rgba(INFO, 0.9f * op), 10.5f, tip[i]);
+    return;   // the verdict is in the panel
   }
-  // the verdict and the tip, above the damage meters on this port's side
+  // no panel: the verdict and the tip, above the damage meters on this port's side
   if (p.age < 240) {
     float fade = p.age < 200 ? 1.0f : (float)(240 - p.age) / 40.0f;
     float x = port % 2 == 0 ? 20.0f : 620.0f, y = 330 - (float)(port / 2) * 60;

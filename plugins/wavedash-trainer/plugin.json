@@ -1,7 +1,7 @@
 {
   "id": "wavedash-trainer",
   "name": "Wavedash Trainer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "abi": 1,
   "entry": "wavedash-trainer.dll",
   "summary": "Breaks down every wavedash: when you pressed L/R, the stick angle, how long it was against your character's best, and one tip to fix it.",
@@ -17,5 +17,6 @@
     {"key": "panel", "type": "bool", "label": "Breakdown panel", "default": true},
     {"key": "reset_key", "type": "key", "label": "Reset the count", "default": "F12"},
     {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.95, "min": 0.3, "max": 1.0}
-  ]
+  ],
+  "changes": "The verdict and the tip now sit inside the breakdown panel (wrapped to fit), so they no longer land on Tech Trainer's lines; on PascalPatch 0.5 the panel shares its corner with other plugins' panels."
 }

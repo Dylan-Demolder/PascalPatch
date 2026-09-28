@@ -47,6 +47,11 @@ Export `pp_plugin_load(const pp_host *host, const char *config_path)` and return
   - `overlay_open`.
 - since 0.4:
   - `hud_capsule`: the hull of two circles, for hitboxes, hurtboxes and swept shapes.
+- since 0.5:
+  - `hud_place`: where to draw a panel. Ask for a w x h panel in a corner (`PP_CORNER_*`) and the runtime stacks every plugin's panels in that corner, frame by frame, so they never draw over each other. Fall back to a fixed spot when it is missing (see Frame Data's `place()`).
+  - `pad_set` / `pad_release`: hold a port's controller in a state (`pp_pad_state`: buttons, sticks -1..1, triggers 0..1) from the next frame on, as if a controller were plugged in there. The runtime writes it into the raw pad reading before the game processes it, so the game's own clamping, dead zones and button edges apply: a fighter reads exactly what a real controller would give (checked in game: a stick of -0.5 reads -0.5000). Only human ports follow it; a CPU's fighter reads its AI. This is what training dummies, input recording and playback, and scripted drills build on.
+
+Panels: on 0.5, get every panel's position from `hud_place` so plugins share the screen; keep outlined `hud_label` lines for short-lived messages near the fighters.
 
 Callbacks run on the game's simulation thread, inside the frame: don't do file or network I/O per frame. Blocking stops the game (and only the game: the window, the overlay and presentation carry on, and the port's pacer resumes at 60 Hz afterwards), which is exactly how Training Lab pauses and slows the game; anything else should return promptly.
 

@@ -1,7 +1,7 @@
 {
   "id": "info-display",
   "name": "Info Display",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "abi": 1,
   "entry": "info-display.dll",
   "summary": "A lab-style panel of each fighter's numbers (state and frame, position, velocities, jumps, shield, intangibility, ledge timer), plus a flash the frame a fighter can act again.",
@@ -29,5 +29,6 @@
     {"key": "flash_all", "type": "bool", "label": "Flash every fighter, not just those with a panel", "default": true},
     {"key": "toggle_key", "type": "key", "label": "Show / hide", "default": "Insert"},
     {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.9, "min": 0.3, "max": 1.0}
-  ]
+  ],
+  "changes": "On PascalPatch 0.5 the panels share the top corners with other plugins' panels instead of drawing over them."
 }

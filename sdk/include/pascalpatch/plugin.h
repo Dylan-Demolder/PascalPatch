@@ -42,6 +42,19 @@ typedef struct pp_cpu pp_cpu; /* the guest CPU state of the call in progress */
 typedef void (*pp_guest_fn)(pp_cpu *cpu, void *user);
 typedef void (*pp_frame_fn)(void *user);
 
+/* hud_place corners */
+enum { PP_CORNER_TOP_LEFT = 0, PP_CORNER_TOP_RIGHT = 1, PP_CORNER_BOTTOM_LEFT = 2, PP_CORNER_BOTTOM_RIGHT = 3 };
+
+/* A controller's state for pad_set: buttons as in melee.h (PP_BTN_*), sticks -1..1 as the game
+ * reads them (x right, y up), analog triggers 0..1. Pressing L or R fully also needs the digital
+ * PP_BTN_L / PP_BTN_R bit, as on a real controller. */
+typedef struct pp_pad_state {
+    uint32_t buttons;
+    float stick_x, stick_y;
+    float cstick_x, cstick_y;
+    float trigger_l, trigger_r;
+} pp_pad_state;
+
 typedef struct pp_host {
     uint32_t abi;  /* PP_PLUGIN_ABI */
     uint32_t size; /* sizeof(pp_host) as built by the port */
@@ -132,6 +145,21 @@ typedef struct pp_host {
     /* A capsule: the hull of a circle of radius r0 at (x0, y0) and one of radius r1 at (x1, y1),
      * in HUD units. Hitboxes, hurtboxes, swept shapes; equal points draw a circle. */
     void (*hud_capsule)(float x0, float y0, float r0, float x1, float y1, float r1, uint32_t rgba, int filled);
+
+    /* ---- Since PascalPatch 0.5 (check PP_HOST_HAS). ---- */
+
+    /* Where to draw a w x h panel so plugins do not draw over each other: panels asked for in a
+     * corner (PP_CORNER_*) during a frame stack away from it, in the order they are asked for.
+     * Writes the panel's top-left corner to *x, *y (HUD units, 640 x 480). */
+    void (*hud_place)(int corner, float w, float h, float *x, float *y);
+
+    /* Holds port `port`'s controller (0..3) in `state` from the next frame on, as if a controller
+     * were plugged in and held that way; pad_release gives the port back to its controller. The
+     * game's own clamping and dead zones still apply, so a fighter sees exactly what a real
+     * controller in that position would give. For a fighter to follow, the port must be a human
+     * player (a CPU player's fighter reads its AI, not the controller). */
+    void (*pad_set)(int port, const pp_pad_state *state);
+    void (*pad_release)(int port);
 } pp_host;
 
 /* True when `host` serves `field` (the runtime may be older than this header). */

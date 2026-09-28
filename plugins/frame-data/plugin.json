@@ -1,7 +1,7 @@
 {
   "id": "frame-data",
   "name": "Frame Data",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "abi": 1,
   "entry": "frame-data.dll",
   "summary": "Shows each fighter's action state, frame, hitlag and hitstun, and who is plus after every hit or shield.",
@@ -18,5 +18,5 @@
     {"key": "detail", "type": "bool", "label": "Show state ids and positions", "default": false},
     {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.9, "min": 0.3, "max": 1.0}
   ],
-  "changes": "Shield advantage was 3 to 6 frames too harsh: the defender counted as free as soon as shield hitlag ended. It now waits for shield stun to end (checked frame by frame: Dr. Mario's jab is -10 on shield, not -13)."
+  "changes": "On PascalPatch 0.5 the state panels share the top corners with other plugins' panels instead of drawing over them."
 }

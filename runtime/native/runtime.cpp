@@ -479,6 +479,101 @@ HWND port_window() {
   return h;
 }
 int api_overlay_open() { return overlay::is_open() ? 1 : 0; }
+
+// ---- HUD layout (0.5): panels stack away from their corner, in the order asked for ----
+// the top-right stack starts under the key hint the port draws in that corner
+constexpr float HUD_W = 640, HUD_MARGIN = 8, HUD_GAP = 6, HUD_TOP = 8, HUD_TOP_RIGHT = 46, HUD_BOTTOM = 300;
+float g_corner[4];
+void hud_place_reset() {
+  g_corner[0] = HUD_TOP;
+  g_corner[1] = HUD_TOP_RIGHT;
+  g_corner[2] = g_corner[3] = HUD_BOTTOM;
+}
+void api_hud_place(int corner, float w, float h, float* x, float* y) {
+  corner = std::clamp(corner, 0, 3);
+  float px = corner % 2 == 0 ? HUD_MARGIN : HUD_W - HUD_MARGIN - w, py;
+  if (corner < 2) { py = g_corner[corner]; g_corner[corner] += h + HUD_GAP; }
+  else { g_corner[corner] -= h; py = g_corner[corner]; g_corner[corner] -= HUD_GAP; }
+  if (x) *x = px;
+  if (y) *y = py;
+}
+
+// ---- controller override (0.5) ----
+// HSD_PadRenewMasterStatus turns this frame's raw controller reading (a PADStatus in the pad
+// queue) into what the game reads. Standing in front of it, the runtime writes the held state
+// into the queue first, so the game's own clamping, scaling and button edges handle it.
+constexpr uint32_t PAD_RENEW_MASTER = 0x8037750Cu;   // HSD_PadRenewMasterStatus
+constexpr uint32_t PAD_LIB = 0x804C1F78u;            // HSD_PadLibData
+constexpr uint32_t PAD_STATUS_SIZE = 12;             // PADStatus
+struct PadHold { bool on = false; pp_pad_state s{}; };
+PadHold g_pad[4];
+uint32_t g_pad_original = 0;
+bool g_pad_hooked = false;
+
+// A -1..1 stick back to the raw value the clamp turns into it (HSD_PadClampCheck3 and HSD_PadScale).
+void raw_stick(float x, float y, int8_t& rx, int8_t& ry) {
+  float scale = (float)(int8_t)api_rd8(PAD_LIB + 0x26), mn = (float)(int8_t)api_rd8(PAD_LIB + 0x1F);
+  float mx = (float)(int8_t)api_rd8(PAD_LIB + 0x1E);
+  bool shift = api_rd8(PAD_LIB + 0x1D) == 1;
+  if (scale <= 0) scale = 80;
+  float len = std::sqrt(x * x + y * y);
+  if (len < 1e-4f) { rx = ry = 0; return; }
+  float want = len * scale;                      // radius the game should end up with
+  float raw = shift ? want + mn : want;          // before the shift towards the centre
+  if (mx > 0) raw = std::min(raw, mx);
+  float k = raw / len;
+  rx = (int8_t)std::lround(std::clamp(x * k, -127.f, 127.f));
+  ry = (int8_t)std::lround(std::clamp(y * k, -127.f, 127.f));
+}
+uint8_t raw_trigger(float v) {
+  float scale = (float)api_rd8(PAD_LIB + 0x27), mn = (float)api_rd8(PAD_LIB + 0x22), mx = (float)api_rd8(PAD_LIB + 0x21);
+  if (scale <= 0) scale = 140;
+  if (v <= 0) return 0;
+  float raw = v * scale + (api_rd8(PAD_LIB + 0x20) == 1 ? mn : 0);
+  if (mx > 0) raw = std::min(raw, mx);
+  return (uint8_t)std::clamp(std::lround(raw), 0l, 255l);
+}
+
+void pad_renew_master(pp_cpu* cpu, void*) {
+  if (api_rd8(PAD_LIB + 3)) {   // qcount: a reading is waiting
+    uint32_t queue = api_rd32(PAD_LIB + 8);
+    uint32_t read = api_rd8(PAD_LIB + 1);
+    for (int port = 0; port < 4; ++port) {
+      if (!g_pad[port].on || !queue) continue;
+      const pp_pad_state& s = g_pad[port].s;
+      uint32_t st = queue + (read * 4 + (uint32_t)port) * PAD_STATUS_SIZE;
+      int8_t sx, sy, cx, cy;
+      raw_stick(s.stick_x, s.stick_y, sx, sy);
+      raw_stick(s.cstick_x, s.cstick_y, cx, cy);
+      api_wr16(st + 0, (uint16_t)(s.buttons & 0xFFFF));
+      api_wr8(st + 2, (uint8_t)sx);
+      api_wr8(st + 3, (uint8_t)sy);
+      api_wr8(st + 4, (uint8_t)cx);
+      api_wr8(st + 5, (uint8_t)cy);
+      api_wr8(st + 6, raw_trigger(s.trigger_l));
+      api_wr8(st + 7, raw_trigger(s.trigger_r));
+      api_wr8(st + 8, 0);    // analog A, B
+      api_wr8(st + 9, 0);
+      api_wr8(st + 10, 0);   // err: connected
+    }
+  }
+  api_call(cpu, g_pad_original);
+}
+
+void api_pad_set(int port, const pp_pad_state* s) {
+  if (port < 0 || port > 3 || !s) return;
+  if (!g_pad_hooked) {
+    g_pad_hooked = true;
+    g_pad_original = api_hook(PAD_RENEW_MASTER, pad_renew_master, nullptr);
+    if (!g_pad_original) log("[pascalpatch] pad_set: could not hook HSD_PadRenewMasterStatus");
+  }
+  if (!g_pad_original) return;
+  g_pad[port].on = true;
+  g_pad[port].s = *s;
+}
+void api_pad_release(int port) {
+  if (port >= 0 && port <= 3) g_pad[port].on = false;
+}
 int api_key_down(int vk) {
   if (vk <= 0 || vk > 0xFE || overlay::is_open()) return 0;
   HWND fg = GetForegroundWindow();
@@ -495,6 +590,7 @@ const pp_host g_host = {
   api_hud_text, api_hud_rect, api_hud_circle,
   api_toast, api_key_down, api_overlay_open, api_hud_label,
   api_hud_capsule,
+  api_hud_place, api_pad_set, api_pad_release,
 };
 
 // A plugin's record. Its id is the DLL's name; a downloaded plugin's staged config carries its
@@ -571,6 +667,7 @@ void retrace(Context& c, uint8_t* m) {
     load_plugins();
   }
   pp::hud_building().clear();
+  hud_place_reset();
   for (auto& f : g_frame) f.first(f.second);
   pp::hud_publish();
   g_frame_original(c, m);

@@ -1,10 +1,10 @@
 {
   "id": "tech-trainer",
   "name": "Tech Trainer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "abi": 1,
   "entry": "tech-trainer.dll",
-  "summary": "Instant feedback on L-cancels, short hops, wavedashes and techs: made it, or how many frames early or late.",
+  "summary": "Instant feedback on L-cancels, short hops, wavedashes, techs, out-of-shield timing, powershields, ledgedashes, SDI and fastfalls.",
   "author": "PascalPatch",
   "license": "GPL-2.0-or-later",
   "tags": ["hud", "training"],
@@ -18,8 +18,14 @@
     {"key": "hops", "type": "bool", "label": "Short hops and full hops", "default": true},
     {"key": "wavedash", "type": "bool", "label": "Wavedashes", "default": true},
     {"key": "techs", "type": "bool", "label": "Techs", "default": true},
+    {"key": "oos", "type": "bool", "label": "Out of shield timing", "default": true},
+    {"key": "powershield", "type": "bool", "label": "Powershields", "default": true},
+    {"key": "ledgedash", "type": "bool", "label": "Ledgedashes", "default": true},
+    {"key": "sdi", "type": "bool", "label": "SDI during hitlag", "default": true},
+    {"key": "fastfall", "type": "bool", "label": "Fastfall timing", "default": false},
     {"key": "tally", "type": "bool", "label": "Success tally in the corner", "default": true},
     {"key": "reset_key", "type": "key", "label": "Reset the tally", "default": "F8"},
     {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.95, "min": 0.3, "max": 1.0}
-  ]
+  ],
+  "changes": "Five new coaches, after UnclePunch's Training Mode: out-of-shield timing (the first action after shield stun and on which frame), powershields (or how many frames early the L/R press was), ledgedashes (intangibility left once the landing lag ends), SDI (inputs during hitlag and the distance moved) and fastfall timing (frames after the jump's peak). On PascalPatch 0.5 the tally shares the corner with other plugins' panels."
 }

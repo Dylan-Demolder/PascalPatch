@@ -10,7 +10,7 @@
 
 namespace pp {
 
-constexpr const char* VERSION = "0.4.0";
+constexpr const char* VERSION = "0.5.0";
 
 struct Setting {
   std::string key, label, type = "bool", help;   // type: bool int float choice text

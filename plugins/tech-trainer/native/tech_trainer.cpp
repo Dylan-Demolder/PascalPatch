@@ -5,6 +5,12 @@
 //   Hops       short hop or full hop, off every jump
 //   Wavedash   how many frames after jumpsquat the air dodge came, and its angle
 //   Techs      teched, or missed and by how much
+//   Out of shield  the first action after shield stun and how many frames it took (1 = no delay)
+//   Powershield    a hit during the powershield window (GuardReflect, entered by a digital L/R press),
+//                  or how early the press came
+//   Ledgedash  intangibility left once the landing lag ends ("GALINT"), off a ledge drop
+//   SDI        smash DI inputs during hitlag and how far they moved you
+//   Fastfall   how many frames after the peak of the jump the fastfall came (1 = the first frame)
 //
 // Each result shows as an outlined line above the damage meters and adds to a running tally
 // (L-cancel 14/17, 82%). The tally resets with a hotkey or at the start of each match.
@@ -25,10 +31,18 @@ constexpr int TECH_WINDOW = 20;       // L/R within 20 frames before hitting the
 constexpr int LATE_WATCH = 12;        // how long after a missed landing a late press still counts
 constexpr int SHOW = 150;             // frames a result stays up
 constexpr uint32_t GOOD = 0x5BD68A, BAD = 0xFF6B5E, INFO = 0xF2F4FA, WARN = 0xF2C200;
+constexpr int POWERSHIELD_FRAMES = 8;  // GuardReflect lasts 8 frames: a hit in them is a powershield
+constexpr int OOS_WATCH = 30;         // frames after shield stun to wait for an action
+constexpr int LEDGE_WATCH = 60;       // frames after letting go of the ledge to wait for the landing
+constexpr int ESCAPE_AIR_LAG = 10;    // LandingFallSpecial after an air dodge (PlCo 0x344)
+constexpr uint32_t FT_TIMED_INTANG = 0x1990;   // s32 frames of intangibility left (ledge grab, respawn)
+constexpr uint32_t FT_FASTFALL_VEL = 0x184;    // f32 co_attrs.fast_fall_velocity
+constexpr uint32_t FT_LANDING_LAG = 0x1F4;     // f32 co_attrs.normal_landing_lag
+constexpr uint32_t ST_JUMP_AERIAL_F = 0x1B, ST_CLIFF_WAIT = 0xFD;
 
 const pp_host* H = nullptr;
 
-struct Line { char text[72] = ""; uint32_t rgb = INFO; int age = SHOW; };
+struct Line { char text[96] = ""; uint32_t rgb = INFO; int age = SHOW; };
 struct Tally { int ok = 0, all = 0; };
 
 struct Player {
@@ -42,7 +56,20 @@ struct Player {
   float stick_x = 0, stick_y = 0;
   Line line[3];      // newest first
   Line hop;          // the last jump, on a quieter line of its own
-  Tally lc, wd, tech, sh;
+  Tally lc, wd, tech, sh, ps, ld;
+  // out of shield: frames since shield stun ended (-1 not watching); jumpsquat out of shield waits
+  // to see whether it becomes a jump or a jump-cancelled move
+  int oos = -1, oos_squat = -1;
+  int reflect = -1;          // frames since the powershield window (GuardReflect) opened
+  // ledgedash: frames since letting go of the ledge, and when the jump and the air dodge came
+  int ledge = -1, ledge_jump = -1, ledge_dodge = -1;
+  // SDI: hitlag frames so far, inputs (frames the fighter moved while frozen) and distance
+  int hitlag = 0, sdi = 0;
+  float sdi_dist = 0, last_x = 0, last_y = 0;
+  bool sdi_shield = false;   // the hitlag is a shield's
+  // fastfall: frames since the jump's peak (-1 rising or grounded)
+  int falling = -1;
+  bool fastfell = false;
 };
 
 Player pl[4];
@@ -57,7 +84,7 @@ void say(Player& p, uint32_t rgb, const char* fmt, ...) {
   va_end(ap);
   l.rgb = rgb;
   l.age = 0;
-  char msg[96];
+  char msg[120];
   std::snprintf(msg, sizeof msg, "P%d %s", (int)(&p - pl) + 1, l.text);
   H->log(ID, msg);
 }
@@ -66,6 +93,140 @@ bool on(const char* key) { return H->setting_number(ID, key) > 0.5; }
 
 bool pressed_lrz(uint32_t fp) { return (H->rd32(fp + PP_FT_PRESSED) & (PP_BTN_L | PP_BTN_R | PP_BTN_Z)) != 0; }
 bool pressed_lr(uint32_t fp) { return (H->rd32(fp + PP_FT_PRESSED) & (PP_BTN_L | PP_BTN_R)) != 0; }
+const char* plural(int n) { return n == 1 ? "" : "s"; }
+bool in_shield(uint32_t s) { return s == PP_ST_GUARD_ON || s == PP_ST_GUARD || s == PP_ST_GUARD_SET_OFF || s == PP_ST_GUARD_REFLECT; }
+
+// What a player did, in words: "Jump", "Roll", or the move's name.
+const char* action_name(uint32_t kind, uint32_t s) {
+  if (s == PP_ST_KNEE_BEND || s == PP_ST_JUMP_F || s == PP_ST_JUMP_F + 1) return "Jump";
+  if (s == PP_ST_ESCAPE_F || s == PP_ST_ESCAPE_B) return "Roll";
+  if (s == PP_ST_ESCAPE) return "Spot dodge";
+  if (s == PP_ST_GUARD_OFF) return "Shield drop";
+  return pp_move_name(kind, s);
+}
+
+void out_of_shield(Player& p, uint32_t kind, uint32_t s, int frame, bool jc) {
+  if (s == PP_ST_GUARD_OFF) {
+    say(p, frame <= 1 ? INFO : WARN, "Out of shield: shield drop on frame %d (15 frames of lag)", frame);
+    return;
+  }
+  say(p, frame <= 1 ? GOOD : frame <= 3 ? WARN : BAD, "Out of shield: %s%s on frame %d%s", action_name(kind, s),
+      jc ? " (jump-cancelled)" : "", frame, frame <= 1 ? " (no delay)" : "");
+}
+
+void techniques(Player& p, uint32_t kind) {
+  const uint32_t fp = p.fp, s = p.state, prev = p.prev_state;
+  const bool entered = s != prev;
+
+  // ---- powershield: the hit lands while the window from a digital L/R press is open ----
+  if (on("powershield")) {
+    if (entered && s == PP_ST_GUARD_REFLECT) p.reflect = 0;
+    else if (p.reflect >= 0 && ++p.reflect > POWERSHIELD_FRAMES + 12) p.reflect = -1;   // then it is just a shield
+    if (entered && s == PP_ST_GUARD_SET_OFF) {
+      if (prev == PP_ST_GUARD_REFLECT) {
+        ++p.ps.all;
+        ++p.ps.ok;
+        say(p, GOOD, "Powershield! (frame %d of %d)  %d/%d", p.reflect + 1, POWERSHIELD_FRAMES, p.ps.ok, p.ps.all);
+      } else if (p.reflect >= 0) {
+        ++p.ps.all;
+        int early = p.reflect + 1 - POWERSHIELD_FRAMES;
+        say(p, BAD, "Powershield: L/R %d frame%s too early  %d/%d", early, plural(early), p.ps.ok, p.ps.all);
+      }   // otherwise an ordinary shield, not a powershield attempt
+      p.reflect = -1;
+    }
+  }
+
+  // ---- out of shield: the first action once shield stun ends ----
+  if (on("oos")) {
+    if (prev == PP_ST_GUARD_SET_OFF && entered) { p.oos = 0; p.oos_squat = -1; }
+    if (p.oos >= 0) {
+      ++p.oos;
+      if (p.oos_squat >= 0) {   // jumpsquat out of shield: a jump, or a jump-cancelled move
+        if (entered && s != PP_ST_KNEE_BEND) {
+          out_of_shield(p, kind, s, p.oos_squat, s != PP_ST_JUMP_F && s != PP_ST_JUMP_F + 1);
+          p.oos = p.oos_squat = -1;
+        }
+      } else if (!in_shield(s)) {
+        if (s == PP_ST_KNEE_BEND) p.oos_squat = p.oos;
+        else { out_of_shield(p, kind, s, p.oos, false); p.oos = -1; }
+      } else if (s == PP_ST_GUARD_SET_OFF || p.oos > OOS_WATCH) {
+        p.oos = -1;   // hit again, or just held shield
+      }
+    }
+  }
+
+  // ---- ledgedash: let go of the ledge, jump, air dodge onto the stage ----
+  if (on("ledgedash")) {
+    if (prev == ST_CLIFF_WAIT && entered && !pp_state_is_damage(s)) { p.ledge = 0; p.ledge_jump = p.ledge_dodge = -1; }
+    if (p.ledge >= 0) {
+      ++p.ledge;
+      if (entered && (s == ST_JUMP_AERIAL_F || s == ST_JUMP_AERIAL_F + 1)) p.ledge_jump = p.ledge;
+      if (entered && s == PP_ST_ESCAPE_AIR) p.ledge_dodge = p.ledge;
+      bool landed = entered && (s == PP_ST_LANDING_FALL_SPECIAL || s == PP_ST_LANDING);
+      if (landed && p.ledge_jump > 0) {
+        int intang = (int)H->rd32(fp + FT_TIMED_INTANG);
+        int lag = s == PP_ST_LANDING_FALL_SPECIAL ? ESCAPE_AIR_LAG : (int)H->rdf32(fp + FT_LANDING_LAG);
+        int galint = intang - lag;
+        char how[40];
+        if (p.ledge_dodge > 0)
+          std::snprintf(how, sizeof how, "jump f%d, dodge f%d", p.ledge_jump, p.ledge_dodge);
+        else
+          std::snprintf(how, sizeof how, "jump f%d, no air dodge", p.ledge_jump);
+        ++p.ld.all;
+        if (galint > 0) {
+          ++p.ld.ok;
+          say(p, GOOD, "Ledgedash: %d frame%s intangible after the lag (%s)  %d/%d", galint, plural(galint), how, p.ld.ok, p.ld.all);
+        } else {
+          // no intangibility left while the landing lag still holds you: -galint frames open to a hit
+          say(p, BAD, "Ledgedash: open to hits for %d frame%s of the landing (%s)  %d/%d", -galint, plural(-galint), how, p.ld.ok, p.ld.all);
+        }
+        p.ledge = -1;
+      } else if (p.ledge > LEDGE_WATCH || s == ST_CLIFF_WAIT || pp_state_is_damage(s) || (landed && p.ledge_jump < 0)) {
+        p.ledge = -1;
+      }
+    }
+  }
+
+  // ---- SDI: count the frames a fighter frozen in hitlag moves ----
+  if (on("sdi")) {
+    float x = H->rdf32(fp + PP_FT_POS), y = H->rdf32(fp + PP_FT_POS + 4);
+    bool frozen = H->rdf32(fp + PP_FT_HITLAG) > 0 && (pp_state_is_damage(s) || s == PP_ST_GUARD_SET_OFF);
+    if (frozen && p.hitlag == 0) p.sdi_shield = s == PP_ST_GUARD_SET_OFF;
+    if (frozen) {
+      if (p.hitlag > 0) {
+        float d = std::hypot(x - p.last_x, y - p.last_y);
+        if (d > 0.01f) { ++p.sdi; p.sdi_dist += d; }
+      }
+      ++p.hitlag;
+    } else if (p.hitlag > 0) {
+      if (p.sdi)
+        say(p, GOOD, "SDI: %d input%s in %d frames of hitlag, moved %.1f", p.sdi, plural(p.sdi), p.hitlag, p.sdi_dist);
+      else if (p.hitlag >= 6 && !p.sdi_shield)
+        say(p, WARN, "No SDI: %d frames of hitlag to wiggle in", p.hitlag);
+      p.hitlag = p.sdi = 0;
+      p.sdi_dist = 0;
+    }
+    p.last_x = x;
+    p.last_y = y;
+  }
+
+  // ---- fastfall: frames from the peak of the jump to the fastfall ----
+  if (on("fastfall")) {
+    bool air = H->rd32(fp + PP_FT_AIRBORNE) != 0 && !pp_state_is_damage(s) && s != PP_ST_ESCAPE_AIR;
+    float vy = H->rdf32(fp + PP_FT_SELF_VEL + 4), ff = H->rdf32(fp + FT_FASTFALL_VEL);
+    if (!air || vy > 0) {
+      p.falling = -1;
+      p.fastfell = false;
+    } else if (!p.fastfell) {
+      ++p.falling;   // 0 on the first frame falling
+      if (ff > 0 && std::fabs(vy + ff) < 0.001f && p.falling > 0) {
+        int f = p.falling;
+        say(p, f <= 1 ? GOOD : f <= 3 ? INFO : WARN, "Fastfall: frame %d after the peak%s", f, f <= 1 ? " (earliest)" : "");
+        p.fastfell = true;
+      }
+    }
+  }
+}
 
 void step(Player& p) {
   const uint32_t fp = p.fp, s = p.state, prev = p.prev_state;
@@ -136,6 +297,8 @@ void step(Player& p) {
     }
   }
 
+  techniques(p, kind);
+
   // ---- techs: hitting the ground in tumble ----
   if (on("techs") && entered) {
     bool teched = s >= PP_ST_PASSIVE && s <= PP_ST_PASSIVE_CEIL;
@@ -171,21 +334,31 @@ void draw(int port, Player& p, float op) {
   if (p.hop.age < 60) H->hud_label(x, y - 3 * 18, pp_rgba(0x9FB4FF, op * 0.9f), 13, align, p.hop.text);
 }
 
+// A spot for a panel: stacked in its corner with other plugins' panels on PascalPatch 0.5
+// (hud_place), or the fixed spot given on older runtimes.
+void place(int corner, float w, float h, float fixed_x, float fixed_y, float& x, float& y) {
+  if (PP_HOST_HAS(H, hud_place)) H->hud_place(corner, w, h, &x, &y);
+  else { x = fixed_x; y = fixed_y; }
+}
+
 void draw_tally(float op) {
   // one compact box on the left for the focused port
   int port = (int)H->setting_number(ID, "port");
   if (port < 0 || port > 3 || !pl[port].fp) return;
   Player& p = pl[port];
-  char row[4][40];
+  char row[6][40];
   int n = 0;
   auto pct = [](const Tally& t) { return t.all ? (100 * t.ok + t.all / 2) / t.all : 0; };
   if (on("lcancel")) std::snprintf(row[n++], 40, "L-cancel  %d/%d  %d%%", p.lc.ok, p.lc.all, pct(p.lc));
   if (on("hops")) std::snprintf(row[n++], 40, "Short hops  %d/%d", p.sh.ok, p.sh.all);
   if (on("wavedash")) std::snprintf(row[n++], 40, "Wavedash  %d/%d  %d%%", p.wd.ok, p.wd.all, pct(p.wd));
   if (on("techs")) std::snprintf(row[n++], 40, "Techs  %d/%d  %d%%", p.tech.ok, p.tech.all, pct(p.tech));
+  if (on("powershield") && p.ps.all) std::snprintf(row[n++], 40, "Powershields  %d/%d", p.ps.ok, p.ps.all);
+  if (on("ledgedash") && p.ld.all) std::snprintf(row[n++], 40, "Ledgedashes  %d/%d", p.ld.ok, p.ld.all);
   if (!n) return;
   // below where Frame Data puts port 1's panel, so the two can run together
-  float x0 = 8, y0 = 100, w = 150, h = 22 + 14.0f * (float)n;
+  float x0, y0, w = 150, h = 22 + 14.0f * (float)n;
+  place(PP_CORNER_TOP_LEFT, w, h, 8, 100, x0, y0);
   H->hud_rect(x0, y0, x0 + w, y0 + h, pp_rgba(0x111838, 0.78f * op), 6, 1);
   H->hud_rect(x0, y0, x0 + 3, y0 + h, pp_rgba(pp_port_rgb[port], op), 1, 1);
   char title[24];
@@ -195,7 +368,7 @@ void draw_tally(float op) {
 }
 
 void reset() {
-  for (auto& p : pl) { p.lc = p.wd = p.tech = p.sh = Tally{}; for (auto& l : p.line) l = Line{}; p.hop = Line{}; }
+  for (auto& p : pl) { p.lc = p.wd = p.tech = p.sh = p.ps = p.ld = Tally{}; for (auto& l : p.line) l = Line{}; p.hop = Line{}; }
 }
 
 void frame(void*) {
@@ -218,7 +391,12 @@ void frame(void*) {
     uint32_t fp = pp_fighter(H, i);
     bool watched = fp && (which == 1 ? pp_player_type(H, i) == 0 : i == focus);
     if (!watched) { p.fp = 0; continue; }
-    if (fp != p.fp) { p.fp = fp; p.prev_state = p.state = H->rd32(fp + PP_FT_STATE); p.late_watch = p.since_jump = -1; }
+    if (fp != p.fp) {
+      p.fp = fp;
+      p.prev_state = p.state = H->rd32(fp + PP_FT_STATE);
+      p.late_watch = p.since_jump = p.oos = p.oos_squat = p.reflect = p.ledge = p.falling = -1;
+      p.hitlag = p.sdi = 0;
+    }
     p.state = H->rd32(fp + PP_FT_STATE);
     step(p);
     p.prev_state = p.state;
@@ -244,10 +422,15 @@ extern "C" __declspec(dllexport) int pp_plugin_load(const pp_host* host, const c
   H->declare_setting(ID, R"({"key":"hops","type":"bool","label":"Short hops and full hops","default":true})");
   H->declare_setting(ID, R"({"key":"wavedash","type":"bool","label":"Wavedashes","default":true})");
   H->declare_setting(ID, R"({"key":"techs","type":"bool","label":"Techs","default":true})");
+  H->declare_setting(ID, R"({"key":"oos","type":"bool","label":"Out of shield timing","default":true})");
+  H->declare_setting(ID, R"({"key":"powershield","type":"bool","label":"Powershields","default":true})");
+  H->declare_setting(ID, R"({"key":"ledgedash","type":"bool","label":"Ledgedashes","default":true})");
+  H->declare_setting(ID, R"({"key":"sdi","type":"bool","label":"SDI during hitlag","default":true})");
+  H->declare_setting(ID, R"({"key":"fastfall","type":"bool","label":"Fastfall timing","default":false})");
   H->declare_setting(ID, R"({"key":"tally","type":"bool","label":"Success tally in the corner","default":true})");
   H->declare_setting(ID, R"({"key":"reset_key","type":"key","label":"Reset the tally","default":"F8"})");
   H->declare_setting(ID, R"({"key":"opacity","type":"float","label":"Opacity","default":0.95,"min":0.3,"max":1.0})");
-  H->set_status(ID, "Coaching L-cancels, hops, wavedashes and techs.");
+  H->set_status(ID, "Coaching L-cancels, hops, wavedashes, techs, shields, ledgedashes, SDI and fastfalls.");
   H->on_frame(frame, nullptr);
   return 0;
 }

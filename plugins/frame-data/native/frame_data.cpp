@@ -153,12 +153,19 @@ void chip(float& x, float y, const char* text, uint32_t rgb, float op) {
   x += w + 4;
 }
 
+// A spot for a panel: stacked in its corner with other plugins' panels on PascalPatch 0.5
+// (hud_place), or the fixed spot given on older runtimes.
+void place(int corner, float w, float h, float fixed_x, float fixed_y, float& x, float& y) {
+  if (PP_HOST_HAS(H, hud_place)) H->hud_place(corner, w, h, &x, &y);
+  else { x = fixed_x; y = fixed_y; }
+}
+
 void panel(int port, float op, bool detail) {
   const Fighter& f = now[port];
   const float w = 164, h = detail ? 62.0f : 48.0f;
   // right-hand panels stop short of the corner, where the port shows its own key hint
-  float x0 = (port % 2 == 0) ? 8 : 640 - 70 - w;
-  float y0 = 8 + (float)(port / 2) * (h + 30);
+  float x0, y0;
+  place(port % 2, w, h + 22, (port % 2 == 0) ? 8 : 640 - 70 - w, 8 + (float)(port / 2) * (h + 30), x0, y0);   // + the advantage line
   uint32_t pc = pp_port_rgb[port];
   H->hud_rect(x0, y0, x0 + w, y0 + h, pp_rgba(0x111838, 0.78f * op), 6, 1);
   H->hud_rect(x0, y0, x0 + 3, y0 + h, pp_rgba(pc, op), 1, 1);

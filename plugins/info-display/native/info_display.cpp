@@ -140,6 +140,13 @@ void flash(const Camera& cam, const Fighter& f, int port, float op) {
   (void)port;
 }
 
+// A spot for a panel: stacked in its corner with other plugins' panels on PascalPatch 0.5
+// (hud_place), or the fixed spot given on older runtimes.
+void place(int corner, float w, float h, float fixed_x, float fixed_y, float& x, float& y) {
+  if (PP_HOST_HAS(H, hud_place)) H->hud_place(corner, w, h, &x, &y);
+  else { x = fixed_x; y = fixed_y; }
+}
+
 void panel(int port, const Fighter& f, float op) {
   const uint32_t fp = f.fp, s = f.state;
   char lines[12][64];
@@ -198,9 +205,11 @@ void panel(int port, const Fighter& f, float op) {
   if (!n) return;
 
   const float w = 176, lh = 12.5f, h = 18 + n * lh;
-  float x0 = port % 2 == 0 ? 8.0f : 640 - 8 - w;
-  float top = H->setting_number(ID, "place") > 0.5 ? 205.0f : 8.0f;   // top corners, or halfway down
-  float y0 = top + (float)(port / 2) * (h + 6);   // ports 3 and 4 under 1 and 2 (every panel has the same rows)
+  float x0 = port % 2 == 0 ? 8.0f : 640 - 8 - w, y0;
+  if (H->setting_number(ID, "place") > 0.5)   // halfway down the sides; ports 3 and 4 under 1 and 2
+    y0 = 205 + (float)(port / 2) * (h + 6);
+  else
+    place(port % 2, w, h, x0, 8 + (float)(port / 2) * (h + 6), x0, y0);
   H->hud_rect(x0, y0, x0 + w, y0 + h, pp_rgba(0x111838, 0.8f * op), 5, 1);
   H->hud_rect(x0, y0, x0 + 3, y0 + h, pp_rgba(pp_port_rgb[port], op), 1, 1);
   char t[32];
