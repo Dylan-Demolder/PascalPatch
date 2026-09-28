@@ -188,3 +188,12 @@ The repository includes a harmless `demo-mod` catalog entry at `plugins/demo-mod
 
 The demo mod is a static source-to-DOL composition, so it is Dolphin-observed
 today and Tier C on the native runtime until the recompiler fork exists.
+
+## License
+
+PascalPatch is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version 2 of
+the License, or (at your option) any later version. See [LICENSE](LICENSE). This matches
+[melee-unlocked](https://github.com/hero88go/melee-unlocked), the port PascalPatch runs.
+
+The repository holds no Nintendo game data: bring your own NTSC 1.02 disc image.
