@@ -157,7 +157,8 @@ static inline uint32_t pp_fighter(const pp_host *h, int port) { return pp_fighte
 static inline uint32_t pp_scene_major(const pp_host *h) { return h->rd8(PP_SCENE); }
 static inline uint32_t pp_scene_minor(const pp_host *h) { return h->rd8(PP_SCENE + 3); }
 
-/* True while a match is on screen, in VS or any other mode that plays one (the port's own rule:
+/* True while a match is on screen, in VS or any other mode that plays one, Quick Match's included
+ * (the port's own rule:
  * in those modes minor scenes 0 and 1 are the character and stage selects, 2 and up the match),
  * and some port has a fighter. Fighter pointers outlive the match (they still read as valid on
  * the menus after it, and during the title demo), so never go by pp_fighter alone. */
@@ -166,6 +167,11 @@ static inline int pp_in_match(const pp_host *h) {
     int mode = major == 0x02 || major == 0x03 || major == 0x04 || major == 0x05 || major == 0x0F ||
                (major >= 0x10 && major <= 0x13) || major == 0x1B || major == 0x1C;
     if (major == 0x08) mode = minor == 2; /* Slippi online, if ever */
+    if (major == 0x0E) { /* debug VS (Quick Match): state 1 is the match, 3 the results */
+        if (minor != 1) return 0;
+        for (int i = 0; i < 4; ++i) if (pp_fighter(h, i)) return 1;
+        return 0;
+    }
     if (!mode || minor < 2) return 0;
     /* VS and Training: 2 is the game itself; a quit (L+R+A+Start) or the results screen come after */
     if ((major == 0x02 || major == 0x1C) && minor != 2) return 0;

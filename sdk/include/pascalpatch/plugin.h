@@ -11,12 +11,14 @@
  * patches instructions. It changes behaviour three ways:
  *   - reading and writing guest memory (game data, tables, fighter structs);
  *   - calling guest functions by address;
- *   - standing in front of a guest function: `hook` replaces what an indirect
- *     call (function pointer, callback table, bctrl) reaches, and
- *     `trampoline` gives a host function a guest address that can be stored in
- *     any game table or callback field.
- * Direct `bl` calls inside the translated code do not go through the hook
- * table, so hooks see every call made through a pointer, not every call.
+ *   - standing in front of a guest function: `hook` catches calls through a
+ *     pointer (callback tables, bctrl) and, by patching the translated
+ *     function's entry in memory, direct `bl` calls too; `trampoline` gives a
+ *     host function a guest address that can be stored in any game table or
+ *     callback field.
+ * Two cases fall back to pointer calls only, with a line in the log: a guest
+ * address whose translation is shared with another (small HLE stand-ins), and
+ * calls made while the hooked function's original is itself running.
  *
  * Every callback runs on the simulation thread, inside the frame, and must not
  * block. Plugins are offline-only: the runtime refuses every network request
