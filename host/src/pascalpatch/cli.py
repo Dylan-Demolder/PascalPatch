@@ -7,7 +7,7 @@ from .discovery import find_dolphin
 from .errors import PascalPatchError
 from .launcher import launch
 from .plugin_store import PluginStore
-from .native import find_melee_port, find_pascalpatch_launcher, native_command
+from .native import find_melee_port, find_pascalpatch_launcher, native_command, stage_quick_match
 
 def _root(args): return Path(args.root).expanduser().resolve()
 def _profile(args): return _root(args)/"profiles"/(args.id+".json")
@@ -26,11 +26,15 @@ def _launch_target(store,profile_id):
  if iso.is_file(): return iso
  if current.is_dir(): return current
  raise PascalPatchError(f"no built game for {profile_id}; run 'pascalpatch build {profile_id}' first: {current}")
-def prepare_run_mods(data_root,profile_id,build_mods):
- """A fresh mods folder for one run: the profile's own plugins plus every enabled downloaded plugin."""
+def prepare_run_mods(data_root,profile_id,build_mods,quick_match=None):
+ """A fresh mods folder for one run: the profile's own plugins plus every enabled downloaded plugin.
+
+ A profile's quick_match stages the quick-match plugin set to that match (it wins over a
+ downloaded copy, as every profile plugin does)."""
  run=Path(data_root)/"run"/profile_id/"mods"
  if run.exists(): shutil.rmtree(run)
  if Path(build_mods).is_dir(): shutil.copytree(build_mods,run)
+ if quick_match is not None: stage_quick_match(quick_match,data_root,run)
  PluginStore(data_root).stage(run)
  return run if run.is_dir() and any(run.iterdir()) else None
 def cmd_launch(args):
@@ -38,7 +42,7 @@ def cmd_launch(args):
  if p.compatibility != "online-safe" and not args.allow_unsafe: raise PascalPatchError(f"profile is {p.compatibility}; pass --allow-unsafe to launch it")
  logdir=BuildStore(args.data).root/"logs"/p.data["id"]; logdir.mkdir(parents=True,exist_ok=True); log=logdir/(datetime.datetime.now().strftime("%Y%m%dT%H%M%S")+".log")
  if args.runtime=="native":
-  mods=prepare_run_mods(store.root,p.data["id"],Path(output).parent.parent/"mods")
+  mods=prepare_run_mods(store.root,p.data["id"],Path(output).parent.parent/"mods",p.data.get("quick_match"))
   # Always through the PascalPatch launcher: the unmodified port runs with the runtime injected (offline guard, plugins).
   exe=find_melee_port(args.port); launcher=find_pascalpatch_launcher(store.root,args.launcher)
   cmd=native_command(exe,output,args.port_arg,mods=mods,launcher=launcher,sandbox=store.root/"sandbox"/p.data["id"],log=log.with_suffix(".pascalpatch.log"),settings=PluginStore(store.root).settings_dir)

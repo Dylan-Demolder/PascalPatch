@@ -6,7 +6,8 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
 from pascalpatch.errors import CompositionError, ManifestError
-from pascalpatch.native import assign_new_fighters, native_command, stage_native_plugins, validate_character_entry
+from pascalpatch.manifest import validate_quick_match
+from pascalpatch.native import assign_new_fighters, native_command, stage_native_plugins, stage_quick_match, validate_character_entry
 from pascalpatch.profile import load_profile
 from pascalpatch.store import BuildStore
 
@@ -112,6 +113,21 @@ class NativeTests(unittest.TestCase):
             doc["characters"].append(dict(entries[0])); (root / "profiles/custom-roster.json").write_text(json.dumps(doc))
             with self.assertRaises((ManifestError, CompositionError)):
                 BuildStore(root / "data").build(load_profile(root / "profiles/custom-roster.json", root))
+
+    def test_quick_match_is_validated_and_staged_with_character_numbers(self):
+        self.assertEqual(validate_quick_match({"p1": "falco", "p2": 9, "p2_player": "cpu7", "stage": "bf", "rules": "stock4"}), [])
+        self.assertEqual(validate_quick_match({}), [])
+        bad = validate_quick_match({"p1": "hulk", "p2": 26, "p2_player": "cpu0", "stage": "hyrule", "rules": "coins"})
+        self.assertEqual(sorted(e.path for e in bad), ["quick_match.p1", "quick_match.p2", "quick_match.p2_player", "quick_match.rules", "quick_match.stage"])
+        self.assertTrue(validate_quick_match({"p3": "fox"}))
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td); plugins = root / "plugins"; plugins.mkdir(); (plugins / "quick-match.dll").write_bytes(b"dll")
+            with patch.dict("os.environ", {"PASCALPATCH_NATIVE_PLUGINS": str(plugins)}):
+                entry = stage_quick_match({"p1": "falco", "p2": 9, "stage": "fd"}, root / "data", root / "mods")
+            config = json.loads((root / "mods/quick-match.json").read_text())
+            self.assertEqual(config["match"], {"p1": 20, "p2": 9, "stage": "fd"})
+            self.assertEqual(entry["match"], config["match"])
+            self.assertEqual((root / "mods/quick-match.dll").read_bytes(), b"dll")
 
     def test_portrait_stages_extra_fighters_with_name_and_photo(self):
         with tempfile.TemporaryDirectory() as td:

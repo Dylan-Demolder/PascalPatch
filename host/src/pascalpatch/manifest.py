@@ -49,7 +49,7 @@ def validate_mod(obj,path="mod"):
  return e
 
 def validate_profile(obj,path="profile"):
- e=[]; _base(obj,path,{"id","name","game_version","base_game","plugins","mods","mode","online_safe"},e,optional=("allow_priority","decomp_repo","decomp_orig","plugin_source_root","runtime_root","characters",))
+ e=[]; _base(obj,path,{"id","name","game_version","base_game","plugins","mods","mode","online_safe"},e,optional=("allow_priority","decomp_repo","decomp_orig","plugin_source_root","runtime_root","characters","quick_match",))
  if isinstance(obj,dict):
   if obj.get("game_version")!=GAME_VERSION: e.append(ValidationError(path+".game_version","game_version","must be GALE01-1.02"))
   if not isinstance(obj.get("base_game"),str) or not obj.get("base_game"): e.append(ValidationError(path+".base_game","base_game","must be a path"))
@@ -67,6 +67,24 @@ def validate_profile(obj,path="profile"):
    replaced=[c["slot"].lower() for c in chars if c.get("install","replace")=="replace"]
    if len(set(replaced))!=len(replaced): e.append(ValidationError(path+".characters","duplicate","one character per replaced slot"))
    if sum(1 for c in chars if c.get("install")=="new")>40: e.append(ValidationError(path+".characters","install","at most 40 new fighters"))
+  if "quick_match" in obj: e+=validate_quick_match(obj["quick_match"],path+".quick_match")
+ return e
+
+QUICK_MATCH_STAGES={"fd","bf","ys","fod","ps","dl"}
+QUICK_MATCH_RULES={"endless","stock4","stock1"}
+QUICK_MATCH_PLAYERS={"human","none",*(f"cpu{n}" for n in range(1,10))}
+def validate_quick_match(obj,path="quick_match"):
+ """A profile's quick_match: the match the game boots straight into (the quick-match plugin)."""
+ from .native import CSS_KINDS
+ e=[]
+ if not isinstance(obj,dict) or not set(obj)<={"p1","p2","p2_player","stage","rules"}:
+  return [ValidationError(path,"quick_match","must be an object with p1, p2, p2_player, stage and rules (all optional)")]
+ for k in ("p1","p2"):
+  v=obj.get(k,"fox")
+  if not ((isinstance(v,str) and v in CSS_KINDS) or (isinstance(v,int) and not isinstance(v,bool) and 0<=v<=25)):
+   e.append(ValidationError(f"{path}.{k}","fighter","must be a fighter slot name (fox, marth, ...) or a character number 0-25"))
+ for k,allowed in (("p2_player",QUICK_MATCH_PLAYERS),("stage",QUICK_MATCH_STAGES),("rules",QUICK_MATCH_RULES)):
+  if k in obj and obj[k] not in allowed: e.append(ValidationError(f"{path}.{k}",k,"must be one of "+", ".join(sorted(allowed))))
  return e
 
 def require_valid(obj,kind,path="manifest"):

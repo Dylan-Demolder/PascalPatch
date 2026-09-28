@@ -212,6 +212,21 @@ def stage_native_plugins(characters, data_root, folder, unlock_all=False):
     return {"folder": str(folder), "plugins": plugins, **({"notes": notes} if notes else {})}
 
 
+def stage_quick_match(match, data_root, folder):
+    """Stage the quick-match plugin set to boot straight into ``match`` (a profile's quick_match).
+
+    Fighters given by slot name ("fox") are passed on as character numbers, which is what the
+    plugin reads. Returns the plugin's entry for a staging report.
+    """
+    dll = find_native_plugin("quick-match", data_root)
+    folder = Path(folder); folder.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(dll, folder / dll.name)
+    m = {k: CSS_KINDS[v] if k in ("p1", "p2") and isinstance(v, str) else v for k, v in match.items()}
+    config = {"match": m, "_pascalpatch": {"id": "quick-match", "name": "Quick Match", "source": "profile"}}
+    (folder / "quick-match.json").write_text(json.dumps(config, indent=1) + "\n", encoding="utf-8")
+    return {"id": "quick-match", "sha256": hashlib.sha256(dll.read_bytes()).hexdigest(), "match": m}
+
+
 def find_melee_port(explicit=None):
     candidates = [explicit, os.environ.get("MELEE_PORT")]
     candidates += [shutil.which(name) for name in PORT_NAMES]
