@@ -38,7 +38,7 @@ Everything is offline. PascalPatch never uses Slippi or netplay, and it blocks e
 
 - A Windows 10 or 11 PC (64-bit).
 - **Your own Melee disc image**: NTSC 1.02 (GALE01 revision 2), as an `.iso`. PascalPatch never changes it and never includes any game data.
-- **Melee Unlocked**: download `MeleeUnlocked-<version>-win64.zip` from its [releases](https://github.com/hero88go/melee-unlocked/releases) and unzip it anywhere. Version 0.7 or newer.
+- **Melee Unlocked**: download `MeleeUnlocked-<version>-win64.zip` from its [releases](https://github.com/hero88go/melee-unlocked/releases) and unzip it anywhere. Version 0.7 or newer; 0.8 is the latest.
 - **Python 3.11 or newer**, from python.org. Tick "Add python.exe to PATH" when installing.
 - **Git**, to download PascalPatch.
 - **Visual Studio 2022 Build Tools**, with "Desktop development with C++", and **CMake**. These build PascalPatch's in-game runtime. You only need them for setup and updates.
@@ -63,9 +63,11 @@ Double-click **`pascalpatch.cmd`** in the PascalPatch folder, or run it from a t
 
 On first run, go to **Settings**:
 
-1. **melee_port.exe**: the `melee_port.exe` inside your Melee Unlocked folder.
+1. **melee_port.exe**: click **Browse…** and pick `melee_port.exe` in your Melee Unlocked folder.
 2. **Game folder**: leave it empty to use the exe's folder, where Melee Unlocked keeps its settings and saves.
 3. **Save**.
+
+Melee Unlocked 0.8 has several programs in its folder. PascalPatch works with `melee_port.exe`, the Static Recomp build. `melee_source.exe` is the new Source Port, which is built for Slippi online and cannot load plugins, and `MeleeUnlockedLauncher.exe` is Melee Unlocked's own launcher. If you pick one of those, Settings tells you which file to choose. `melee_port_compat.exe` is the same game built for older processors; PascalPatch has not been tested with it yet.
 
 The **Play** page shows a status list. When everything is ready it reads: Melee Unlocked found, PascalPatch runtime built, offline guard on, and the number of plugins available.
 
@@ -254,7 +256,6 @@ All 26 characters and every stage from the first boot. It works without touching
 |---|---|
 | F1 | Melee Unlocked's PC settings |
 | F2 | PascalPatch's plugin window |
-| F3 | Melee Unlocked's Lab view |
 | F11 | Melee Unlocked's compact menu |
 | F4 (hold) | Match Stats: the live card |
 | F5 / F6 / F7 | Training Lab: pause, frame advance, slow motion |
@@ -305,7 +306,7 @@ The built game for each profile lives in PascalPatch's data folder, never beside
 
 | Problem | Try |
 |---|---|
-| The Play page says Melee Unlocked is missing | Settings: point melee_port.exe at your Melee Unlocked folder. |
+| The Play page says Melee Unlocked is missing | Settings: **Browse…** to `melee_port.exe` in your Melee Unlocked folder. |
 | The Play page says the runtime is not built | Run `python tooling/native/build_plugins.py` in the PascalPatch folder. |
 | The game starts, but F2 does nothing | Melee Unlocked must use Direct3D 12 (F1 > Graphics backend). Click the game window so it has focus. |
 | A plugin does nothing | Is it switched on (Installed)? Are you in a match? Check its F2 tab for "failed to load" and its log. |

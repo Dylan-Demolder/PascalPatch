@@ -38,7 +38,7 @@ Choose a default that does not collide. Players can rebind any clash, but a good
 
 | Key | Used by |
 |---|---|
-| F1, F2, F3, F11 | Melee Unlocked (F1 PC settings, F3 Lab view, F11 menu) and the PascalPatch overlay (F2): keep clear |
+| F1, F2, F3, F11 | Melee Unlocked (F1 PC settings, F11 menu; F3 was its Lab view before 0.8) and the PascalPatch overlay (F2): keep clear |
 | F4 | Match Stats |
 | F5, F6, F7, F9 | Training Lab: pause, step, slow motion, reset |
 | F8 | Tech Trainer |
