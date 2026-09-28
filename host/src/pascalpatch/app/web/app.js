@@ -152,7 +152,7 @@ function newProfileDialog() {
   openDialog('New profile', [
     h('div', { class: 'pp-field' }, h('label', {}, 'Name'), name),
     h('div', { class: 'pp-field' }, h('label', {}, 'ID'), id, h('span', { class: 'pp-hint' }, 'Lowercase letters, digits and dashes.')),
-    h('div', { class: 'pp-field' }, h('label', {}, 'Your Melee 1.02 ISO'), iso, h('span', { class: 'pp-hint' }, 'Your own NTSC 1.02 disc image. PascalPatch never changes it.'))],
+    h('div', { class: 'pp-field' }, h('label', {}, 'Your Melee 1.02 ISO'), pathRow(iso, 'iso', 'Choose your Melee 1.02 ISO'), h('span', { class: 'pp-hint' }, 'Your own NTSC 1.02 disc image. PascalPatch never changes it.'))],
     'Create', async () => { await run(() => api.post('/api/profile/create', { id: id.value.trim(), name: name.value.trim(), iso: iso.value.trim() }), 'Profile created'); route(); });
   name.addEventListener('input', () => { if (!id.dataset.touched) id.value = name.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); });
   id.addEventListener('input', () => { id.dataset.touched = 1; });
@@ -285,19 +285,19 @@ async function pageActivity(root) {
 // ---------------------------------------------------------------- Settings
 async function pageSettings(root) {
   const s = await api.get('/api/settings');
-  const f = (key, label, hint, attrs = {}) => {
+  const f = (key, label, hint, attrs = {}, pick = null) => {
     const input = h('input', { class: 'pp-input', value: Array.isArray(s[key]) ? s[key].join(' ') : (s[key] || ''), ...attrs });
     input.dataset.key = key;
-    return h('div', { class: 'pp-field' }, h('label', {}, label), input, hint ? h('span', { class: 'pp-hint' }, hint) : null);
+    return h('div', { class: 'pp-field' }, h('label', {}, label), pick ? pathRow(input, ...pick) : input, hint ? h('span', { class: 'pp-hint' }, hint) : null);
   };
   const theme = h('select', { class: 'pp-select' }, ['dark', 'light'].map((t) => h('option', { value: t, selected: s.theme === t }, t === 'dark' ? 'Dark (Melee)' : 'Light')));
   const form = h('div', { class: 'pp-stack' },
     frame(['Game'], h('div', { class: 'pp-row-form' },
-      f('port', 'melee_port.exe', 'Your Melee Unlocked build. PascalPatch starts it unmodified.', { placeholder: 'C:\\...\\melee_port.exe' }),
-      f('port_cwd', 'Game folder', 'Where the game keeps its settings and saves (defaults to the exe\'s folder).'),
+      f('port', 'melee_port.exe', 'In your Melee Unlocked folder. Not melee_source.exe: the Source Port cannot load plugins. PascalPatch starts the game unmodified.', { placeholder: 'C:\\...\\melee_port.exe' }, ['exe', 'Choose melee_port.exe in your Melee Unlocked folder']),
+      f('port_cwd', 'Game folder', 'Where the game keeps its settings and saves. Leave it empty to use the exe\'s folder.', {}, ['folder', 'Choose the game folder']),
       f('port_args', 'Extra game options', 'Passed to melee_port.exe, separated by spaces.', { placeholder: '--fps unlocked' }))),
     frame(['Plugins'], h('div', { class: 'pp-row-form' }, f('site', 'Plugin site', 'Where Browse downloads the plugin list. Downloads are checked against PascalPatch\'s signing key whatever the site.'))),
-    frame(['Character Studio'], h('div', { class: 'pp-row-form' }, f('studio_repo', 'Character Studio folder', 'The MeleeCharacterStudio folder, for the Character Studio button.'))),
+    frame(['Character Studio'], h('div', { class: 'pp-row-form' }, f('studio_repo', 'Character Studio folder', 'The MeleeCharacterStudio folder, for the Character Studio button.', {}, ['folder', 'Choose the MeleeCharacterStudio folder']))),
     frame(['Look'], h('div', { class: 'pp-row-form' }, h('div', { class: 'pp-field' }, h('label', {}, 'Theme'), theme))),
     h('div', { class: 'play-row' }, h('button', { class: 'pp-btn pp-btn--primary', onclick: async () => {
       const body = { theme: theme.value };
@@ -305,6 +305,18 @@ async function pageSettings(root) {
       await run(() => api.post('/api/settings', body), 'Settings saved'); applyTheme(body.theme); refreshStatus();
     } }, 'Save'), h('span', { class: 'pp-small pp-dim' }, `Profiles: ${S.status?.root} · Data: ${S.status?.data}`)));
   root.append(pageHead('Settings'), form);
+}
+
+// A path box with a Browse button that opens the Windows file picker (the app runs on this PC).
+function pathRow(input, kind, title) {
+  const browse = h('button', { class: 'pp-btn pp-btn--ghost', type: 'button', onclick: async () => {
+    browse.disabled = true;
+    try {
+      const r = await api.post('/api/pick', { kind, title, start: input.value.trim() });
+      if (r.path) input.value = r.path;
+    } catch (e) { toast(e.message, 'danger'); } finally { browse.disabled = false; }
+  } }, 'Browse…');
+  return h('div', { class: 'path-row' }, input, browse);
 }
 
 // ---------------------------------------------------------------- dialogs

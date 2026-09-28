@@ -227,12 +227,31 @@ def stage_quick_match(match, data_root, folder):
     return {"id": "quick-match", "sha256": hashlib.sha256(dll.read_bytes()).hexdigest(), "match": m}
 
 
+# Melee Unlocked 0.8 ships several exes in one folder; plugins load only into the Static Recomp.
+WRONG_EXES = {
+    "melee_source.exe": "melee_source.exe is the Source Port, which runs Slippi online and cannot load plugins",
+    "meleeunlockedlauncher.exe": "MeleeUnlockedLauncher.exe is Melee Unlocked's launcher, not the game",
+    "melee_port_playback.exe": "melee_port_playback.exe is the replay player",
+}
+
+
+def check_melee_port(path):
+    """Raise a DiscoveryError that names the right file when ``path`` is not a game exe plugins can load into."""
+    path = Path(path)
+    why = WRONG_EXES.get(path.name.lower())
+    if why:
+        raise DiscoveryError(f"{why}. Pick melee_port.exe in the same folder.")
+    if path.suffix.lower() != ".exe" and path.name not in PORT_NAMES:
+        raise DiscoveryError(f"{path.name} is not a program. Pick melee_port.exe in your Melee Unlocked folder.")
+    return path
+
+
 def find_melee_port(explicit=None):
     candidates = [explicit, os.environ.get("MELEE_PORT")]
     candidates += [shutil.which(name) for name in PORT_NAMES]
     for value in candidates:
         if value and Path(value).is_file():
-            return Path(value).resolve()
+            return check_melee_port(Path(value).resolve())
     raise DiscoveryError("melee_port.exe not found; pass --port or set MELEE_PORT")
 
 

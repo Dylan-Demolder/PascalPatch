@@ -12,6 +12,7 @@ import datetime
 import functools
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -26,7 +27,7 @@ from .. import __version__
 from ..errors import PascalPatchError
 from ..gui import GuiController
 from ..mods import CatalogError, create_profile, delete_profile, set_enabled
-from ..native import PORT_NAMES, find_melee_port, find_pascalpatch_launcher
+from ..native import PORT_NAMES, check_melee_port, find_melee_port, find_pascalpatch_launcher
 from ..plugin_store import SITE_URL, PluginStore
 
 WEB = Path(__file__).with_name("web")
@@ -110,6 +111,8 @@ class App:
                 s[k] = changes[k]
         if s["port"] and not Path(s["port"]).is_file():
             raise PascalPatchError(f"melee_port.exe not found at {s['port']}")
+        if s["port"]:
+            check_melee_port(s["port"])
         if not s["site"].startswith("https://"):
             raise PascalPatchError("the plugin site must be an https:// address")
         self.data.mkdir(parents=True, exist_ok=True)
@@ -124,8 +127,8 @@ class App:
         s = self.settings(); port = launcher = None; problems = []
         try:
             port = str(find_melee_port(s["port"] or None))
-        except PascalPatchError:
-            problems.append("melee_port.exe not found: set it in Settings.")
+        except PascalPatchError as exc:
+            problems.append(str(exc) if s["port"] and Path(s["port"]).is_file() else "melee_port.exe not found: set it in Settings.")
         try:
             launcher = str(find_pascalpatch_launcher(self.data))
         except PascalPatchError:
@@ -133,8 +136,11 @@ class App:
         mu_version = None
         if port:
             for parent in Path(port).parents:
-                if (parent / "VERSION").is_file():
+                if (parent / "VERSION").is_file():   # a source checkout
                     mu_version = (parent / "VERSION").read_text(encoding="utf-8").strip(); break
+                m = re.fullmatch(r"MeleeUnlocked-(\d+(?:\.\d+)+)", parent.name)   # an unzipped release
+                if m:
+                    mu_version = m.group(1); break
         profiles = self.gui.list_profiles()
         return {"version": __version__, "root": str(self.root), "data": str(self.data), "port": port,
                 "melee_unlocked": mu_version, "launcher": launcher, "profiles": len(profiles),
@@ -218,6 +224,15 @@ class App:
             raise PascalPatchError("not a PascalPatch log")
         raw = f.read_bytes()[-200_000:]
         return raw.decode("utf-8", "replace")
+
+    def pick(self, kind, title, start=""):
+        """A native Open dialog on this PC, for the path fields: returns {"path": ""} when cancelled."""
+        if kind not in ("exe", "iso", "zip", "folder"):
+            raise PascalPatchError("unknown kind of file")
+        start = str(Path(start).parent if start and Path(start).is_file() else start or "")
+        r = subprocess.run([sys.executable, str(Path(__file__).with_name("picker.py")), kind, title, start],
+                           capture_output=True, text=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        return {"path": str(Path(r.stdout.strip())) if r.stdout.strip() else ""}
 
     def open_studio(self):
         repo = self.settings()["studio_repo"]
@@ -319,6 +334,7 @@ class Handler(BaseHTTPRequestHandler):
                 a.plugins().uninstall(b["id"]); return self._send(200, {"ok": True})
             if p == "/api/settings": return self._send(200, a.save_settings(b))
             if p == "/api/studio": return self._send(200, a.open_studio())
+            if p == "/api/pick": return self._send(200, a.pick(b.get("kind", ""), b.get("title", "Choose a file"), b.get("start", "")))
             return self._send(404, {"error": "not found"})
         except (PascalPatchError, CatalogError, KeyError, ValueError, OSError) as exc:
             msg = str(exc) or exc.__class__.__name__

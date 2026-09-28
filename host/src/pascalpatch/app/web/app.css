@@ -27,3 +27,5 @@
 .pp-field-group { margin: 14px 0 2px; padding-bottom: 4px; border-bottom: 1px solid var(--pp-line);
   font-size: var(--pp-size-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--pp-text-dim); }
 .pp-field-group:first-child { margin-top: 0; }
+.path-row { display: flex; gap: 6px; }
+.path-row .pp-input { flex: 1; min-width: 0; }

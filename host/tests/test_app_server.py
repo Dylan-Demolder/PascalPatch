@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 from pascalpatch.app.server import App, Handler
+from pascalpatch.errors import PascalPatchError
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -36,6 +37,17 @@ class AppServerTests(unittest.TestCase):
         [row] = self.get("/api/plugins")["builtin"]
         self.assertEqual((row["name"], row["version"], row["summary"]),
                          (manifest["name"], manifest["version"], manifest["summary"]))
+
+    def test_settings_refuse_the_source_port_and_name_the_right_exe(self):
+        game = Path(self.tmp.name) / "MeleeUnlocked-0.8.0"; game.mkdir()
+        for name in ("melee_port.exe", "melee_source.exe", "MeleeUnlockedLauncher.exe"):
+            (game / name).write_bytes(b"MZ")
+        app = Handler.app
+        for wrong in ("melee_source.exe", "MeleeUnlockedLauncher.exe"):
+            with self.assertRaisesRegex(PascalPatchError, "Pick melee_port.exe"):
+                app.save_settings({"port": str(game / wrong)})
+        self.assertEqual(app.save_settings({"port": str(game / "melee_port.exe")})["port"], str(game / "melee_port.exe"))
+        self.assertEqual(self.get("/api/status")["melee_unlocked"], "0.8.0", "read from the unzipped release's folder name")
 
 
 if __name__ == "__main__":
