@@ -12,6 +12,35 @@ Percent, shield and stock options apply to the player you pick: port 1, port 2 (
 practice partner), everyone, or only CPU players. Hotkeys only work while the game window has
 focus and the F2 window is closed.
 
+## The dummy
+
+On PascalPatch 0.5, Training Lab can play a practice partner for you, in the spirit of
+UnclePunch's Training Mode. Set up a match with the dummy's port (port 2 by default) as a
+**human** player, then press **Home** to hand that port to the dummy (or turn it on for every
+match in the settings). It plays through the port's controller, so it is held to the same rules
+as you are:
+
+- **Stance**: stands, crouches (for crouch-cancel practice), holds shield, or keeps jumping.
+- **DI**: survival (up and in), combo (down and away), in, out, or random per hit; plus
+  **SDI** during hitlag, some or as much as possible.
+- **Techs**: in place, toward you, away, never, or random (misses included), wherever it lands,
+  platforms too. After a missed tech it **gets up** the way you pick: stand, roll either way,
+  getup attack, or random, on the first possible frame, for tech-chase practice.
+- **Counter-actions**: when hitstun ends, or when shield stun ends, it jumps, nairs, grabs,
+  spot dodges, rolls, up-Bs, down-Bs, air dodges or attacks, on the first possible frame: out of
+  shield that means a frame-1 shield grab, or a jump-cancelled up-B or shine, so you learn what
+  is safe on shield and what is not.
+- **Recovery**: knocked off Battlefield, Final Destination, Dream Land, Yoshi's Story, Fountain
+  of Dreams or Pokemon Stadium, it double jumps back and up-Bs, for edge-guard practice.
+- **Mash out of grabs**, so you learn which throws and pummels you really get.
+- **Record and play back**: press **PageUp** to record your own inputs (up to 20 seconds; press
+  it again to stop), then **PageDown** to have the dummy play them back, once or on a loop,
+  mirrored when it faces the other way. Record a pressure string, then practise against it.
+
+A badge in the bottom-left corner shows what the dummy is doing. Only teching touches game
+memory: the dummy marks a well-timed L/R press in its tech timer, because when a tumble ends
+depends on where it lands.
+
 Pause and slow motion hold the game inside the frame; the window, the F2 window and other
-plugins keep running. This plugin writes game memory (percent, shield, stocks) only while those
-options are on.
+plugins keep running. This plugin writes game memory (percent, shield, stocks, the tech timer)
+only while those options are on.
