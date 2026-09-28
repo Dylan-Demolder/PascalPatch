@@ -428,6 +428,7 @@ const pp::Setting* find_setting(const char* plugin, const char* key) {
 double api_setting_number(const char* plugin, const char* key) {
   std::lock_guard<std::mutex> lock(pp::mutex());
   const pp::Setting* s = find_setting(plugin, key);
+  if (s && s->type == "key") return pp::key_vk(s->text);
   return s ? s->num : 0;
 }
 const char* api_setting_text(const char* plugin, const char* key) {
@@ -451,6 +452,34 @@ void api_hud_rect(float x0, float y0, float x1, float y1, uint32_t rgba, float r
 void api_hud_circle(float x, float y, float r, uint32_t rgba, int filled) {
   pp::hud_building().push_back({pp::HudCmd::Circle, x, y, r, 0, 0, rgba, filled != 0, {}});
 }
+void api_hud_label(float x, float y, uint32_t rgba, float size, int align, const char* text) {
+  if (!text) return;
+  pp::HudCmd c{pp::HudCmd::Text, x, y, 0, 0, size > 0 ? size : 16, rgba, true, text};
+  c.align = (uint8_t)std::clamp(align, 0, 2);
+  c.outline = true;
+  pp::hud_building().push_back(std::move(c));
+}
+void api_toast(const char* plugin, const char* text) {
+  if (!text || !*text) return;
+  std::lock_guard<std::mutex> lock(pp::mutex());
+  auto& t = pp::toasts();
+  std::string name = plugin ? plugin : "";
+  if (pp::Plugin* p = plugin ? pp::find(plugin) : nullptr) name = p->name;
+  t.push_back({name, text, GetTickCount64()});
+  while (t.size() > 3) t.pop_front();
+}
+HWND port_window() {
+  static HWND h = nullptr;
+  if (!h || !IsWindow(h)) h = FindWindowW(L"MeleePortWindow", nullptr);
+  return h;
+}
+int api_overlay_open() { return overlay::is_open() ? 1 : 0; }
+int api_key_down(int vk) {
+  if (vk <= 0 || vk > 0xFE || overlay::is_open()) return 0;
+  HWND fg = GetForegroundWindow();
+  if (!fg || fg != port_window()) return 0;
+  return (GetAsyncKeyState(vk) & 0x8000) ? 1 : 0;
+}
 
 const pp_host g_host = {
   PP_PLUGIN_ABI, sizeof(pp_host), api_log,
@@ -459,6 +488,7 @@ const pp_host g_host = {
   api_call, api_trampoline, api_hook, api_on_frame, api_guest_alloc,
   api_declare_setting, api_setting_number, api_setting_text, api_set_status,
   api_hud_text, api_hud_rect, api_hud_circle,
+  api_toast, api_key_down, api_overlay_open, api_hud_label,
 };
 
 // A plugin's record. Its id is the DLL's name; a downloaded plugin's staged config carries its
@@ -617,6 +647,40 @@ std::vector<HudCmd>& hud_building() { static std::vector<HudCmd> v; return v; }
 static std::vector<HudCmd>& hud_published() { static std::vector<HudCmd> v; return v; }
 void hud_publish() { std::lock_guard<std::mutex> lock(mutex()); hud_published() = hud_building(); }
 std::vector<HudCmd> hud_latest() { std::lock_guard<std::mutex> lock(mutex()); return hud_published(); }
+std::deque<Toast>& toasts() { static std::deque<Toast> t; return t; }
+
+// ---- key names, for "key" settings ----
+namespace {
+const std::pair<const char*, int> KEYS[] = {
+  {"Backspace", VK_BACK}, {"Tab", VK_TAB}, {"Enter", VK_RETURN}, {"Shift", VK_SHIFT}, {"Ctrl", VK_CONTROL}, {"Alt", VK_MENU},
+  {"Pause", VK_PAUSE}, {"CapsLock", VK_CAPITAL}, {"Space", VK_SPACE}, {"PageUp", VK_PRIOR}, {"PageDown", VK_NEXT},
+  {"End", VK_END}, {"Home", VK_HOME}, {"Left", VK_LEFT}, {"Up", VK_UP}, {"Right", VK_RIGHT}, {"Down", VK_DOWN},
+  {"Insert", VK_INSERT}, {"Delete", VK_DELETE}, {"NumpadMultiply", VK_MULTIPLY}, {"NumpadAdd", VK_ADD},
+  {"NumpadSubtract", VK_SUBTRACT}, {"NumpadDecimal", VK_DECIMAL}, {"NumpadDivide", VK_DIVIDE},
+  {"Semicolon", VK_OEM_1}, {"Equals", VK_OEM_PLUS}, {"Comma", VK_OEM_COMMA}, {"Minus", VK_OEM_MINUS},
+  {"Period", VK_OEM_PERIOD}, {"Slash", VK_OEM_2}, {"Grave", VK_OEM_3}, {"LeftBracket", VK_OEM_4},
+  {"Backslash", VK_OEM_5}, {"RightBracket", VK_OEM_6}, {"Quote", VK_OEM_7},
+};
+}  // namespace
+int key_vk(const std::string& name) {
+  if (name.empty()) return 0;
+  if (name.size() == 1 && ((name[0] >= 'A' && name[0] <= 'Z') || (name[0] >= '0' && name[0] <= '9'))) return name[0];
+  if (name.size() == 1 && name[0] >= 'a' && name[0] <= 'z') return name[0] - 'a' + 'A';
+  if (name[0] == 'F' && name.size() <= 3) {
+    int n = std::atoi(name.c_str() + 1);
+    if (n >= 1 && n <= 24) return VK_F1 + n - 1;
+  }
+  if (name.rfind("Numpad", 0) == 0 && name.size() == 7 && name[6] >= '0' && name[6] <= '9') return VK_NUMPAD0 + (name[6] - '0');
+  for (auto& k : KEYS) if (_stricmp(k.first, name.c_str()) == 0) return k.second;
+  return 0;
+}
+std::string key_name(int vk) {
+  if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9')) return std::string(1, (char)vk);
+  if (vk >= VK_F1 && vk <= VK_F24) return "F" + std::to_string(vk - VK_F1 + 1);
+  if (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) return "Numpad" + std::to_string(vk - VK_NUMPAD0);
+  for (auto& k : KEYS) if (k.second == vk) return k.first;
+  return std::string();
+}
 }  // namespace pp
 
 BOOL WINAPI DllMain(HINSTANCE self, DWORD reason, LPVOID) {

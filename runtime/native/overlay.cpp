@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cfloat>
 #include <cstdio>
 #include <map>
 #include <string>
@@ -52,6 +53,8 @@ std::atomic<ID3D12CommandQueue*> g_queue{nullptr};   // the port's direct queue,
 
 // ---- window input ----
 std::atomic<bool> g_open{false};
+std::atomic<bool> g_capturing{false};   // a "key" setting is waiting for its key
+std::atomic<int> g_captured{0};         // the key it got (VK code; -1 = Escape: unbind)
 HWND g_hwnd = nullptr;
 WNDPROC g_wndproc = nullptr;
 struct Msg { UINT m; WPARAM w; LPARAM l; };
@@ -89,6 +92,11 @@ LRESULT CALLBACK wndproc(HWND h, UINT m, WPARAM w, LPARAM l) {
   }
   if ((m == WM_KEYUP || m == WM_SYSKEYUP) && w == VK_F2) return 0;
   if (g_open.load()) {
+    if (g_capturing.load() && (m == WM_KEYDOWN || m == WM_SYSKEYDOWN)) {
+      g_captured.store(w == VK_ESCAPE ? -1 : (int)w);   // Escape unbinds instead of closing
+      g_capturing.store(false);
+      return 0;
+    }
     if (m == WM_SETCURSOR && LOWORD(l) == HTCLIENT) { SetCursor(nullptr); return TRUE; }   // ImGui draws its own
     if (overlay_input(m)) {
       queue_msg(m, w, l);
@@ -231,7 +239,24 @@ void draw_hud(const std::vector<pp::HudCmd>& cmds) {
   ImDrawList* dl = ImGui::GetBackgroundDrawList();
   for (const auto& c : cmds) {
     switch (c.kind) {
-      case pp::HudCmd::Text: dl->AddText(g.display, c.f * s, P(c.a, c.b), rgba(c.rgba), c.text.c_str()); break;
+      case pp::HudCmd::Text: {
+        float size = c.f * s;
+        ImVec2 at = P(c.a, c.b);
+        if (c.align) {
+          ImVec2 ext = g.display->CalcTextSizeA(size, FLT_MAX, 0, c.text.c_str());
+          at.x -= c.align == 1 ? ext.x * 0.5f : ext.x;
+        }
+        if (c.outline) {
+          float d = std::max(1.0f, size / 14.0f);
+          ImU32 shade = IM_COL32(8, 10, 24, (c.rgba & 0xFF) * 220 / 255);
+          for (int i = 0; i < 8; ++i) {
+            static const float ox[8] = {-1, 0, 1, -1, 1, -1, 0, 1}, oy[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
+            dl->AddText(g.display, size, ImVec2(at.x + ox[i] * d, at.y + oy[i] * d), shade, c.text.c_str());
+          }
+        }
+        dl->AddText(g.display, size, at, rgba(c.rgba), c.text.c_str());
+        break;
+      }
       case pp::HudCmd::Rect:
         if (c.filled) dl->AddRectFilled(P(c.a, c.b), P(c.c, c.d), rgba(c.rgba), c.f * s);
         else dl->AddRect(P(c.a, c.b), P(c.c, c.d), rgba(c.rgba), c.f * s, 0, std::max(1.0f, s));
@@ -270,6 +295,43 @@ void draw_toast(size_t loaded) {
   ImGui::PopStyleVar();
 }
 
+// Plugin messages (host->toast): a bubble at the top centre, newest at the bottom, 2.5 s each.
+void draw_plugin_toasts() {
+  std::vector<pp::Toast> shown;
+  uint64_t now = GetTickCount64();
+  {
+    std::lock_guard<std::mutex> lock(pp::mutex());
+    auto& t = pp::toasts();
+    while (!t.empty() && now - t.front().shown > 2600) t.pop_front();
+    shown.assign(t.begin(), t.end());
+  }
+  if (shown.empty()) return;
+  ImVec2 ds = ImGui::GetIO().DisplaySize;
+  float y = ds.y * 0.06f;
+  for (size_t i = 0; i < shown.size(); ++i) {
+    const auto& t = shown[i];
+    float age = (now - t.shown) / 1000.0f;
+    float alpha = age < 2.1f ? 1.0f : std::max(0.0f, (2.6f - age) / 0.5f);
+    ImGui::SetNextWindowPos(ImVec2(ds.x * 0.5f, y), ImGuiCond_Always, ImVec2(0.5f, 0));
+    ImGui::SetNextWindowBgAlpha(0.9f * alpha);
+    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
+    char id[32];
+    std::snprintf(id, sizeof id, "##pp_msg%zu", i);
+    ImGui::Begin(id, nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs |
+                                  ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoSavedSettings);
+    if (!t.plugin.empty()) {
+      ImGui::PushFont(g.display, 16.0f);
+      ImGui::TextColored(PascalUI::Accent(), "%s", t.plugin.c_str());
+      ImGui::PopFont();
+      ImGui::SameLine();
+    }
+    ImGui::TextUnformatted(t.text.c_str());
+    y += ImGui::GetWindowHeight() + 6;
+    ImGui::End();
+    ImGui::PopStyleVar();
+  }
+}
+
 struct UiState {
   std::map<std::string, int> next;   // downloaded plugins' "load next launch", read when the overlay opens
   std::map<std::string, std::vector<char>> text;   // edit buffers for text settings, by plugin/key
@@ -305,7 +367,21 @@ bool setting_widget(pp::Plugin& p, pp::Setting& s) {
         if (ImGui::Selectable(s.option_labels[i].c_str(), i == v)) { s.num = i; s.text = s.options[i]; changed = commit = true; }
       ImGui::EndCombo();
     }
-  } else {   // text, key
+  } else if (s.type == "key") {
+    static std::string waiting;   // plugin/key of the setting capturing a key
+    std::string me = p.id + "/" + s.key;
+    if (waiting == me && !g_capturing.load()) {   // the window thread caught a key for us
+      int vk = g_captured.exchange(0);
+      if (vk) { s.text = vk < 0 ? std::string() : pp::key_name(vk); commit = true; }
+      waiting.clear();
+    }
+    std::string shown = waiting == me ? "Press a key... (Esc: none)" : s.text.empty() ? "None" : s.text;
+    if (ImGui::Button((shown + "###bind").c_str(), ImVec2(280, 0))) {
+      waiting = me; g_captured.store(0); g_capturing.store(true);
+    }
+    ImGui::SameLine();
+    ImGui::TextUnformatted(label);
+  } else {   // text
     auto& buf = ui.text[p.id + "/" + s.key];
     if (buf.empty()) { buf.assign(256, 0); std::snprintf(buf.data(), buf.size(), "%s", s.text.c_str()); }
     ImGui::SetNextItemWidth(280);
@@ -477,6 +553,7 @@ void render(IDXGISwapChain* raw) {
   { std::lock_guard<std::mutex> lock(g_msg_mutex); msgs.swap(g_msgs); }
   std::vector<pp::HudCmd> hud = pp::hud_latest();
   bool toast = GetTickCount64() - g.started < 7000;
+  if (!toast) { std::lock_guard<std::mutex> lock(pp::mutex()); toast = !pp::toasts().empty(); }
   if (!g_open.load() && !ui.was_open && hud.empty() && !toast) return;   // nothing to draw: leave the frame alone
 
   for (auto& m : msgs) ImGui_ImplWin32_WndProcHandler(g_hwnd, m.m, m.w, m.l);
@@ -490,6 +567,7 @@ void render(IDXGISwapChain* raw) {
   ImGui::NewFrame();
   draw_hud(hud);
   draw_toast(loaded);
+  draw_plugin_toasts();
   draw_window();
   ImGui::Render();
 
@@ -571,6 +649,7 @@ LRESULT CALLBACK dummy_proc(HWND h, UINT m, WPARAM w, LPARAM l) { return DefWind
 }  // namespace
 
 namespace overlay {
+bool is_open() { return g_open.load(); }
 void install() {
   static std::atomic<bool> done{false};
   if (done.exchange(true)) return;

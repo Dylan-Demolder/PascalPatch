@@ -111,6 +111,21 @@ typedef struct pp_host {
     void (*hud_text)(float x, float y, uint32_t rgba, float size, const char *text);
     void (*hud_rect)(float x0, float y0, float x1, float y1, uint32_t rgba, float rounding, int filled);
     void (*hud_circle)(float x, float y, float radius, uint32_t rgba, int filled);
+
+    /* ---- Since PascalPatch 0.3 (check PP_HOST_HAS). ---- */
+
+    /* A short message in a bubble at the top of the screen for a few seconds, shown even with
+     * the overlay closed: "Infinite shield on". Newer messages replace older ones. */
+    void (*toast)(const char *plugin, const char *text);
+    /* Hotkeys. True while the key with Windows virtual-key code `vk` is held, the game window
+     * has focus and the F2 overlay is closed (so typing in the overlay never triggers plugins).
+     * A "key" setting's setting_number is its virtual-key code (0 when unbound). */
+    int (*key_down)(int vk);
+    /* True while the F2 overlay is open: a good time for a plugin to stop reacting to input. */
+    int (*overlay_open)(void);
+    /* HUD text with a dark outline, readable over any stage. `align`: 0 left, 1 centred on x,
+     * 2 right-aligned to x. */
+    void (*hud_label)(float x, float y, uint32_t rgba, float size, int align, const char *text);
 } pp_host;
 
 /* True when `host` serves `field` (the runtime may be older than this header). */

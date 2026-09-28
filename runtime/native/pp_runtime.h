@@ -10,7 +10,7 @@
 
 namespace pp {
 
-constexpr const char* VERSION = "0.2.0";
+constexpr const char* VERSION = "0.3.0";
 
 struct Setting {
   std::string key, label, type = "bool", help;   // type: bool int float choice text
@@ -32,7 +32,18 @@ struct HudCmd {
   uint32_t rgba;
   bool filled;
   std::string text;
+  uint8_t align = 0;      // text: 0 left, 1 centre, 2 right
+  bool outline = false;   // text: dark outline (hud_label)
 };
+
+struct Toast {
+  std::string plugin, text;
+  uint64_t shown = 0;   // GetTickCount64 when it was posted
+};
+
+// Key names for "key" settings ("F5", "P", "Numpad4"); 0 / "" for none.
+int key_vk(const std::string& name);
+std::string key_name(int vk);
 
 std::mutex& mutex();
 std::vector<Plugin>& plugins();            // in load order
@@ -47,6 +58,7 @@ bool next_launch(const std::string& id, bool* enabled);
 std::vector<HudCmd>& hud_building();        // sim thread only
 void hud_publish();
 std::vector<HudCmd> hud_latest();
+std::deque<Toast>& toasts();                // caller holds mutex(); newest last
 
 void log(const char* fmt, ...);
 std::string settings_dir();
@@ -55,4 +67,5 @@ std::string settings_dir();
 
 namespace overlay {
 void install();   // hooks presentation once the port has a window; safe to call more than once
+bool is_open();   // the F2 window is showing
 }
