@@ -98,6 +98,27 @@
           "install": {"enum": ["replace", "new"], "default": "replace", "description": "replace: the character takes the slot's place; new: it is added to the game and the select screen as a new fighter built on the slot's fighter, which stays (at most 40)"}
         }
       }
+    },
+    "quick_match": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "the match the game boots straight into (the quick-match plugin)",
+      "properties": {
+        "p1": {"$ref": "#/$defs/quick_match_fighter"},
+        "p2": {"$ref": "#/$defs/quick_match_fighter"},
+        "p2_player": {"enum": ["human", "none", "cpu1", "cpu2", "cpu3", "cpu4", "cpu5", "cpu6", "cpu7", "cpu8", "cpu9"]},
+        "stage": {"enum": ["fd", "bf", "ys", "fod", "ps", "dl"]},
+        "rules": {"enum": ["endless", "stock4", "stock1"]}
+      }
+    }
+  },
+  "$defs": {
+    "quick_match_fighter": {
+      "description": "a fighter slot name (fox, marth, ...) or a character number 0-25",
+      "oneOf": [
+        {"enum": ["captain-falcon", "donkey-kong", "fox", "mr-game-and-watch", "kirby", "bowser", "link", "luigi", "mario", "marth", "mewtwo", "ness", "peach", "pikachu", "ice-climbers", "jigglypuff", "samus", "yoshi", "zelda", "sheik", "falco", "young-link", "dr-mario", "roy", "pichu", "ganondorf"]},
+        {"type": "integer", "minimum": 0, "maximum": 25}
+      ]
     }
   }
 }
