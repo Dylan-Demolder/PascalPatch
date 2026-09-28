@@ -5,6 +5,8 @@ from urllib.request import urlopen
 
 from pascalpatch.app.server import App, Handler
 from pascalpatch.errors import PascalPatchError
+from pascalpatch.mods import create_profile
+from pascalpatch.native import release_args
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -25,7 +27,9 @@ class AppServerTests(unittest.TestCase):
             return json.loads(r.read())
 
     def test_profile_mods_lists_the_catalog(self):
-        body = self.get("/api/profile-mods?id=vanilla")
+        create_profile(REPO, "test-catalog", "Test", "melee.iso")
+        self.addCleanup((REPO / "profiles" / "test-catalog.json").unlink)
+        body = self.get("/api/profile-mods?id=test-catalog")
         self.assertTrue(body["catalog"], "the roadmap catalog is never empty")
         self.assertTrue(all(isinstance(e["id"], str) and "name" in e for e in body["catalog"]))
         self.assertIsInstance(body["enabled"], list)
@@ -48,6 +52,25 @@ class AppServerTests(unittest.TestCase):
                 app.save_settings({"port": str(game / wrong)})
         self.assertEqual(app.save_settings({"port": str(game / "melee_port.exe")})["port"], str(game / "melee_port.exe"))
         self.assertEqual(self.get("/api/status")["melee_unlocked"], "0.8.0", "read from the unzipped release's folder name")
+
+    def test_a_release_launch_gets_the_release_folders_but_not_the_slippi_login(self):
+        game = Path(self.tmp.name) / "MeleeUnlocked-0.8.0"; (game / "Sys").mkdir(parents=True)
+        (game / "melee_port.exe").write_bytes(b"MZ")
+        self.assertEqual(release_args(game / "melee_port.exe", self.tmp.name), [], "no Sys/codehandler.bin: a source build")
+        (game / "Sys" / "codehandler.bin").write_bytes(b"\0")
+        args = release_args(game / "melee_port.exe", self.tmp.name)
+        flags = dict(zip(args[::2], args[1::2]))
+        self.assertEqual(flags["--sys-dir"], str(game / "Sys"))
+        self.assertEqual(flags["--settings-path"], str(game / "port-settings.ini"))
+        self.assertEqual(Path(flags["--card-dir"]), Path(self.tmp.name).resolve() / "memory-card" / "CardA",
+                         "PascalPatch's own memory card, never the player's real save")
+        self.assertNotIn("--user-dir", flags)
+        self.assertNotIn("--settings-path", release_args(game / "melee_port.exe", self.tmp.name, ["--settings-path=mine.ini"]))
+
+    def test_a_new_install_is_told_to_make_a_profile(self):
+        root = Path(self.tmp.name) / "install"; root.mkdir()
+        problems = App(root, Path(self.tmp.name) / "data").status()["problems"]
+        self.assertTrue(any("Make a profile" in p for p in problems), problems)
 
 
 if __name__ == "__main__":

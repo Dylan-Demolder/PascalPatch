@@ -121,6 +121,7 @@ def read_profile(root, profile_id):
 
 def write_profile(root, profile_id, data):
     path = profile_path(root, profile_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return path
 

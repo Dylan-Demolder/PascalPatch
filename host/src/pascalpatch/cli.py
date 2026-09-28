@@ -7,7 +7,7 @@ from .discovery import find_dolphin
 from .errors import PascalPatchError
 from .launcher import launch
 from .plugin_store import PluginStore
-from .native import find_melee_port, find_pascalpatch_launcher, native_command, stage_quick_match
+from .native import find_melee_port, find_pascalpatch_launcher, native_command, release_args, stage_quick_match
 
 def _root(args): return Path(args.root).expanduser().resolve()
 def _profile(args): return _root(args)/"profiles"/(args.id+".json")
@@ -45,7 +45,7 @@ def cmd_launch(args):
   mods=prepare_run_mods(store.root,p.data["id"],Path(output).parent.parent/"mods",p.data.get("quick_match"))
   # Always through the PascalPatch launcher: the unmodified port runs with the runtime injected (offline guard, plugins).
   exe=find_melee_port(args.port); launcher=find_pascalpatch_launcher(store.root,args.launcher)
-  cmd=native_command(exe,output,args.port_arg,mods=mods,launcher=launcher,sandbox=store.root/"sandbox"/p.data["id"],log=log.with_suffix(".pascalpatch.log"),settings=PluginStore(store.root).settings_dir)
+  cmd=native_command(exe,output,[*release_args(exe,store.root,args.port_arg),*args.port_arg],mods=mods,launcher=launcher,sandbox=store.root/"sandbox"/p.data["id"],log=log.with_suffix(".pascalpatch.log"),settings=PluginStore(store.root).settings_dir)
   if args.dry_run: print(json.dumps({"command":cmd,"log":str(log),"compatibility":p.compatibility,"runtime":"native"},indent=2)); return 0
   # The port resolves scripts, settings and melee_port.log relative to its working directory.
   result=launch(exe,output,log,wait=args.wait,timeout=args.timeout,command=cmd,cwd=args.port_cwd); print(f"launched {p.data['id']} with {exe}; log={log}; pid={result.pid}" + (f"; exit={result.exit_code}" if result.exit_code is not None else ""))

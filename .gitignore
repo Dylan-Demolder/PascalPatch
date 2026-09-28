@@ -8,3 +8,4 @@ __pycache__/
 
 profiles/demo-runtime.json
 profiles/custom-roster.json
+dist/

@@ -6,6 +6,8 @@ PascalPatch is a separate host-side project for building isolated Super Smash Br
 
 PascalPatch is a mod loader for [melee-unlocked](https://github.com/hero88go/melee-unlocked), the native Windows port of Melee 1.02. It works like BakkesMod: the game is never modified. `pascalpatch-launch.exe` starts the port and injects `pascalpatch_runtime.dll`, which loads plugins into the running game. Everything is offline: never Slippi, never netplay.
 
+**Play:** download `PascalPatch-<version>-windows.zip` from the [latest release](https://github.com/Dylan-Demolder/PascalPatch/releases/latest), unzip it, and double-click `pascalpatch.cmd`. It includes Python and the built runtime: no compiler, no installs.
+
 **New here?** [The PascalPatch guide](docs/user-guide.md) covers setup, playing, every plugin and hotkey, practice recipes, Character Studio and troubleshooting.
 
 **Build your own plugin:** PascalPatch is community developed. Start with [docs/plugins](docs/plugins/README.md): a 15-minute tutorial from the SDK template to your plugin in game, the full API reference, and how to get it listed on the plugin site.

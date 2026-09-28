@@ -27,7 +27,7 @@ from .. import __version__
 from ..errors import PascalPatchError
 from ..gui import GuiController
 from ..mods import CatalogError, create_profile, delete_profile, set_enabled
-from ..native import PORT_NAMES, check_melee_port, find_melee_port, find_pascalpatch_launcher
+from ..native import BUNDLED_BIN, PORT_NAMES, check_melee_port, find_melee_port, find_pascalpatch_launcher
 from ..plugin_store import SITE_URL, PluginStore
 
 WEB = Path(__file__).with_name("web")
@@ -142,15 +142,28 @@ class App:
                 if m:
                     mu_version = m.group(1); break
         profiles = self.gui.list_profiles()
+        if not profiles:
+            problems.append("Make a profile: it only needs your Melee disc (NTSC 1.02 ISO). Open Profiles, then New profile.")
+        for row in profiles:
+            try:
+                disc = json.loads((self.root / "profiles" / f"{row.id}.json").read_text(encoding="utf-8")).get("base_game", "")
+            except (OSError, ValueError):
+                continue
+            if disc and not Path(disc).is_file():
+                problems.append(f"The profile {row.name} cannot find its Melee disc ({disc}). Open Profiles to delete it, "
+                                "or make a new profile with your disc.")
         return {"version": __version__, "root": str(self.root), "data": str(self.data), "port": port,
                 "melee_unlocked": mu_version, "launcher": launcher, "profiles": len(profiles),
-                "plugins": len(self.plugins().installed()) + len(self.builtin()), "problems": problems,
+                "plugins": len({p["id"] for p in self.plugins().installed()} | {p["id"] for p in self.builtin()}), "problems": problems,
                 "running": [j.as_dict() for j in self.jobs.values() if j.exit is None]}
 
     def builtin(self):
-        folder = self.data / "native-plugins"
+        dlls = {}
+        for folder in (self.data / "native-plugins", BUNDLED_BIN):   # a release's bin/ wins over older local builds
+            for dll in folder.glob("*.dll") if folder.is_dir() else []:
+                dlls[dll.stem] = dll
         out = []
-        for dll in sorted(folder.glob("*.dll")) if folder.is_dir() else []:
+        for dll in (dlls[k] for k in sorted(dlls)):
             if dll.stem.endswith("_runtime"):
                 continue
             m = {}

@@ -39,56 +39,58 @@ Everything is offline. PascalPatch never uses Slippi or netplay, and it blocks e
 - A Windows 10 or 11 PC (64-bit).
 - **Your own Melee disc image**: NTSC 1.02 (GALE01 revision 2), as an `.iso`. PascalPatch never changes it and never includes any game data.
 - **Melee Unlocked**: download `MeleeUnlocked-<version>-win64.zip` from its [releases](https://github.com/hero88go/melee-unlocked/releases) and unzip it anywhere. Version 0.7 or newer; 0.8 is the latest.
-- **Python 3.11 or newer**, from python.org. Tick "Add python.exe to PATH" when installing.
-- **Git**, to download PascalPatch.
-- **Visual Studio 2022 Build Tools**, with "Desktop development with C++", and **CMake**. These build PascalPatch's in-game runtime. You only need them for setup and updates.
+
+That's all. PascalPatch brings its own Python, and its in-game runtime comes built.
 
 ### Install PascalPatch
+
+1. Download **`PascalPatch-<version>-windows.zip`** from PascalPatch's [latest release](https://github.com/Dylan-Demolder/PascalPatch/releases/latest).
+2. Unzip it anywhere, for example next to your Melee Unlocked folder.
+3. Open the `PascalPatch-<version>` folder and double-click **`pascalpatch.cmd`**.
+
+Windows may say it protected your PC, because the download is new and not signed by a company. Click **More info**, then **Run anyway**. You only see this once.
+
+The app opens in its own window. A console window opens with it: that is the app's server, and closing it closes the app. Your settings, plugins and logs live in PascalPatch's data folder (`%USERPROFILE%\.local\share\pascalpatch`), not in the unzipped folder.
+
+### Open the app
+
+The **Play** page lists what is left to set up, with a button for each step. On first run:
+
+1. **Settings > melee_port.exe**: click **Browse…** and pick `melee_port.exe` in your Melee Unlocked folder, then **Save**. Leave **Game folder** empty.
+2. **Profiles > New profile**: give it a name and **Browse…** to your Melee `.iso`. See [Play](#play).
+
+Melee Unlocked 0.8 has several programs in its folder. PascalPatch works with `melee_port.exe`, the Static Recomp build, and with `melee_port_compat.exe`, the same game built for older processors. `melee_source.exe` is the new Source Port, which is built for Slippi online and cannot load plugins, and `MeleeUnlockedLauncher.exe` is Melee Unlocked's own launcher. If you pick one of those, Settings tells you which file to choose.
+
+The game uses Melee Unlocked's own graphics and controller settings (its `port-settings.ini`), so anything you set in Melee Unlocked's launcher carries over. It does **not** use your Melee Unlocked save: PascalPatch gives the game a memory card of its own, so plugins never touch your real save.
+
+When everything is ready the status list reads: Melee Unlocked found (with its version), PascalPatch runtime ready, offline guard on, and the number of plugins available.
+
+### Update
+
+Download the new release zip and unzip it in place of the old folder. Your settings, profiles' data, plugins and saves are in the data folder, so nothing is lost. Profiles themselves are in the PascalPatch folder's `profiles` folder: copy it across (or unzip over the old folder) to keep them.
+
+Plugins from Browse update from the app: when a new version is out, its card on Browse shows **Update to** the new version.
+
+### From source
+
+To work on PascalPatch itself, clone the repository instead. You then need Python 3.11 or newer, Git, and Visual Studio 2022 Build Tools (with "Desktop development with C++") and CMake to build the runtime:
 
 ```bash
 git clone https://github.com/Dylan-Demolder/PascalPatch
 ```
 
-Then build the in-game runtime (the launcher and the DLL that loads plugins) from inside the `PascalPatch` folder:
-
 ```bash
 python tooling/native/build_plugins.py
 ```
 
-This takes a few minutes the first time. It puts everything in PascalPatch's data folder (`%USERPROFILE%\.local\share\pascalpatch`).
-
-### Open the app
-
-Double-click **`pascalpatch.cmd`** in the PascalPatch folder, or run it from a terminal. The app opens in its own window.
-
-On first run, go to **Settings**:
-
-1. **melee_port.exe**: click **Browse…** and pick `melee_port.exe` in your Melee Unlocked folder.
-2. **Game folder**: leave it empty to use the exe's folder, where Melee Unlocked keeps its settings and saves.
-3. **Save**.
-
-Melee Unlocked 0.8 has several programs in its folder. PascalPatch works with `melee_port.exe`, the Static Recomp build. `melee_source.exe` is the new Source Port, which is built for Slippi online and cannot load plugins, and `MeleeUnlockedLauncher.exe` is Melee Unlocked's own launcher. If you pick one of those, Settings tells you which file to choose. `melee_port_compat.exe` is the same game built for older processors; PascalPatch has not been tested with it yet.
-
-The **Play** page shows a status list. When everything is ready it reads: Melee Unlocked found, PascalPatch runtime built, offline guard on, and the number of plugins available.
-
-### Update
-
-```bash
-git pull
-```
-
-```bash
-python tooling/native/build_plugins.py
-```
-
-Plugins from Browse update from the app: when a new version is out, its card on Browse shows **Update to** the new version.
+Run the second command inside the `PascalPatch` folder, and again after each `git pull`. `pascalpatch.cmd` then uses your installed Python. `python tooling/release/package.py` builds the release zip.
 
 ## Play
 
 1. **Make a profile** (once): **Profiles > New profile**. Give it a name and **Browse…** to your Melee 1.02 `.iso`. A profile with no custom fighters is plain Melee plus your plugins.
 2. On the **Play** page, pick the profile and press **Play**.
 
-The very first time, Melee asks whether to create game data on its memory card. Choose **Yes**; it never asks again.
+The very first time, Melee asks whether to create game data on PascalPatch's memory card. Choose **Yes**; it never asks again.
 
 Play prepares the profile (its fighters and plugins), then starts the game. **Activity** shows the progress. **Build** does only the preparing, which is handy for checking a profile after changing its fighters.
 
@@ -309,10 +311,12 @@ The built game for each profile lives in PascalPatch's data folder, never beside
 | Problem | Try |
 |---|---|
 | The Play page says Melee Unlocked is missing | Settings: **Browse…** to `melee_port.exe` in your Melee Unlocked folder. |
-| The Play page says the runtime is not built | Run `python tooling/native/build_plugins.py` in the PascalPatch folder. |
+| The Play page says the runtime is not built | The release zip includes it: check the `bin` folder was unzipped too. From source, run `python tooling/native/build_plugins.py` in the PascalPatch folder. |
+| The game stops at boot with "OSPanic" in its log | Update PascalPatch: versions before 0.5 did not pass Melee Unlocked's release folders to the game. |
+| `pascalpatch.cmd` says it needs Python | Unzip the whole download first: opening it from inside the zip leaves its own Python behind. |
 | The game starts, but F2 does nothing | Melee Unlocked must use Direct3D 12 (F1 > Graphics backend). Click the game window so it has focus. |
 | A plugin does nothing | Is it switched on (Installed)? Are you in a match? Check its F2 tab for "failed to load" and its log. |
-| A plugin says it needs a newer PascalPatch | Update: `git pull`, then rebuild the runtime. |
+| A plugin says it needs a newer PascalPatch | Download the latest release (from source: `git pull`, then rebuild the runtime). |
 | A hotkey does nothing | The F2 window must be closed and the game window focused. Check the key in the plugin's F2 tab for a clash with another plugin. |
 | The dummy does not move | Its port must be a **human** player (Quick Match: "Player 2 is: a human player"). |
 | A savestate won't load | States only load into the match they were saved in. |

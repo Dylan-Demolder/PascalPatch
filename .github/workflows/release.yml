@@ -1,0 +1,57 @@
+name: release
+# Builds the player download (tooling/release/package.py) on a clean Windows runner and attaches it
+# to the tag's GitHub release, as a draft when the release does not exist yet: a maintainer reads
+# the notes and publishes it.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and attach to, such as v0.5.0 (it must exist)"
+        required: true
+permissions:
+  contents: write
+jobs:
+  windows-zip:
+    runs-on: windows-2022
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Host tests
+        shell: bash
+        run: PYTHONPATH=host/src python -m unittest discover -s host/tests -q
+      - name: Check the tag is this version
+        shell: bash
+        run: |
+          ver=$(sed -n 's/.*VERSION = "\([^"]*\)".*/\1/p' runtime/native/pp_runtime.h)
+          test "v$ver" = "$TAG" || { echo "tag $TAG but the runtime says $ver"; exit 1; }
+      - name: Build the zip
+        shell: bash
+        run: python tooling/release/package.py --out dist
+      - name: Smoke-test the zip's own Python
+        shell: pwsh
+        run: |
+          Expand-Archive dist/PascalPatch-*-windows.zip -DestinationPath smoke
+          $root = (Get-ChildItem smoke)[0].FullName
+          & "$root/python/python.exe" -m pascalpatch.cli --root $root --help | Out-Null
+          if ($LASTEXITCODE) { throw "the bundled Python cannot run PascalPatch" }
+          foreach ($f in "bin/pascalpatch-launch.exe", "bin/pascalpatch_runtime.dll", "bin/quick-match.dll", "pascalpatch.cmd") {
+            if (-not (Test-Path "$root/$f")) { throw "missing $f" }
+          }
+      - name: Attach to the release
+        shell: bash
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --draft --verify-tag --title "PascalPatch ${TAG#v}" --notes "Draft: write the notes, then publish."
+          gh release upload "$TAG" dist/PascalPatch-*-windows.zip dist/PascalPatch-*-windows.zip.sha256 --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PascalPatch-windows
+          path: dist/

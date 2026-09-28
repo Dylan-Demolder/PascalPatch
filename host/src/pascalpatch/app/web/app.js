@@ -81,7 +81,7 @@ async function pagePlay(root) {
     onclick: async () => { const j = await run(() => api.post('/api/build', { id: S.selected }), 'Building…'); watchJob(j.id); } }, 'Build');
   const checks = h('div', { class: 'checks' },
     [[!!st.port, 'Melee Unlocked', st.port ? `${st.melee_unlocked ? 'v' + st.melee_unlocked + ' · ' : ''}${st.port}` : 'melee_port.exe not found'],
-     [!!st.launcher, 'PascalPatch runtime', st.launcher ? 'built' : 'not built'],
+     [!!st.launcher, 'PascalPatch runtime', st.launcher ? 'ready' : 'not built'],
      [true, 'Offline guard', 'network refused in game, Slippi login hidden'],
      [st.plugins > 0, 'Plugins', `${st.plugins || 0} available`]].map(([ok, name, text]) =>
       h('div', { class: `check ${ok ? 'ok' : 'bad'}` }, h('b', {}, ok ? '✓' : '✕'), h('div', {}, h('strong', {}, name), h('div', { class: 'pp-dim' }, text)))));
@@ -106,6 +106,8 @@ function setupSteps(problems) {
       } }, 'Copy'));
     } else if (/melee_port|Settings/.test(text)) {
       action = h('a', { class: 'pp-btn pp-btn--sm', href: '#settings' }, 'Open Settings');
+    } else if (/profile/i.test(text)) {
+      action = h('a', { class: 'pp-btn pp-btn--sm', href: '#profiles' }, 'Open Profiles');
     }
     return h('li', {}, h('div', {}, text), action);
   };

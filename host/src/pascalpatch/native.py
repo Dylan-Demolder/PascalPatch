@@ -148,15 +148,24 @@ def _checked_file(value, expected, sidecar_suffix, character_id, where, hsd=True
 
 NATIVE_PLUGIN_ENV = "PASCALPATCH_NATIVE_PLUGINS"
 LEGACY_PLUGIN_ENV = "MELEEMOD_NATIVE_PLUGINS"   # the name before the MeleeMod -> PascalPatch rename
+# A release download ships the runtime and the built-in plugins prebuilt in <PascalPatch>/bin, so
+# players need no compiler; a source checkout has no bin/ and builds into <data>/native-plugins.
+BUNDLED_BIN = Path(__file__).resolve().parents[3] / "bin"
 
 
 def _plugin_env():
     return os.environ.get(NATIVE_PLUGIN_ENV) or os.environ.get(LEGACY_PLUGIN_ENV)
 
 
+def native_folders(data_root):
+    """Where built native binaries are looked for, first match wins: $PASCALPATCH_NATIVE_PLUGINS,
+    a release's bin/, then <data>/native-plugins."""
+    return [f for f in (_plugin_env(), BUNDLED_BIN if BUNDLED_BIN.is_dir() else None, Path(data_root) / "native-plugins") if f]
+
+
 def find_native_plugin(name, data_root):
-    """A built native plugin DLL: $PASCALPATCH_NATIVE_PLUGINS/<name>.dll or <data>/native-plugins/<name>.dll."""
-    for folder in (_plugin_env(), Path(data_root) / "native-plugins"):
+    """A built native plugin DLL, from the first of native_folders() that has <name>.dll."""
+    for folder in native_folders(data_root):
         if folder and (Path(folder) / f"{name}.dll").is_file():
             return (Path(folder) / f"{name}.dll").resolve()
     raise DiscoveryError(f"native plugin {name}.dll not built; run tooling/native/build_plugins.py --data {data_root}")
@@ -257,13 +266,36 @@ def find_melee_port(explicit=None):
 
 def find_pascalpatch_launcher(data_root, explicit=None):
     """pascalpatch-launch.exe with pascalpatch_runtime.dll beside it (built by tooling/native/build_plugins.py)."""
-    for folder in (explicit, _plugin_env(), Path(data_root) / "native-plugins"):
+    for folder in ([explicit] if explicit else []) + native_folders(data_root):
         # Builds from before the rename have meleemod-launch.exe + meleemod_runtime.dll; they still work.
         for exe_name, dll in (("pascalpatch-launch.exe", "pascalpatch_runtime.dll"), ("meleemod-launch.exe", "meleemod_runtime.dll")):
             exe = Path(folder) / exe_name if folder else None
             if exe and exe.is_file() and (exe.parent / dll).is_file():
                 return exe.resolve()
     raise DiscoveryError(f"pascalpatch-launch.exe not built; run tooling/native/build_plugins.py --data {data_root}")
+
+
+def release_args(port, data_root, given=()):
+    """The folder flags an unzipped Melee Unlocked release needs, as its own launcher passes them.
+
+    A release keeps Slippi's system files in Sys/ beside melee_port.exe; without --sys-dir the game
+    looks for a source checkout's port/slippi_sys and stops at boot. The game shares the release's
+    port-settings.ini (graphics, controllers), but saves to PascalPatch's own memory card, so
+    plugins never touch the player's real save, and gets no --user-dir, so the Slippi login stays
+    hidden. Flags already in ``given`` (the user's port arguments) are left to the user.
+    """
+    folder = Path(port).parent
+    if not (folder / "Sys" / "codehandler.bin").is_file():
+        return []   # a source build: its defaults are right
+    given = {str(a).split("=", 1)[0] for a in given}
+    card = Path(data_root).resolve() / "memory-card" / "CardA"
+    out = []
+    for flag, value in (("--sys-dir", folder / "Sys"), ("--settings-path", folder / "port-settings.ini"), ("--card-dir", card)):
+        if flag not in given:
+            out += [flag, str(value)]
+    if "--card-dir" not in given:
+        card.mkdir(parents=True, exist_ok=True)
+    return out
 
 
 def native_command(port, iso, extra_args=(), mods=None, launcher=None, sandbox=None, log=None, settings=None):
