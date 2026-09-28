@@ -49,6 +49,15 @@ Useful fighter fields:
 | `PP_FT_SINCE_LR` | u8 | frames since L/R/Z was pressed: the L-cancel timer |
 | `PP_FT_HITBOXES` | 4 × HitCapsule | active hitboxes (`PP_HIT_*`) |
 | `PP_FT_HIT_SOURCE` | s32 | port of whoever hit it last |
+| `PP_FT_HURTBOXES`, `PP_FT_HURT_COUNT` | FighterHurtCapsule[], u8 | its hurtboxes (`PP_HURT_*`) |
+| `PP_FT_INTANGIBLE`, `PP_FT_INVINCIBLE` | s32 | frames of intangibility or invincibility left (ledge grab, respawn) |
+| `PP_FT_MOVE_HURT` | s32 | the current move's own body state: `PP_HURT_NORMAL`, `_INVINCIBLE`, `_INTANGIBLE` |
+| `PP_FT_SINCE_TECH`, `PP_FT_TECH_GAP` | u8 | the tech timer: frames since L/R, and between the last two presses |
+| `PP_FT_WALK_MAX`, `PP_FT_TRACTION`, `PP_FT_GRAVITY`, `PP_FT_FALL_SPEED`, `PP_FT_FASTFALL_SPEED`, `PP_FT_WEIGHT`, `PP_FT_LANDING_LAG`, `PP_FT_MAX_JUMPS` | f32, s32 | the fighter's attributes |
+
+The raw controller, before the fighter's dead zones, is `PP_PAD_STATUS + PP_PAD_STRIDE * port`: `PP_PAD_BUTTONS`, `PP_PAD_PRESSED`, `PP_PAD_STICK`, `PP_PAD_CSTICK`, `PP_PAD_ANALOG_L`, `PP_PAD_ANALOG_R`.
+
+The stage: `pp_stage_kind` (`PP_GR_BATTLEFIELD`, ...), `pp_stage_blast_zones` and `pp_stage_floor_edge`. The camera, for drawing at world positions, is in `pascalpatch/camera.h` (see [drawing on screen](hud.md#world-positions-on-screen)).
 
 A Vec3 is three floats: `rdf32(fp + PP_FT_POS)`, `+ 4`, `+ 8`.
 
@@ -79,12 +88,12 @@ To find a state you do not know, show `pp_state_name(kind, state)` on screen whi
 | Major | Mode |
 |---|---|
 | 0x01 | the main menus |
-| 0x02 | VS: minor 0 character select, 1 stage select, 2 the match, then results |
-| 0x0E | Quick Match (the game's debug VS): minor 1 the match, 3 results |
-| 0x1C | Training mode: minor 2 the match |
+| 0x02 (`PP_SCENE_VS`) | VS: minor 0 character select, 1 stage select, 2 the match, then results |
+| 0x0E (`PP_SCENE_DEBUG_VS`) | Quick Match (the game's debug VS): minor 1 the match, 3 results |
+| 0x1C (`PP_SCENE_TRAINING`) | Training mode: minor 2 the match |
 | 0x18 | the title screen and its demo |
 
-Use `pp_in_match` rather than testing these yourself.
+Use `pp_in_match` rather than testing these yourself. `pp_scene_plays_matches(major)` is true for every mode whose minor scenes 0 and 1 are the character and stage selects, which is how Unlock All finds the select screens.
 
 To act once when a match starts or ends, watch `pp_in_match` change from one frame to the next:
 
@@ -113,7 +122,7 @@ The decomp has every struct in the game. When you need a field `melee.h` does no
 
 1. Find it in [doldecomp/melee](https://github.com/doldecomp/melee): `src/melee/ft/types.h` for the fighter, `src/melee/lb/types.h` for hit capsules, `src/melee/gm/types.h` for game modes, and `src/melee/gr/` for stages.
 2. Its offset is in the struct's comments, or work it out from the layout.
-3. Define it in your plugin with a comment naming the struct and field, as the first-party plugins do. The hitbox viewer, for example, reads the camera with `GAME_CAMERA = 0x80452C68 // Camera game_camera`.
+3. Define it in your plugin with a comment naming the struct and field, for example `constexpr uint32_t FT_X2222 = 0x2222; // Fighter.x2222_flag`.
 4. Check it in game by logging it before you build on it.
 
-If the field is generally useful, send a pull request adding it to `melee.h`.
+Then send a pull request adding it to `melee.h`, so the next plugin does not have to find it again. The first-party plugins follow the same rule: they build against the SDK alone, and anything more than one plugin reads goes into the SDK first. What they still define themselves is internal to one plugin, such as Extra Fighters' select-screen hooks.

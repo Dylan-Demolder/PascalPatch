@@ -9,7 +9,7 @@
 // they are read, and put back as they were once the match starts. Nothing is written to the
 // memory card unless the game itself saves. Offline only, like every native plugin.
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "pascalpatch/plugin.h"
+#include "pascalpatch/melee.h"
 
 namespace {
 
@@ -17,7 +17,6 @@ constexpr uint32_t UNLOCKED_CHARACTERS = 0x8045BF28;   // NTSC 1.02, u16 bit fie
 constexpr uint16_t ALL_CHARACTERS = 0x07FF;              // Dr. Mario ... Young Link, Mr. Game & Watch
 constexpr uint32_t UNLOCKED_STAGES = 0x8045BF2A;       // u16 bit field (NUM_UNLOCKABLE_STAGES bits)
 constexpr uint16_t ALL_STAGES = 0x07FF;                  // the 11 unlockable stages
-constexpr uint32_t GAME_MODE = 0x80479D30;             // routingInfo: curr_mode, ..., curr_state_id at +3
 constexpr uint8_t STATE_CSS = 0, STATE_SSS = 1;
 
 const pp_host* H = nullptr;
@@ -38,10 +37,8 @@ Flags g_chars{UNLOCKED_CHARACTERS, ALL_CHARACTERS}, g_stage_flags{UNLOCKED_STAGE
 
 // the modes whose minor scenes 0 and 1 are a character select and a stage select
 bool selecting() {
-  uint8_t mode = H->rd8(GAME_MODE), state = H->rd8(GAME_MODE + 3);
-  bool match_mode = mode == 0x02 || mode == 0x03 || mode == 0x04 || mode == 0x05 || mode == 0x0F ||
-                    (mode >= 0x10 && mode <= 0x13) || mode == 0x1B || mode == 0x1C;
-  return match_mode && (state == STATE_CSS || state == STATE_SSS);
+  uint32_t mode = pp_scene_major(H), state = pp_scene_minor(H);
+  return pp_scene_plays_matches(mode) && (state == STATE_CSS || state == STATE_SSS);
 }
 
 bool g_settings = false;     // the runtime serves settings (PascalPatch 0.2+)

@@ -30,12 +30,11 @@ constexpr const char* ID = "wavedash-trainer";
 constexpr float AIRDODGE_SPEED = 3.1f, AIRDODGE_DECAY = 0.9f, STICK_DEADZONE = 0.28f, FAST_FRICTION = 2.0f;
 constexpr float BEST_DEG = 16.71f;                                   // asin(0.2875): the first stick notch past 0.28
 constexpr float BEST_SPEED = AIRDODGE_SPEED * 0.95777f * AIRDODGE_DECAY;   // frame 1 at that angle: 2.67
-constexpr uint32_t FT_TRACTION = 0x128, FT_WALK_MAX = 0x118;       // co_attrs at fp+0x110
 constexpr int MAX_AIR = 8;            // airborne frames to wait for an air dodge
 constexpr int MAX_DODGE = 6;          // frames from the air dodge to the landing for it to count as a wavedash
 constexpr int GAP_WATCH = 40;         // frames after the landing lag in which a new jump counts as a chain
 constexpr int HISTORY = 16;
-constexpr uint32_t GOOD = 0x5BD68A, OK = 0xF2C200, BAD = 0xFF6B5E, INFO = 0xF2F4FA, DIM = 0x9FB4FF;
+constexpr uint32_t GOOD = PP_RGB_GOOD, OK = PP_RGB_WARN, BAD = PP_RGB_BAD, INFO = PP_RGB_TEXT, DIM = PP_RGB_DIM;
 constexpr uint32_t C_SQUAT = 0x8A93B8, C_AIR = 0xF2A444, C_LAG = 0x5B7BD6;
 
 const pp_host* H = nullptr;
@@ -124,7 +123,7 @@ void grade_early(Player& p) {
 
 void grade_landed(Player& p) {
   Attempt& a = p.cur;
-  float traction = H->rdf32(p.fp + FT_TRACTION), walk = H->rdf32(p.fp + FT_WALK_MAX);
+  float traction = H->rdf32(p.fp + PP_FT_TRACTION), walk = H->rdf32(p.fp + PP_FT_WALK_MAX);
   a.length = slide(a.speed, traction, walk);
   a.best = slide(BEST_SPEED, traction, walk);
   int pct = a.best > 0 ? (int)(100 * a.length / a.best + 0.5f) : 0;

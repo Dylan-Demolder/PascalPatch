@@ -1,12 +1,16 @@
 cmake_minimum_required(VERSION 3.20)
 project(pascalpatch_wavedash_trainer CXX)
 
-# NLOHMANN_JSON_INCLUDE is accepted (build_plugins.py passes it to every plugin) but unused.
-set(NLOHMANN_JSON_INCLUDE "" CACHE PATH "unused")
+# The PascalPatch SDK: the same headers community plugins build against. First-party plugins take
+# nothing else from this repository, so whatever they need from the game goes into the SDK first.
+set(PASCALPATCH_SDK "${CMAKE_CURRENT_SOURCE_DIR}/../../../sdk/include" CACHE PATH "folder containing pascalpatch/plugin.h")
+if(NOT EXISTS "${PASCALPATCH_SDK}/pascalpatch/plugin.h")
+  message(FATAL_ERROR "set PASCALPATCH_SDK to the folder containing pascalpatch/plugin.h")
+endif()
 
 add_library(wavedash-trainer SHARED wavedash_trainer.cpp)
 set_target_properties(wavedash-trainer PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON PREFIX "")
-target_include_directories(wavedash-trainer PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../../sdk/include")
+target_include_directories(wavedash-trainer PRIVATE "${PASCALPATCH_SDK}")
 if(MSVC)
   target_compile_options(wavedash-trainer PRIVATE /W4 /utf-8)
   set_property(TARGET wavedash-trainer PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")

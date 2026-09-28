@@ -6,11 +6,10 @@
 // regrab timer, stick and trigger, hitlag and hitstun. And a flash on the fighter the frame it can
 // act again after hitstun, landing lag, shield stun, a knockdown or its own move ("actionable").
 //
-// Fields are the decomp's Fighter struct (ft/types.h): x1990 counts timed intangibility down (ledge
-// grab, respawn), x1994 timed invincibility, x1988 is the current move's own hurtbox state.
+// Fighter fields and the camera are the SDK's (pascalpatch/melee.h, camera.h).
 // Needs PascalPatch 0.3; the flash is a ring on 0.3 and a filled glow on 0.4.
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "pascalpatch/melee.h"
+#include "pascalpatch/camera.h"
 
 #include <cmath>
 #include <cstdarg>
@@ -20,18 +19,7 @@ namespace {
 
 constexpr const char* ID = "info-display";
 
-constexpr uint32_t FT_MOVE_HURT = 0x1988;      // 0 normal, 1 invincible, 2 intangible (the move's own)
-constexpr uint32_t FT_TIMED_INTANG = 0x1990;   // s32 frames of intangibility left
-constexpr uint32_t FT_TIMED_INVINC = 0x1994;   // s32 frames of invincibility left
-constexpr uint32_t FT_WALLJUMPS = 0x1969;      // u8
-constexpr uint32_t FT_LANDING_LAG = 0x1F4;     // f32 normal_landing_lag (attributes): Landing is interruptible from there
-
-constexpr uint32_t GAME_CAMERA = 0x80452C68;
-constexpr uint32_t GOBJ_HSD_OBJ = 0x28;
-constexpr uint32_t COBJ_VIEWPORT = 0x0C, COBJ_NEAR = 0x38, COBJ_FOV = 0x40, COBJ_ASPECT = 0x44, COBJ_PROJ = 0x50,
-                   COBJ_VIEW = 0x54;
-
-constexpr uint32_t LABEL = 0x9FB4FF, VALUE = 0xF2F4FA, GOOD = 0x5BD68A, WARN = 0xF2C200, BAD = 0xFF6B5E;
+constexpr uint32_t LABEL = PP_RGB_DIM, VALUE = PP_RGB_TEXT, GOOD = PP_RGB_GOOD, WARN = PP_RGB_WARN, BAD = PP_RGB_BAD;
 constexpr int FLASH_FRAMES = 8;
 
 const pp_host* H = nullptr;
@@ -60,38 +48,6 @@ struct Fighter {
 };
 Fighter ft[4];
 
-struct Camera { float m[12]; float cot, aspect, near_z, left, right, top, bottom; };
-
-bool read_camera(Camera& c) {
-  uint32_t gobj = H->rd32(GAME_CAMERA);
-  if (!pp_is_ptr(gobj)) return false;
-  uint32_t cobj = H->rd32(gobj + GOBJ_HSD_OBJ);
-  if (!pp_is_ptr(cobj) || H->rd8(cobj + COBJ_PROJ) != 1) return false;
-  for (int i = 0; i < 12; ++i) c.m[i] = H->rdf32(cobj + COBJ_VIEW + 4 * i);
-  float fov = H->rdf32(cobj + COBJ_FOV);
-  c.aspect = H->rdf32(cobj + COBJ_ASPECT);
-  c.near_z = H->rdf32(cobj + COBJ_NEAR);
-  c.left = H->rdf32(cobj + COBJ_VIEWPORT);
-  c.right = H->rdf32(cobj + COBJ_VIEWPORT + 4);
-  c.top = H->rdf32(cobj + COBJ_VIEWPORT + 8);
-  c.bottom = H->rdf32(cobj + COBJ_VIEWPORT + 12);
-  if (!(fov > 1 && fov < 179) || !(c.aspect > 0.1f) || c.right <= c.left || c.bottom <= c.top) return false;
-  c.cot = 1.0f / std::tan(fov * 3.14159265f / 360.0f);
-  return true;
-}
-
-// A world point in the HUD's 640 x 480 space, and how many HUD pixels one world unit is there.
-bool project(const Camera& c, float x, float y, float& sx, float& sy, float& ppu) {
-  float vx = c.m[0] * x + c.m[1] * y + c.m[3];
-  float vy = c.m[4] * x + c.m[5] * y + c.m[7];
-  float vz = c.m[8] * x + c.m[9] * y + c.m[11];
-  if (vz > -c.near_z) return false;
-  float w = -vz;
-  sx = c.left + (c.cot / c.aspect * vx / w + 1) * 0.5f * (c.right - c.left);
-  sy = c.top + (1 - c.cot * vy / w) * 0.5f * (c.bottom - c.top);
-  ppu = c.cot / w * 0.5f * (c.bottom - c.top);
-  return std::isfinite(sx) && std::isfinite(sy);
-}
 
 bool on(const char* k) { return H->setting_number(ID, k) > 0.5; }
 
@@ -110,7 +66,7 @@ bool is_lag(uint32_t s) {
 }
 
 bool can_act(uint32_t fp, uint32_t s) {
-  if (s == PP_ST_LANDING) return H->rdf32(fp + PP_FT_ANIM_FRAME) >= H->rdf32(fp + FT_LANDING_LAG);   // ftCo_Landing_IASA
+  if (s == PP_ST_LANDING) return H->rdf32(fp + PP_FT_ANIM_FRAME) >= H->rdf32(fp + PP_FT_LANDING_LAG);   // ftCo_Landing_IASA
   return pp_state_is_actionable(s) || pp_can_interrupt(H, fp);
 }
 
@@ -126,11 +82,11 @@ void track(Fighter& f) {
   }
 }
 
-void flash(const Camera& cam, const Fighter& f, int port, float op) {
+void flash(const pp_camera& cam, const Fighter& f, int port, float op) {
   if (f.flash <= 0) return;
   float x = H->rdf32(f.fp + PP_FT_POS), y = H->rdf32(f.fp + PP_FT_POS + 4);
   float sx, sy, ppu;
-  if (!project(cam, x, y + 6.0f, sx, sy, ppu)) return;
+  if (!pp_project(&cam, x, y + 6.0f, 0, &sx, &sy, &ppu)) return;
   float t = (float)f.flash / FLASH_FRAMES, r = (6.0f + 2.5f * (1 - t)) * ppu;   // about the body, widening as it fades
   if (r < 8) r = 8;
   if (r > 70) r = 70;
@@ -176,18 +132,18 @@ void panel(int port, const Fighter& f, float op) {
   if (on("row_jumps")) {
     int max = (int)H->rd32(fp + PP_FT_MAX_JUMPS), used = H->rd8(fp + PP_FT_JUMPS_USED);
     int left = max - used < 0 ? 0 : max - used;
-    add(left ? VALUE : BAD, "Jumps   %d of %d   walljumps %d", left, max, H->rd8(fp + FT_WALLJUMPS));
+    add(left ? VALUE : BAD, "Jumps   %d of %d   walljumps %d", left, max, H->rd8(fp + PP_FT_WALLJUMPS));
   }
   if (on("row_shield")) {
     float sh = H->rdf32(fp + PP_FT_SHIELD);
     add(sh > 30 ? VALUE : sh > 15 ? WARN : BAD, "Shield  %5.1f / 60", sh);
   }
   if (on("row_intang")) {
-    int ti = (int)H->rd32(fp + FT_TIMED_INTANG), tv = (int)H->rd32(fp + FT_TIMED_INVINC), mv = (int)H->rd32(fp + FT_MOVE_HURT);
+    int ti = (int)H->rd32(fp + PP_FT_INTANGIBLE), tv = (int)H->rd32(fp + PP_FT_INVINCIBLE), mv = (int)H->rd32(fp + PP_FT_MOVE_HURT);
     if (ti > 0) add(GOOD, "Intangible  %d frame%s left", ti, ti == 1 ? "" : "s");
     else if (tv > 0) add(GOOD, "Invincible  %d frame%s left", tv, tv == 1 ? "" : "s");
-    else if (mv == 2) add(GOOD, "Intangible  (move)");
-    else if (mv == 1) add(GOOD, "Invincible  (move)");
+    else if (mv == PP_HURT_INTANGIBLE) add(GOOD, "Intangible  (move)");
+    else if (mv == PP_HURT_INVINCIBLE) add(GOOD, "Invincible  (move)");
     else add(LABEL, "Vulnerable");
   }
   if (on("row_ledge")) {
@@ -238,8 +194,8 @@ void frame(void*) {
 
   float op = (float)H->setting_number(ID, "opacity");
   if (op <= 0) op = 0.9f;
-  Camera cam;
-  bool have_cam = on("flash") && read_camera(cam);
+  pp_camera cam;
+  bool have_cam = on("flash") && pp_camera_read(H, &cam);
   for (int i = 0; i < 4; ++i) {
     Fighter& f = ft[i];
     uint32_t fp = pp_fighter(H, i);

@@ -50,9 +50,11 @@ def main(argv=None):
                          if l.startswith("CMAKE_HOME_DIRECTORY:")), "")
             if home and Path(home).resolve() != src.parent.resolve():
                 shutil.rmtree(build)
-        subprocess.run([a.cmake, "-S", str(src.parent), "-B", str(build), "-A", "x64",
-                        f"-DNLOHMANN_JSON_INCLUDE={a.json_include}", f"-DPASCALPATCH_SDK={REPO / 'sdk' / 'include'}",
-                        "--no-warn-unused-cli"], check=True, stdout=subprocess.DEVNULL)
+        text = src.read_text(encoding="utf-8", errors="replace")   # pass only what the project reads: CMake warns otherwise
+        defs = [f"-D{k}={v}" for k, v in (("NLOHMANN_JSON_INCLUDE", a.json_include), ("PASCALPATCH_SDK", REPO / "sdk" / "include"))
+                if k in text]
+        subprocess.run([a.cmake, "-S", str(src.parent), "-B", str(build), "-A", "x64", *defs],
+                       check=True, stdout=subprocess.DEVNULL)
         subprocess.run([a.cmake, "--build", str(build), "--config", "Release"], check=True)
         outputs = ["pascalpatch-launch.exe", "pascalpatch_runtime.dll"] if pid == "runtime" else [f"{pid}.dll"]
         for name in outputs:

@@ -30,15 +30,11 @@ constexpr int LCANCEL_WINDOW = 7;     // L/R/Z within 7 frames before landing ha
 constexpr int TECH_WINDOW = 20;       // L/R within 20 frames before hitting the ground techs
 constexpr int LATE_WATCH = 12;        // how long after a missed landing a late press still counts
 constexpr int SHOW = 150;             // frames a result stays up
-constexpr uint32_t GOOD = 0x5BD68A, BAD = 0xFF6B5E, INFO = 0xF2F4FA, WARN = 0xF2C200;
+constexpr uint32_t GOOD = PP_RGB_GOOD, BAD = PP_RGB_BAD, INFO = PP_RGB_TEXT, WARN = PP_RGB_WARN;
 constexpr int POWERSHIELD_FRAMES = 8;  // GuardReflect lasts 8 frames: a hit in them is a powershield
 constexpr int OOS_WATCH = 30;         // frames after shield stun to wait for an action
 constexpr int LEDGE_WATCH = 60;       // frames after letting go of the ledge to wait for the landing
 constexpr int ESCAPE_AIR_LAG = 10;    // LandingFallSpecial after an air dodge (PlCo 0x344)
-constexpr uint32_t FT_TIMED_INTANG = 0x1990;   // s32 frames of intangibility left (ledge grab, respawn)
-constexpr uint32_t FT_FASTFALL_VEL = 0x184;    // f32 co_attrs.fast_fall_velocity
-constexpr uint32_t FT_LANDING_LAG = 0x1F4;     // f32 co_attrs.normal_landing_lag
-constexpr uint32_t ST_JUMP_AERIAL_F = 0x1B, ST_CLIFF_WAIT = 0xFD;
 
 const pp_host* H = nullptr;
 
@@ -157,15 +153,15 @@ void techniques(Player& p, uint32_t kind) {
 
   // ---- ledgedash: let go of the ledge, jump, air dodge onto the stage ----
   if (on("ledgedash")) {
-    if (prev == ST_CLIFF_WAIT && entered && !pp_state_is_damage(s)) { p.ledge = 0; p.ledge_jump = p.ledge_dodge = -1; }
+    if (prev == PP_ST_CLIFF_WAIT && entered && !pp_state_is_damage(s)) { p.ledge = 0; p.ledge_jump = p.ledge_dodge = -1; }
     if (p.ledge >= 0) {
       ++p.ledge;
-      if (entered && (s == ST_JUMP_AERIAL_F || s == ST_JUMP_AERIAL_F + 1)) p.ledge_jump = p.ledge;
+      if (entered && (s == PP_ST_JUMP_AERIAL_F || s == PP_ST_JUMP_AERIAL_F + 1)) p.ledge_jump = p.ledge;
       if (entered && s == PP_ST_ESCAPE_AIR) p.ledge_dodge = p.ledge;
       bool landed = entered && (s == PP_ST_LANDING_FALL_SPECIAL || s == PP_ST_LANDING);
       if (landed && p.ledge_jump > 0) {
-        int intang = (int)H->rd32(fp + FT_TIMED_INTANG);
-        int lag = s == PP_ST_LANDING_FALL_SPECIAL ? ESCAPE_AIR_LAG : (int)H->rdf32(fp + FT_LANDING_LAG);
+        int intang = (int)H->rd32(fp + PP_FT_INTANGIBLE);
+        int lag = s == PP_ST_LANDING_FALL_SPECIAL ? ESCAPE_AIR_LAG : (int)H->rdf32(fp + PP_FT_LANDING_LAG);
         int galint = intang - lag;
         char how[40];
         if (p.ledge_dodge > 0)
@@ -181,7 +177,7 @@ void techniques(Player& p, uint32_t kind) {
           say(p, BAD, "Ledgedash: open to hits for %d frame%s of the landing (%s)  %d/%d", -galint, plural(-galint), how, p.ld.ok, p.ld.all);
         }
         p.ledge = -1;
-      } else if (p.ledge > LEDGE_WATCH || s == ST_CLIFF_WAIT || pp_state_is_damage(s) || (landed && p.ledge_jump < 0)) {
+      } else if (p.ledge > LEDGE_WATCH || s == PP_ST_CLIFF_WAIT || pp_state_is_damage(s) || (landed && p.ledge_jump < 0)) {
         p.ledge = -1;
       }
     }
@@ -213,7 +209,7 @@ void techniques(Player& p, uint32_t kind) {
   // ---- fastfall: frames from the peak of the jump to the fastfall ----
   if (on("fastfall")) {
     bool air = H->rd32(fp + PP_FT_AIRBORNE) != 0 && !pp_state_is_damage(s) && s != PP_ST_ESCAPE_AIR;
-    float vy = H->rdf32(fp + PP_FT_SELF_VEL + 4), ff = H->rdf32(fp + FT_FASTFALL_VEL);
+    float vy = H->rdf32(fp + PP_FT_SELF_VEL + 4), ff = H->rdf32(fp + PP_FT_FASTFALL_SPEED);
     if (!air || vy > 0) {
       p.falling = -1;
       p.fastfell = false;

@@ -29,7 +29,6 @@
 namespace {
 
 constexpr const char* ID = "training-lab";
-constexpr uint32_t PL_DAMAGE = 0x60;   // player block: u16 damage the HUD counts toward
 
 const pp_host* H = nullptr;
 
@@ -62,7 +61,7 @@ bool port_selected(int port) {
 
 void set_percent(uint32_t fp, int port, float pct) {
   H->wrf32(fp + PP_FT_PERCENT, pct);
-  H->wr16(pp_player_block(port) + PL_DAMAGE, (uint16_t)(pct + 0.5f));
+  H->wr16(pp_player_block(port) + PP_PL_DAMAGE, (uint16_t)(pct + 0.5f));
 }
 
 void badge(const char* text, uint32_t rgb) {
@@ -72,16 +71,6 @@ void badge(const char* text, uint32_t rgb) {
 
 // ---------------------------------------------------------------- the dummy
 
-constexpr uint32_t FT_SINCE_TECH_PRESS = 0x680;   // u8 frames since L/R was pressed (a tech needs < 20)
-constexpr uint32_t FT_TECH_PRESS_GAP = 0x684;     // u8 frames between the last two presses (>= 40, or locked out)
-constexpr uint32_t PAD_MASTER = PP_PAD_STATUS;    // HSD_PadMasterStatus[4]
-constexpr uint32_t PAD_BUTTONS = 0x1F7F;          // the digital buttons (no analog bits)
-
-// states
-constexpr uint32_t ST_KNEE_BEND = 0x18, ST_JUMP_LAST = 0x1C, ST_DAMAGE_FALL = 0x26, ST_ATTACK_AIR_N = 0x41;
-constexpr uint32_t ST_DOWN_BOUND_U = 0xB7, ST_DOWN_WAIT_U = 0xB8, ST_DOWN_BOUND_D = 0xBF, ST_DOWN_WAIT_D = 0xC0;
-constexpr uint32_t ST_ESCAPE_F = 0xE9, ST_ESCAPE_B = 0xEA, ST_ESCAPE = 0xEB, ST_ESCAPE_AIR = 0xEC;
-constexpr uint32_t ST_CATCH_FIRST = 0xD4, ST_CATCH_LAST = 0xD8, ST_SPECIAL_FIRST = 0x155;
 
 enum Stance { STANCE_STAND, STANCE_CROUCH, STANCE_SHIELD, STANCE_JUMP };
 enum Di { DI_NONE, DI_SURVIVAL, DI_COMBO, DI_IN, DI_OUT, DI_RANDOM };
@@ -215,7 +204,7 @@ bool ends_next_frame(uint32_t fp) {
   return left >= 0 && left <= 1.0001f;
 }
 
-bool is_jump(uint32_t s) { return s >= ST_KNEE_BEND && s <= ST_JUMP_LAST; }
+bool is_jump(uint32_t s) { return s >= PP_ST_KNEE_BEND && s <= PP_ST_JUMP_AERIAL_B; }
 
 void start(int act, bool air, const char* why) {
   if (act == ACT_RANDOM) {
@@ -244,29 +233,29 @@ void run_macro(pp_pad_state& out, uint32_t s, bool air, float dir) {
       else { press(out, PP_BTN_X); if (shielding) hold_shield(out); }
       break;
     case ACT_NAIR:
-      if (s == ST_ATTACK_AIR_N) done = true;
-      else if (!air || s == ST_KNEE_BEND) { if (s != ST_KNEE_BEND) press(out, PP_BTN_X); if (shielding) hold_shield(out); }
+      if (s == PP_ST_ATTACK_AIR_N) done = true;
+      else if (!air || s == PP_ST_KNEE_BEND) { if (s != PP_ST_KNEE_BEND) press(out, PP_BTN_X); if (shielding) hold_shield(out); }
       else press(out, PP_BTN_A);
       break;
     case ACT_UP_B:
     case ACT_DOWN_B: {
       float y = m.act == ACT_UP_B ? 1.0f : -1.0f;
-      if (s >= ST_SPECIAL_FIRST && m.t > 0) done = true;
+      if (s >= PP_STATE_COMMON && m.t > 0) done = true;
       else if (shielding) { press(out, PP_BTN_X); hold_shield(out); }   // out of shield: through jump squat
       else { out.stick_y = y; press(out, PP_BTN_B); }
       break;
     }
     case ACT_GRAB:
-      if (air || (s >= ST_CATCH_FIRST && s <= ST_CATCH_LAST)) done = true;
+      if (air || (s >= PP_ST_CATCH && s <= PP_ST_CATCH_WAIT)) done = true;
       else if (shielding) { hold_shield(out); press(out, PP_BTN_A); }   // shield grab
       else press(out, PP_BTN_Z);
       break;
     case ACT_SPOT_DODGE:
     case ACT_ROLL_AWAY:
     case ACT_ROLL_TOWARD: {
-      uint32_t want = m.act == ACT_SPOT_DODGE ? ST_ESCAPE : 0;
+      uint32_t want = m.act == ACT_SPOT_DODGE ? PP_ST_ESCAPE : 0;
       if (air) { m.act = ACT_AIR_DODGE; break; }
-      if (s == want || (!want && (s == ST_ESCAPE_F || s == ST_ESCAPE_B))) { done = true; break; }
+      if (s == want || (!want && (s == PP_ST_ESCAPE_F || s == PP_ST_ESCAPE_B))) { done = true; break; }
       hold_shield(out);
       if (shielding) {
         float x = m.act == ACT_SPOT_DODGE ? 0 : m.act == ACT_ROLL_TOWARD ? dir : -dir;
@@ -275,11 +264,11 @@ void run_macro(pp_pad_state& out, uint32_t s, bool air, float dir) {
       break;
     }
     case ACT_AIR_DODGE:
-      if (s == ST_ESCAPE_AIR || !air) done = true;
+      if (s == PP_ST_ESCAPE_AIR || !air) done = true;
       else press(out, PP_BTN_R);
       break;
     case ACT_ATTACK:
-      if ((s >= PP_ST_ATTACK_11 && s <= PP_ST_ATTACK_AIR_LW) || s >= ST_SPECIAL_FIRST) done = true;
+      if ((s >= PP_ST_ATTACK_11 && s <= PP_ST_ATTACK_AIR_LW) || s >= PP_STATE_COMMON) done = true;
       else press(out, PP_BTN_A);
       break;
     default:
@@ -291,20 +280,8 @@ void run_macro(pp_pad_state& out, uint32_t s, bool air, float dir) {
 
 // ---- recovering ----
 
-constexpr uint32_t STAGE_INFO = 0x8049E6C8, SI_GRKIND = 0x88;   // StageInfo: the stage being played
-
-// Main-floor half widths (the floor is at y = 0) of the stages people train on; 0 elsewhere.
-float stage_edge() {
-  switch (H->rd32(STAGE_INFO + SI_GRKIND)) {
-    case 0x0A: return 56.0f;     // Yoshi's Story
-    case 0x0C: return 63.35f;    // Fountain of Dreams
-    case 0x10: return 87.75f;    // Pokemon Stadium
-    case 0x1C: return 77.27f;    // Dream Land
-    case 0x24: return 68.4f;     // Battlefield
-    case 0x25: return 85.5657f;  // Final Destination
-    default: return 0;
-  }
-}
+// Main-floor half width of the stage (the floor is at y = 0); 0 off the tournament stages.
+float stage_edge() { return pp_stage_floor_edge(pp_stage_kind(H)); }
 
 // Off the stage and free to act: drift back, double jump towards the stage, then up-B once
 // falling below the ledge. True while it is steering.
@@ -313,10 +290,10 @@ bool recover(uint32_t fp, uint32_t s, bool free_now, pp_pad_state& out) {
   if (!on("recover") || edge <= 0 || std::fabs(x) <= edge) return false;
   float in = x > 0 ? -1.0f : 1.0f;
   out.stick_x = in;
-  if (!free_now) return s >= ST_SPECIAL_FIRST || (s >= PP_ST_FALL_SPECIAL && s <= PP_ST_FALL_SPECIAL_B);
+  if (!free_now) return s >= PP_STATE_COMMON || (s >= PP_ST_FALL_SPECIAL && s <= PP_ST_FALL_SPECIAL_B);
   float vy = H->rdf32(fp + PP_FT_SELF_VEL + 4);
   int used = H->rd8(fp + PP_FT_JUMPS_USED), jumps = (int)H->rd32(fp + PP_FT_MAX_JUMPS);
-  if (used < jumps && (vy <= 0 || s == ST_DAMAGE_FALL)) press(out, PP_BTN_X);
+  if (used < jumps && (vy <= 0 || s == PP_ST_DAMAGE_FALL)) press(out, PP_BTN_X);
   else if (used >= jumps && vy <= 0 && y < 15) {
     out.stick_x = 0.6f * in;
     out.stick_y = 0.8f;
@@ -351,7 +328,7 @@ void react(int port, uint32_t fp, pp_pad_state& out) {
   uint32_t s = H->rd32(fp + PP_FT_STATE);
   bool air = H->rd32(fp + PP_FT_AIRBORNE) != 0;
   float hitlag = pp_hitlag(H, fp), dir = toward(port, fp);
-  bool damaged = pp_state_is_damage(s) || s == ST_DAMAGE_FALL;
+  bool damaged = pp_state_is_damage(s) || s == PP_ST_DAMAGE_FALL;
 
   // a new hit: pick this hit's DI, tech and getup, and wait for hitstun to end
   if (hitlag > 0 && pp_state_is_damage(s) && (hitlag > D.prev_hitlag + 0.5f || !pp_state_is_damage(D.prev_state))) {
@@ -408,7 +385,7 @@ void react(int port, uint32_t fp, pp_pad_state& out) {
 
   // the counter action, as soon as the dummy can act
   float stun = pp_state_is_damage(s) ? H->rdf32(fp + PP_FT_HITSTUN) : 0;
-  bool free_now = pp_state_is_actionable(s) || s == ST_DAMAGE_FALL || (pp_state_is_damage(s) && stun <= 1);
+  bool free_now = pp_state_is_actionable(s) || s == PP_ST_DAMAGE_FALL || (pp_state_is_damage(s) && stun <= 1);
   if (D.after_hit && free_now) {
     D.after_hit = false;
     start(choice("counter_hit"), air, "After the hit:");
@@ -423,16 +400,16 @@ void react(int port, uint32_t fp, pp_pad_state& out) {
   // flying or tumbling: tech on landing (the tech timer sees a well-timed L/R that is not locked
   // out), holding the direction to tech in
   if (air && damaged && D.tech != TECH_MISS) {
-    H->wr8(fp + FT_SINCE_TECH_PRESS, 0);
-    H->wr8(fp + FT_TECH_PRESS_GAP, 0xFF);
+    H->wr8(fp + PP_FT_SINCE_TECH, 0);
+    H->wr8(fp + PP_FT_TECH_GAP, 0xFF);
     if (D.tech == TECH_TOWARD) out.stick_x = dir;
     if (D.tech == TECH_AWAY) out.stick_x = -dir;
     return;
   }
 
   // missed the tech: get up
-  bool bounce_ends = (s == ST_DOWN_BOUND_U || s == ST_DOWN_BOUND_D) && ends_next_frame(fp);
-  if (s == ST_DOWN_WAIT_U || s == ST_DOWN_WAIT_D || bounce_ends) {
+  bool bounce_ends = (s == PP_ST_DOWN_BOUND_U || s == PP_ST_DOWN_BOUND_D) && ends_next_frame(fp);
+  if (s == PP_ST_DOWN_WAIT_U || s == PP_ST_DOWN_WAIT_D || bounce_ends) {
     switch (D.getup) {
       case GETUP_STAND: flick(out, 0, 1); break;
       case GETUP_TOWARD: flick(out, dir, 0); break;
@@ -455,9 +432,9 @@ void react(int port, uint32_t fp, pp_pad_state& out) {
 // ---- recording and playback ----
 
 pp_pad_state read_pad(int port) {
-  uint32_t p = PAD_MASTER + PP_PAD_STRIDE * (uint32_t)port;
+  uint32_t p = PP_PAD_STATUS + PP_PAD_STRIDE * (uint32_t)port;
   pp_pad_state s{};
-  s.buttons = H->rd32(p) & PAD_BUTTONS;
+  s.buttons = H->rd32(p) & PP_BTN_DIGITAL;
   s.stick_x = H->rdf32(p + 0x20);
   s.stick_y = H->rdf32(p + 0x24);
   s.cstick_x = H->rdf32(p + 0x28);
@@ -579,7 +556,7 @@ void dpad(bool& save, bool& load) {
   int dummy = D.active ? dummy_port() : -1;
   for (int i = 0; i < 4; ++i) {
     if (i == dummy || pp_player_type(H, i) != 0) continue;
-    uint32_t pressed = H->rd32(PP_PAD_STATUS + PP_PAD_STRIDE * (uint32_t)i + 0x08);   // HSD_PadStatus.trigger
+    uint32_t pressed = H->rd32(PP_PAD_STATUS + PP_PAD_STRIDE * (uint32_t)i + PP_PAD_PRESSED);
     if (pressed & PP_BTN_DR) save = true;
     if (pressed & PP_BTN_DL) load = true;
   }

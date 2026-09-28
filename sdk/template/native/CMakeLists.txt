@@ -8,8 +8,6 @@ set(PASCALPATCH_SDK "${CMAKE_CURRENT_SOURCE_DIR}/../../include" CACHE PATH "fold
 if(NOT EXISTS "${PASCALPATCH_SDK}/pascalpatch/plugin.h")
   message(FATAL_ERROR "set PASCALPATCH_SDK to the folder containing pascalpatch/plugin.h")
 endif()
-# build_plugins.py passes this to every plugin; this one does not use nlohmann/json.
-set(NLOHMANN_JSON_INCLUDE "" CACHE PATH "unused")
 
 # The DLL's name must be <id>.dll, the id in plugin.json.
 add_library(my-plugin SHARED my_plugin.cpp)

@@ -14,7 +14,7 @@
 // "p2_player": "human", "stage": "fd", "rules": "endless"}}; p1/p2 may also be a character
 // number (CKind 0-25).
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "pascalpatch/plugin.h"
+#include "pascalpatch/melee.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -31,9 +31,8 @@ constexpr const char* ID = "quick-match";
 // NTSC 1.02
 constexpr uint32_t BOOT_ON_LEAVE = 0x801BF9A8;        // gmboot.c bootOnLeave
 constexpr uint32_t DEBUG_VS_ON_ENTER = 0x801B13B8;    // gmvsmode.c onEnterDebugVs
-constexpr uint32_t GAME_MODE = 0x80479D30;            // state_machine: curr_mode, pending_mode, ...
 constexpr uint32_t SCENE_END = 0x80479D64;            // gm_80479D58.unk_C: 1 ends the scene loop
-constexpr uint8_t GM_DEBUG_VS = 0x0E, STATE_DEBUG_VS = 1;
+constexpr uint8_t STATE_DEBUG_VS = 1;   // debug VS's minor scene for the match
 
 // StartMeleeData (0xF0 bytes): StartMeleeRules (0x60), then six PlayerInitData of 0x24
 constexpr uint32_t RULES_STKIND = 0x0E, RULES_TIME_LIMIT = 0x10, RULES_ITEM_FREQ = 0x0B;
@@ -121,7 +120,7 @@ void read_file(const char* config_path) {
 void boot_on_leave(pp_cpu* cpu, void*) {
   H->call(cpu, g_boot_leave);
   if (!current().boot) return;
-  H->wr8(GAME_MODE + 1, GM_DEBUG_VS);   // routing.pending_mode (the mode change is already pending)
+  H->wr8(PP_SCENE + PP_SCENE_PENDING, PP_SCENE_DEBUG_VS);   // the mode change is already pending
   H->log(ID, "boot: straight into a match");
 }
 
@@ -181,8 +180,8 @@ void frame(void*) {
   if (!g_settings || !PP_HOST_HAS(H, key_down)) return;
   int vk = (int)H->setting_number(ID, "restart_key");
   bool down = vk && H->key_down(vk);
-  if (down && !g_restart_was && H->rd8(GAME_MODE) == GM_DEBUG_VS && H->rd8(GAME_MODE + 3) == STATE_DEBUG_VS) {
-    H->wr8(GAME_MODE + 5, STATE_DEBUG_VS + 1);   // routing.next_state_id is the state id + 1
+  if (down && !g_restart_was && pp_scene_major(H) == PP_SCENE_DEBUG_VS && pp_scene_minor(H) == STATE_DEBUG_VS) {
+    H->wr8(PP_SCENE + PP_SCENE_NEXT, STATE_DEBUG_VS + 1);   // replay the match scene
     H->wr32(SCENE_END, 1);
   }
   g_restart_was = down;

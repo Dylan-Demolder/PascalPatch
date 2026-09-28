@@ -102,7 +102,7 @@ void draw_flash(float x, float y) {
   --g_flash.frames;
 }
 
-say("L-cancel: 2 frames early", 0xF2C200);
+say("L-cancel: 2 frames early", PP_RGB_WARN);
 ```
 
 ## A panel that shares its corner
@@ -121,14 +121,14 @@ void panel(const char* title, const char* body, int port) {
 
 ## Text above a fighter
 
-Project the fighter's position (see [drawing on screen](hud.md#world-positions-on-screen)) and draw a label a little above it:
+Project the fighter's position with `pascalpatch/camera.h` (see [drawing on screen](hud.md#world-positions-on-screen)) and draw a label a little above it:
 
 ```cpp
-Camera cam;
-if (read_camera(cam)) {
+pp_camera cam;
+if (pp_camera_read(H, &cam)) {
   float x = H->rdf32(fp + PP_FT_POS), y = H->rdf32(fp + PP_FT_POS + 4), z = H->rdf32(fp + PP_FT_POS + 8);
   float sx, sy;
-  if (project(cam, x, y + 18, z, sx, sy)) H->hud_label(sx, sy, pp_rgba(0xF2F4FA, 1), 14, 1, "Tech!");
+  if (pp_project(&cam, x, y + 18, z, &sx, &sy, nullptr)) H->hud_label(sx, sy, pp_rgba(PP_RGB_TEXT, 1), 14, 1, "Tech!");
 }
 ```
 
@@ -193,4 +193,10 @@ H->set_status(ID, line);     // live on the plugin's F2 tab
 
 ## Find the stage and its blast zones
 
-DI Trainer reads the current stage's blast zones and the launched fighter's attributes, then replays the game's own knockback physics to predict whether a launch kills. See [di_trainer.cpp](../../plugins/di-trainer/native/di_trainer.cpp).
+```cpp
+float left, right, top, bottom;
+if (pp_stage_blast_zones(H, &left, &right, &top, &bottom)) { /* world units */ }
+float edge = pp_stage_floor_edge(pp_stage_kind(H));   // half the main floor's width; 0 off the tournament stages
+```
+
+DI Trainer uses these with the launched fighter's attributes (`PP_FT_GRAVITY`, `PP_FT_FALL_SPEED`) to replay the game's own knockback physics and predict whether a launch kills. See [di_trainer.cpp](../../plugins/di-trainer/native/di_trainer.cpp).

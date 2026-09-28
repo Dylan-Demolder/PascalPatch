@@ -52,41 +52,21 @@ Keep screen space in mind. The damage meters along the bottom and the timer at t
 
 ## World positions on screen
 
-To draw on a fighter, a hitbox or a point on the stage, project its world position with the game's camera. The hitbox viewer does this with the main camera's matrices (`game_camera` at `0x80452C68`; its gobj's `+0x28` is the camera object):
+To draw on a fighter, a hitbox or a point on the stage, project its world position with the game's own camera. `pascalpatch/camera.h` does it (it includes `melee.h`):
 
 ```cpp
-struct Camera { float m[12]; float cot, aspect, near_z, left, right, top, bottom; };
+#include "pascalpatch/camera.h"
 
-bool read_camera(Camera& c) {
-  uint32_t gobj = H->rd32(0x80452C68);
-  if (!pp_is_ptr(gobj)) return false;
-  uint32_t cobj = H->rd32(gobj + 0x28);
-  if (!pp_is_ptr(cobj) || H->rd8(cobj + 0x50) != 1) return false;          // 1: perspective
-  for (int i = 0; i < 12; ++i) c.m[i] = H->rdf32(cobj + 0x54 + 4 * i);     // view matrix
-  float fov = H->rdf32(cobj + 0x40);
-  c.aspect = H->rdf32(cobj + 0x44);
-  c.near_z = H->rdf32(cobj + 0x38);
-  c.left = H->rdf32(cobj + 0x0C);  c.right = H->rdf32(cobj + 0x10);         // viewport
-  c.top = H->rdf32(cobj + 0x14);   c.bottom = H->rdf32(cobj + 0x18);
-  if (!(fov > 1 && fov < 179) || !(c.aspect > 0.1f)) return false;
-  c.cot = 1.0f / std::tan(fov * 3.14159265f / 360.0f);
-  return true;
-}
-
-// A world point in HUD units; false when it is behind the camera.
-bool project(const Camera& c, float x, float y, float z, float& sx, float& sy) {
-  float vx = c.m[0] * x + c.m[1] * y + c.m[2] * z + c.m[3];
-  float vy = c.m[4] * x + c.m[5] * y + c.m[6] * z + c.m[7];
-  float vz = c.m[8] * x + c.m[9] * y + c.m[10] * z + c.m[11];
-  if (vz > -c.near_z) return false;
-  float nx = c.cot / c.aspect * vx / -vz, ny = c.cot * vy / -vz;
-  sx = c.left + (nx + 1) * 0.5f * (c.right - c.left);
-  sy = c.top + (1 - ny) * 0.5f * (c.bottom - c.top);
-  return true;
+pp_camera cam;
+if (pp_camera_read(H, &cam)) {                        // 0 on the menus
+  float x = H->rdf32(fp + PP_FT_POS), y = H->rdf32(fp + PP_FT_POS + 4);
+  float sx, sy, ppu;
+  if (pp_project(&cam, x, y + 18, 0, &sx, &sy, &ppu))   // 0 when the point is behind the camera
+    H->hud_label(sx, sy, pp_rgba(PP_RGB_TEXT, 1), 14, 1, "Tech!");
 }
 ```
 
-Read the camera once per frame, then project as many points as you need. For sizes (a hitbox's radius), scale by `c.cot / -vz * 0.5f * (c.bottom - c.top)` pixels per world unit, as `project()` in [hitbox_viewer.cpp](../../plugins/hitbox-viewer/native/hitbox_viewer.cpp) does.
+Read the camera once per frame, then project as many points as you need. `ppu` is how many HUD pixels one world unit is at that depth: a hitbox's radius times `ppu` is its radius on screen (pass `nullptr` when you do not need it). [hitbox_viewer.cpp](../../plugins/hitbox-viewer/native/hitbox_viewer.cpp) draws every hitbox and hurtbox this way.
 
 ## Things to avoid
 
