@@ -94,6 +94,9 @@ def main(argv=None):
     ap.add_argument("--plugin", action="append", default=[], help="plugin id to publish (repeatable; default: none, pages only)")
     ap.add_argument("--host", choices=("releases", "pages"), default="releases")
     ap.add_argument("--site", default=SITE)
+    ap.add_argument("--replace", action="store_true",
+                    help="let a version already in the index be rebuilt; only for versions whose release is still a "
+                         "draft (nobody can have installed them)")
     a = ap.parse_args(argv)
     out = Path(a.out).resolve(); out.mkdir(parents=True, exist_ok=True)
     seed = Path(a.seed).read_bytes()
@@ -123,13 +126,17 @@ def main(argv=None):
         data = package(pdir, dll, manifest)
         digest = hashlib.sha256(data).hexdigest()
         name = f"{pid}-{manifest['version']}.zip"
-        (out / "packages").mkdir(exist_ok=True)
-        (out / "packages" / name).write_bytes(data)
         tag = f"{pid}-v{manifest['version']}"
         source = f"{RELEASES}{tag}/{name}" if a.host == "releases" else f"{a.site}packages/{name}"
         old = next((e for e in entries if e["id"] == pid and e["version"] == manifest["version"]), None)
         if old and old["sha256"] != digest:
-            raise SystemExit(f"{pid} {manifest['version']} is already published with different bytes; bump the version")
+            if not a.replace:
+                raise SystemExit(f"{pid} {manifest['version']} is already published with different bytes; bump the version "
+                                 "(or, while its release is still a draft, pass --replace)")
+            entries.remove(old)
+            old = None
+        (out / "packages").mkdir(exist_ok=True)   # only once the version is known to be publishable
+        (out / "packages" / name).write_bytes(data)
         entry = {"id": pid, "version": manifest["version"], "source": source, "sha256": digest,
                  "license": manifest.get("license", "GPL-2.0-or-later"), "compatibility": "offline-only",
                  "dependencies": manifest.get("dependencies", []), "maintainer": manifest.get("author", "PascalPatch")}
