@@ -7,6 +7,10 @@ Practice tools for any match, on hotkeys (rebind them in the F2 window):
   combo at exactly the percent it works at.
 - **Infinite shield**: shields never shrink or break, for practising out-of-shield options.
 - **Endless stocks**: nobody runs out, so a practice match never ends.
+- **Savestates** (PascalPatch 0.5): **D-pad right** (or **End**) saves the moment, **D-pad left**
+  (or **Delete**) puts it back: both fighters, their percents, the stage, the timer, everything.
+  Set up a situation once and replay it as often as you like, as in UnclePunch's Training Mode.
+  A state belongs to the match it was saved in.
 
 Percent, shield and stock options apply to the player you pick: port 1, port 2 (the default, your
 practice partner), everyone, or only CPU players. Hotkeys only work while the game window has
@@ -42,5 +46,5 @@ memory: the dummy marks a well-timed L/R press in its tech timer, because when a
 depends on where it lands.
 
 Pause and slow motion hold the game inside the frame; the window, the F2 window and other
-plugins keep running. This plugin writes game memory (percent, shield, stocks, the tech timer)
-only while those options are on.
+plugins keep running. This plugin writes game memory (percent, shield, stocks, the tech timer,
+a loaded state) only while those options are on or when you load.

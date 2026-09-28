@@ -42,6 +42,8 @@ typedef struct pp_cpu pp_cpu; /* the guest CPU state of the call in progress */
 typedef void (*pp_guest_fn)(pp_cpu *cpu, void *user);
 typedef void (*pp_frame_fn)(void *user);
 
+#define PP_STATE_SLOTS 4
+
 /* hud_place corners */
 enum { PP_CORNER_TOP_LEFT = 0, PP_CORNER_TOP_RIGHT = 1, PP_CORNER_BOTTOM_LEFT = 2, PP_CORNER_BOTTOM_RIGHT = 3 };
 
@@ -160,6 +162,15 @@ typedef struct pp_host {
      * player (a CPU player's fighter reads its AI, not the controller). */
     void (*pad_set)(int port, const pp_pad_state *state);
     void (*pad_release)(int port);
+
+    /* Savestates: capture the game's state into slot 0..3 (PP_STATE_SLOTS), or put it back. Both
+     * happen at the start of the game's next frame, where the game is between frames, and cover
+     * what Slippi's rollback covers: the game's data and heap, not sound, video or the
+     * controllers (so a load does not replay old button presses). Meant for a match in progress:
+     * load only into the match the state was saved in. Return 1 if the request was taken, 0 if
+     * the slot is out of range or (load) empty. */
+    int (*state_save)(int slot);
+    int (*state_load)(int slot);
 } pp_host;
 
 /* True when `host` serves `field` (the runtime may be older than this header). */

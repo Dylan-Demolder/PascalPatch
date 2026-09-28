@@ -46,7 +46,7 @@ struct Key {
 };
 
 Key k_pause{"pause_key"}, k_step{"step_key"}, k_slow{"slow_key"}, k_reset{"reset_key"};
-Key k_dummy{"dummy_key"}, k_record{"record_key"}, k_play{"play_key"};
+Key k_dummy{"dummy_key"}, k_record{"record_key"}, k_play{"play_key"}, k_save{"save_key"}, k_load{"load_key"};
 bool paused = false, slow = false;
 bool shown = false;   // the PAUSED badge has been on screen for a frame (the HUD is published when a frame ends)
 
@@ -510,7 +510,7 @@ void dummy_badge(int port) {
   else if (D.last_action_age < 90) std::snprintf(line, sizeof line, "DUMMY P%d  %s", port + 1, D.last_action);
   else std::snprintf(line, sizeof line, "DUMMY P%d  %s, %s, %s", port + 1, STANCE_NAMES[choice("stance") & 3],
                      DI_NAMES[choice("di") % 6], TECH_NAMES[choice("tech") % 5]);
-  float w = 16 + 5.4f * (float)std::strlen(line), h = 18, x = 8, y = 300 - h;
+  float w = 18 + 4.3f * (float)std::strlen(line), h = 18, x = 8, y = 300 - h;
   if (PP_HOST_HAS(H, hud_place)) H->hud_place(PP_CORNER_BOTTOM_LEFT, w, h, &x, &y);
   H->hud_rect(x, y, x + w, y + h, pp_rgba(0x111838, 0.75f), 5, 1);
   H->hud_rect(x, y, x + 3, y + h, pp_rgba(D.recording ? 0xFF4D4D : pp_port_rgb[port], 1.0f), 1.5f, 1);
@@ -565,6 +565,48 @@ void dummy_frame(bool in_match) {
   dummy_badge(port);
 }
 
+// ---------------------------------------------------------------- savestates (0.5)
+
+int match_id = 0;       // counts matches, so a state is only loaded into the match it came from
+int saved_in = -1;      // the match the saved state belongs to
+bool was_in_match = false;
+
+bool has_states() { return PP_HOST_HAS(H, state_load); }
+
+// D-pad right / left on any player's controller but the dummy's (UnclePunch's buttons), or the keys.
+void dpad(bool& save, bool& load) {
+  if (!on("state_dpad")) return;
+  int dummy = D.active ? dummy_port() : -1;
+  for (int i = 0; i < 4; ++i) {
+    if (i == dummy || pp_player_type(H, i) != 0) continue;
+    uint32_t pressed = H->rd32(PP_PAD_STATUS + PP_PAD_STRIDE * (uint32_t)i + 0x08);   // HSD_PadStatus.trigger
+    if (pressed & PP_BTN_DR) save = true;
+    if (pressed & PP_BTN_DL) load = true;
+  }
+}
+
+void request_load() {
+  if (saved_in != match_id) { H->toast(ID, "No state saved in this match: save one first (D-pad right or End)"); return; }
+  if (H->state_load(0)) {
+    H->toast(ID, "State loaded");
+    D.macro.act = ACT_NONE;
+    D.after_hit = D.after_shield = false;
+    D.prev_state = 0;
+    D.prev_hitlag = 0;
+  }
+}
+
+void states(bool in_match) {
+  if (!has_states()) return;
+  if (in_match && !was_in_match) ++match_id;
+  was_in_match = in_match;
+  if (!in_match) return;
+  bool save = k_save.pressed(), load = k_load.pressed();
+  dpad(save, load);
+  if (save && H->state_save(0)) { saved_in = match_id; H->toast(ID, "State saved: D-pad left (or Delete) to load it"); }
+  else if (load) request_load();
+}
+
 // ---------------------------------------------------------------- the frame
 
 // Holds the game here while paused. Returns when the player resumes or steps one frame.
@@ -572,6 +614,7 @@ void hold() {
   for (;;) {
     if (k_pause.pressed()) { paused = false; H->toast(ID, "Resumed"); return; }
     if (k_step.pressed()) return;                       // run exactly one frame, stay paused
+    if (has_states() && k_load.pressed()) { request_load(); return; }   // load, and show it
     if (!pp_in_match(H)) { paused = false; return; }
     Sleep(4);
   }
@@ -579,6 +622,7 @@ void hold() {
 
 void frame(void*) {
   bool in_match = pp_in_match(H);
+  states(in_match);
   dummy_frame(in_match);
   if (!in_match) { paused = false; return; }
 
@@ -638,6 +682,11 @@ extern "C" __declspec(dllexport) int pp_plugin_load(const pp_host* host, const c
   H->declare_setting(ID, R"J({"key":"percent","type":"int","label":"Locked percent","default":60,"min":0,"max":999})J");
   H->declare_setting(ID, R"J({"key":"infinite_shield","type":"bool","label":"Infinite shield","default":false})J");
   H->declare_setting(ID, R"J({"key":"endless_stocks","type":"bool","label":"Endless stocks","default":false})J");
+  if (PP_HOST_HAS(H, state_load)) {
+    H->declare_setting(ID, R"J({"key":"save_key","type":"key","label":"Save state","default":"End"})J");
+    H->declare_setting(ID, R"J({"key":"load_key","type":"key","label":"Load state","default":"Delete"})J");
+    H->declare_setting(ID, R"J({"key":"state_dpad","type":"bool","label":"D-pad right saves, D-pad left loads (as in UnclePunch)","default":true})J");
+  }
   if (PP_HOST_HAS(H, pad_set)) {
     H->declare_setting(ID, R"J({"key":"dummy","type":"bool","label":"Dummy on when a match starts","default":false})J");
     H->declare_setting(ID, R"J({"key":"dummy_key","type":"key","label":"Dummy on / off","default":"Home"})J");
@@ -655,7 +704,7 @@ extern "C" __declspec(dllexport) int pp_plugin_load(const pp_host* host, const c
     H->declare_setting(ID, R"J({"key":"play_key","type":"key","label":"Dummy plays the recording (start / stop)","default":"PageDown"})J");
     H->declare_setting(ID, R"J({"key":"record_port","type":"choice","label":"Record the inputs of","default":"p1","options":[{"value":"p1","label":"Port 1"},{"value":"p2","label":"Port 2"},{"value":"p3","label":"Port 3"},{"value":"p4","label":"Port 4"}]})J");
     H->declare_setting(ID, R"J({"key":"loop","type":"bool","label":"Loop the playback","default":true})J");
-    H->set_status(ID, "F5 pause, F6 frame advance, F7 slow motion, F9 reset percent. Home: dummy on / off; PageUp record, PageDown play.");
+    H->set_status(ID, "F5 pause, F6 frame advance, F7 slow motion, F9 reset percent. D-pad right / End save a state, D-pad left / Delete load it. Home: dummy on / off; PageUp record, PageDown play.");
   } else {
     H->set_status(ID, "F5 pause, F6 frame advance, F7 slow motion, F9 reset percent. (The dummy needs PascalPatch 0.5.)");
   }

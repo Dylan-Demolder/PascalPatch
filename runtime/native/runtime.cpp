@@ -534,7 +534,75 @@ uint8_t raw_trigger(float v) {
   return (uint8_t)std::clamp(std::lround(raw), 0l, 255l);
 }
 
+// ---- savestates (0.5) ----
+// The same memory Slippi's rollback captures (Dolphin's SlippiSavestate): the game's static data,
+// the file area and the main heap, minus sound, video and other hardware-facing blocks; plus the
+// controller state, left out so a load does not replay presses. Taken and put back at the start
+// of a game frame (in front of HSD_PadRenewMasterStatus), where the game is between frames.
+struct Span { uint32_t start, end; };
+struct StateSlot { bool full = false; uint32_t heap_lo = 0, heap_hi = 0; std::vector<Span> spans; std::vector<uint8_t> data; };
+StateSlot g_states[PP_STATE_SLOTS];
+int g_state_save = -1, g_state_load = -1;   // requests for the next frame
+
+std::vector<Span> state_spans(uint32_t heap_lo, uint32_t heap_hi) {
+  std::vector<Span> keep = {{0x80005520, 0x80005940}, {0x803B7240, 0x804DEC00}, {0x8065C000, 0x8071B000}, {heap_lo, heap_hi}};
+  const Span skip[] = {
+      {0x804031A0, 0x24}, {0x80407FB4, 0x34C}, {0x80433C64, 0x1EE80}, {0x804A8D78, 0x17A68}, {0x804C28E0, 0x399C},
+      {0x804D7474, 0x8}, {0x804D74F0, 0x50}, {0x804D7548, 0x4}, {0x804D7558, 0x24}, {0x804D7580, 0xC},
+      {0x804D759C, 0x4}, {0x804D7720, 0x4}, {0x804D7744, 0x4}, {0x804D774C, 0x8}, {0x804D7758, 0x8},
+      {0x804D7788, 0x10}, {0x804D77C8, 0x4}, {0x804D77D0, 0x4}, {0x804D77E0, 0x4}, {0x804DE358, 0x80},
+      {0x804DE800, 0x70}, {0x804D6030, 0x4}, {0x804D603C, 0x4}, {0x804D7218, 0x4}, {0x804D7228, 0x8},
+      {0x804D7740, 0x4}, {0x804D7754, 0x4}, {0x804D77BC, 0x4}, {0x804DE7F0, 0x10}, {0x804C0980, 0x15F8},
+      {PAD_LIB, 0x144},   // HSD_PadLibData and HSD_PadMasterStatus[4]
+  };   // {address, length}
+  for (const Span& x : skip) {
+    uint32_t a = x.start, b = x.start + x.end;
+    std::vector<Span> out;
+    for (const Span& k : keep) {
+      if (b <= k.start || a >= k.end) { out.push_back(k); continue; }
+      if (a > k.start) out.push_back({k.start, a});
+      if (b < k.end) out.push_back({b, k.end});
+    }
+    keep.swap(out);
+  }
+  return keep;
+}
+
+bool state_heap(uint32_t& lo, uint32_t& hi) {
+  lo = api_rd32(0x804D76B8);   // the main heap's bounds, as the game set them up
+  hi = api_rd32(0x804D76BC);
+  return lo >= 0x80000000u && hi > lo && hi <= RAM_BASE + RAM_SIZE;
+}
+
+void state_step() {
+  if (g_state_save >= 0) {
+    StateSlot& s = g_states[g_state_save];
+    g_state_save = -1;
+    if (state_heap(s.heap_lo, s.heap_hi)) {
+      s.spans = state_spans(s.heap_lo, s.heap_hi);
+      size_t n = 0;
+      for (const Span& x : s.spans) n += x.end - x.start;
+      s.data.resize(n);
+      n = 0;
+      for (const Span& x : s.spans) { std::memcpy(s.data.data() + n, at(x.start, x.end - x.start), x.end - x.start); n += x.end - x.start; }
+      s.full = true;
+    }
+  }
+  if (g_state_load >= 0) {
+    StateSlot& s = g_states[g_state_load];
+    g_state_load = -1;
+    uint32_t lo, hi;
+    if (s.full && state_heap(lo, hi) && lo == s.heap_lo && hi == s.heap_hi) {
+      size_t n = 0;
+      for (const Span& x : s.spans) { std::memcpy(at(x.start, x.end - x.start), s.data.data() + n, x.end - x.start); n += x.end - x.start; }
+    } else {
+      log("[pascalpatch] state_load: the saved state does not fit the game as it is now");
+    }
+  }
+}
+
 void pad_renew_master(pp_cpu* cpu, void*) {
+  state_step();
   if (api_rd8(PAD_LIB + 3)) {   // qcount: a reading is waiting
     uint32_t queue = api_rd32(PAD_LIB + 8);
     uint32_t read = api_rd8(PAD_LIB + 1);
@@ -560,14 +628,29 @@ void pad_renew_master(pp_cpu* cpu, void*) {
   api_call(cpu, g_pad_original);
 }
 
-void api_pad_set(int port, const pp_pad_state* s) {
-  if (port < 0 || port > 3 || !s) return;
+bool pad_hook() {
   if (!g_pad_hooked) {
     g_pad_hooked = true;
     g_pad_original = api_hook(PAD_RENEW_MASTER, pad_renew_master, nullptr);
-    if (!g_pad_original) log("[pascalpatch] pad_set: could not hook HSD_PadRenewMasterStatus");
+    if (!g_pad_original) log("[pascalpatch] could not hook HSD_PadRenewMasterStatus");
   }
-  if (!g_pad_original) return;
+  return g_pad_original != 0;
+}
+
+int api_state_save(int slot) {
+  if (slot < 0 || slot >= PP_STATE_SLOTS || !pad_hook()) return 0;
+  g_state_save = slot;
+  return 1;
+}
+int api_state_load(int slot) {
+  if (slot < 0 || slot >= PP_STATE_SLOTS || !g_states[slot].full || !pad_hook()) return 0;
+  g_state_load = slot;
+  return 1;
+}
+
+void api_pad_set(int port, const pp_pad_state* s) {
+  if (port < 0 || port > 3 || !s) return;
+  if (!pad_hook()) return;
   g_pad[port].on = true;
   g_pad[port].s = *s;
 }
@@ -590,7 +673,7 @@ const pp_host g_host = {
   api_hud_text, api_hud_rect, api_hud_circle,
   api_toast, api_key_down, api_overlay_open, api_hud_label,
   api_hud_capsule,
-  api_hud_place, api_pad_set, api_pad_release,
+  api_hud_place, api_pad_set, api_pad_release, api_state_save, api_state_load,
 };
 
 // A plugin's record. Its id is the DLL's name; a downloaded plugin's staged config carries its
