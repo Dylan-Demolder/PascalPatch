@@ -17,7 +17,7 @@ add_library(pascalpatch_runtime SHARED runtime.cpp overlay.cpp ${IMGUI_SOURCES})
 set_target_properties(pascalpatch_runtime PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON PREFIX "")
 target_include_directories(pascalpatch_runtime PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../design/dist" "${IMGUI}" "${NLOHMANN_JSON_INCLUDE}")
-target_link_libraries(pascalpatch_runtime PRIVATE ws2_32 d3d12 dxgi dxguid d3dcompiler)
+target_link_libraries(pascalpatch_runtime PRIVATE ws2_32 shell32 d3d12 dxgi dxguid d3dcompiler)
 
 # pascalpatch-launch.exe: starts the unmodified port suspended and injects the runtime.
 add_executable(pascalpatch-launch launch.cpp)

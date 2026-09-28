@@ -4,7 +4,7 @@ Plugins draw from an `on_frame` callback. What a frame's callbacks draw is shown
 
 ## The space
 
-- **640 × 480**, the game's own screen, whatever the window size. (0, 0) is the top left.
+- **640 × 480**, the game's own screen, whatever the window size. (0, 0) is the top left. PascalPatch lays it over the picture Melee Unlocked actually shows: letterboxed to 73:60 by default, or 4:3 or 16:9 when forced. With widescreen on, the game camera sees more to each side and 640 × 480 stays on its middle, so a point projected with `pp_project` lands on the fighter in every aspect setting. Sizes (text, radii) follow the height, so circles stay round; x and y can scale a little differently.
 - **Colours** are `0xRRGGBBAA`. `pp_rgba(0xE5322D, 0.8f)` turns an `0xRRGGBB` colour and an alpha into one.
 - **Text size** is its height in those units. Melee's damage digits are about 32; panel text is usually 11 to 16.
 

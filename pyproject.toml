@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "pascalpatch-host"
-version = "0.5.0"
+version = "0.5.1"
 description = "Safe host-side profile and build tooling for PascalPatch"
 requires-python = ">=3.11"
 

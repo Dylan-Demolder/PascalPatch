@@ -13,6 +13,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <shellapi.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
 
@@ -231,12 +232,81 @@ bool init(IDXGISwapChain3* sc) {
 // ---- the overlay's UI ----
 ImU32 rgba(uint32_t c) { return IM_COL32(c >> 24, (c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF); }
 
+// ---- where the game's picture is ----
+// Melee Unlocked does not present a 4:3 picture. Its aspect setting (port-settings.ini "aspect",
+// or --aspect) letterboxes the game to 73:60 by default (what Melee's own camera is built for), to
+// 4:3 or 16:9 when forced, or stretches it over the window; either widescreen option ("widescreen",
+// "truewidescreen") widens every game camera by 320/219 and presents 16:9 (gx_d3d12.h
+// presented_aspect, gx_shader.cpp build_projection). HUD space is the game's 640 x 480 viewport,
+// and plugins project into it with the camera's own aspect, so it is mapped onto the picture
+// actually on screen: y across its height, x across its width shrunk by the widening. Sizes
+// follow y, which keeps circles round wherever the picture is not stretched.
+struct PortView {
+  int aspect = 0;            // AspectMode: 0 auto, 1 73:60, 2 4:3, 3 16:9, 4 stretch
+  bool widescreen = false;   // either widescreen option
+};
+
+PortView read_port_view() {
+  PortView v;
+  int argc = 0;
+  wchar_t** argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+  std::wstring ini = L"port-settings.ini";   // the port's default, in its working directory
+  for (int i = 1; argv && i + 1 < argc; ++i)
+    if (!wcscmp(argv[i], L"--settings-path")) ini = argv[i + 1];
+  bool ws = false, tws = false;
+  FILE* f = nullptr;
+  if (!_wfopen_s(&f, ini.c_str(), L"r") && f) {   // the file first, then the command line, as the port does
+    char line[512];
+    while (std::fgets(line, sizeof line, f)) {
+      char key[64] = {};
+      int value = 0;
+      if (sscanf_s(line, "%63s %d", key, (unsigned)sizeof key, &value) != 2) continue;
+      if (!strcmp(key, "aspect") && value >= 0 && value <= 4) v.aspect = value;
+      else if (!strcmp(key, "widescreen")) ws = value == 1;
+      else if (!strcmp(key, "truewidescreen")) tws = value == 1;
+    }
+    std::fclose(f);
+  }
+  for (int i = 1; argv && i < argc; ++i) {
+    if (!wcscmp(argv[i], L"--widescreen")) { ws = true; tws = false; }
+    else if (!wcscmp(argv[i], L"--true-widescreen")) { tws = true; ws = false; }
+    else if (!wcscmp(argv[i], L"--aspect") && i + 1 < argc) {
+      const wchar_t* a = argv[++i];
+      v.aspect = !wcscmp(a, L"73:60") || !wcscmp(a, L"native") ? 1 : !wcscmp(a, L"4:3") ? 2
+               : !wcscmp(a, L"16:9") ? 3 : !wcscmp(a, L"stretch") ? 4 : 0;
+    }
+  }
+  if (argv) LocalFree(argv);
+  v.widescreen = ws || tws;
+  return v;
+}
+
+// Re-read about once a second, so a change in Melee Unlocked's F1 settings applies at once.
+const PortView& port_view() {
+  static PortView v = read_port_view();
+  static ULONGLONG checked = GetTickCount64();
+  if (GetTickCount64() - checked > 1000) { v = read_port_view(); checked = GetTickCount64(); }
+  return v;
+}
+
+struct HudMap { float ox, oy, sx, sy; };
+
+HudMap hud_map(ImVec2 ds) {
+  const PortView& v = port_view();
+  const float native = 73.0f / 60.0f, widen = v.widescreen ? 320.0f / 219.0f : 1.0f;
+  float aspect = v.aspect == 1 ? native : v.aspect == 2 ? 4.0f / 3.0f : v.aspect == 3 ? 16.0f / 9.0f
+               : v.aspect == 4 ? ds.x / std::max(1.0f, ds.y) : v.widescreen ? 16.0f / 9.0f : native;
+  float pw = ds.x, ph = ds.x / aspect;   // the picture, letterboxed into the window
+  if (ph > ds.y) { ph = ds.y; pw = ds.y * aspect; }
+  float sx = pw / (640.0f * widen), sy = ph / 480.0f;
+  return {ds.x * 0.5f - 320.0f * sx, ds.y * 0.5f - 240.0f * sy, sx, sy};
+}
+
 void draw_hud(const std::vector<pp::HudCmd>& cmds) {
   if (cmds.empty()) return;
-  ImVec2 ds = ImGui::GetIO().DisplaySize;
-  float s = std::min(ds.x / 640.0f, ds.y / 480.0f);
-  ImVec2 o((ds.x - 640 * s) * 0.5f, (ds.y - 480 * s) * 0.5f);   // the game's 4:3 picture, centred
-  auto P = [&](float x, float y) { return ImVec2(o.x + x * s, o.y + y * s); };
+  const HudMap m = hud_map(ImGui::GetIO().DisplaySize);
+  const float s = m.sy;   // sizes: radii, text, line widths
+  auto P = [&](float x, float y) { return ImVec2(m.ox + x * m.sx, m.oy + y * m.sy); };
   ImDrawList* dl = ImGui::GetBackgroundDrawList();
   for (const auto& c : cmds) {
     switch (c.kind) {
