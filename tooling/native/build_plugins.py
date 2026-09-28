@@ -22,13 +22,17 @@ REPO = Path(__file__).resolve().parents[2]
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--data", required=True, help="PascalPatch data root (builds go to <data>/native-plugins)")
-    ap.add_argument("--json-include", required=True, help="folder containing nlohmann/json.hpp")
+    ap.add_argument("--data", help="PascalPatch data root (builds go to <data>/native-plugins; default: the app's)")
+    ap.add_argument("--json-include", default=str(REPO / "runtime" / "third_party"), help="folder containing nlohmann/json.hpp")
     ap.add_argument("--cmake", default=shutil.which("cmake") or r"C:\Program Files\CMake\bin\cmake.exe")
     ap.add_argument("--only", action="append", default=[], help="plugin id (repeatable)")
     ap.add_argument("--plugins-root", action="append", default=[],
                     help="another folder of <id>/native/CMakeLists.txt plugins to build, such as the plugin site's community/ (repeatable)")
     a = ap.parse_args(argv)
+    if not a.data:
+        sys.path.insert(0, str(REPO / "host" / "src"))
+        from pascalpatch.store import default_data_root
+        a.data = str(default_data_root())
     out = Path(a.data).expanduser().resolve() / "native-plugins"; out.mkdir(parents=True, exist_ok=True)
     work = Path(a.data).expanduser().resolve() / "staging" / "native-plugin-build"
     built = []

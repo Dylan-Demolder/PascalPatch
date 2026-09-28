@@ -1,7 +1,7 @@
 {
   "name": "pascalpatch",
   "version": "1.0.0",
-  "description": "PascalPatch is a separate host-side project for building isolated Super Smash Bros. Melee profiles. It never distributes Nintendo game data. Users provide their own GALE01 Rev.02 / Melee 1.02 ISO or extracted game directory.",
+  "description": "A BakkesMod-style mod loader for Melee Unlocked: plugins, training tools and custom fighters, offline.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
@@ -15,7 +15,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "GPL-2.0-or-later",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Dylan-Demolder/PascalPatch/issues"
