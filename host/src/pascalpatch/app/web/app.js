@@ -169,19 +169,28 @@ async function pagePlugins(root) {
     h('div', { class: `plugin-icon ${builtin ? 'is-builtin' : ''}` }, (p.name || p.id)[0].toUpperCase()),
     h('div', { class: 'pp-grow' }, h('strong', {}, p.name || p.id), ' ', h('span', { class: 'pp-dim pp-small' }, `v${p.version}`),
       h('div', { class: 'pp-small pp-muted' }, p.summary)),
-    builtin ? h('span', { class: 'pp-tag', 'data-tip': 'Built from this PascalPatch checkout; profiles turn it on when they need it.' }, 'built-in')
+    builtin ? (p.profile_plugin
+      ? h('span', { class: 'pp-tag', 'data-tip': 'Part of PascalPatch: Play loads it when a profile needs it (new fighters, unlocks, Quick Match).' }, 'built-in')
+      : h('span', { class: 'pp-tag', 'data-tip': 'Built from this PascalPatch checkout. Play does not load it: install it from Browse to use it.' }, 'local build'))
       : h('span', { class: `pp-tag ${p.source === 'file' ? '' : 'pp-tag--info'}`, 'data-tip': p.source === 'file' ? 'Installed from a file: not checked against the plugin site.' : 'Installed from the plugin site: signature and hash checked.' }, p.source === 'file' ? 'local' : 'verified'),
     builtin ? null : h('button', { class: 'pp-btn pp-btn--ghost pp-btn--sm', disabled: !p.settings_schema.length, onclick: () => settingsDialog(p) }, 'Settings'),
+    builtin ? null : h('button', { class: 'pp-btn pp-btn--ghost pp-btn--sm', 'data-tip': 'Remove this plugin. Its settings are kept in case you install it again.',
+      onclick: () => confirmDialog(`Uninstall ${p.name}?`, 'It stops loading from the next Play. Its settings are kept in case you install it again.', 'Uninstall',
+        async () => { await run(() => api.post('/api/plugins/uninstall', { id: p.id }), `${p.name} uninstalled`); route(); refreshStatus(); }) }, 'Uninstall'),
     builtin ? null : h('label', { class: 'pp-switch', 'data-tip': 'Load this plugin the next time you press Play.' },
       h('input', { type: 'checkbox', checked: p.enabled, onchange: async (e) => { await run(() => api.post('/api/plugins/enable', { id: p.id, enabled: e.target.checked }), `${p.name} ${e.target.checked ? 'on' : 'off'}`); } }),
       h('span', { class: 'pp-switch-track' })));
+  const builtIn = data.builtin.filter((p) => p.profile_plugin), local = data.builtin.filter((p) => !p.profile_plugin);
   root.append(pageHead('Installed plugins', 'Plugins run inside the game. Changes apply the next time you press Play; in game, F2 opens their settings.',
     h('a', { class: 'pp-btn pp-btn--primary', href: '#browse' }, 'Browse plugins'),
     h('button', { class: 'pp-btn', 'data-tip': 'Install a plugin ZIP you built yourself.', onclick: () => file.click() }, 'Install from file'), file),
     data.installed.length ? h('div', { class: 'pp-list' }, data.installed.map((p) => row(p, false)))
       : empty('No downloaded plugins', 'Find some on the plugin site.', h('a', { class: 'pp-btn pp-btn--primary', href: '#browse' }, 'Browse plugins')),
     h('h2', { class: 'pp-h2' }, 'Built in'),
-    data.builtin.length ? h('div', { class: 'pp-list' }, data.builtin.map((p) => row(p, true))) : h('p', { class: 'pp-muted' }, 'The runtime and first-party plugins are not built yet.'));
+    builtIn.length ? h('div', { class: 'pp-list' }, builtIn.map((p) => row(p, true))) : h('p', { class: 'pp-muted' }, 'The runtime and first-party plugins are not built yet.'),
+    ...(local.length ? [h('h2', { class: 'pp-h2' }, 'Local builds'),
+      h('p', { class: 'pp-muted pp-small' }, 'Plugins built from this PascalPatch checkout, for developing and publishing. Play does not load these: install a plugin from Browse (or Install from file) to use it.'),
+      h('div', { class: 'pp-list' }, local.map((p) => row(p, true)))] : []));
 }
 function settingsDialog(p) {
   const values = { ...p.settings };
@@ -219,7 +228,7 @@ async function pageBrowse(root, focus) {   // focus: a plugin id from #browse/<i
     tagSel.replaceChildren(h('option', { value: '' }, 'All tags'), ...tags.map((t) => h('option', { value: t, selected: t === cur }, t)));
     const q = search.value.trim().toLowerCase();
     const shown = data.plugins.filter((p) => (!q || `${p.name} ${p.summary} ${p.author} ${p.tags.join(' ')}`.toLowerCase().includes(q)) && (!tagSel.value || p.tags.includes(tagSel.value)));
-    note.replaceChildren(data.fetched ? h('span', { class: 'pp-small pp-dim' }, `From ${data.site} · updated ${new Date(data.fetched * 1000).toLocaleString()}`) : null);
+    note.replaceChildren(...(data.fetched ? [h('span', { class: 'pp-small pp-dim' }, `From ${data.site} · updated ${new Date(data.fetched * 1000).toLocaleString()}`)] : []));
     if (!data.plugins.length) {
       grid.replaceChildren(empty('No plugin list yet', data.fetched ? 'The plugin site has no plugins yet.' : 'Press Refresh to download the list from the plugin site.', refresh.cloneNode(true)));
       grid.querySelector('button')?.addEventListener('click', () => refresh.click());

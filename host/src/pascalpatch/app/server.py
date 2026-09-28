@@ -32,6 +32,9 @@ from ..plugin_store import SITE_URL, PluginStore
 WEB = Path(__file__).with_name("web")
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
          ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json"}
+# Built-in plugins that Play loads by itself when a profile needs them (characters, unlocks, a
+# quick_match); every other DLL in native-plugins is a local build, loaded only once installed.
+PROFILE_PLUGINS = ("unlock-all", "extra-fighters", "move-graft", "quick-match")
 FIRST_PARTY = {
     "unlock-all": "Every character and stage selectable, offline. Stage bits are only opened on the select screens, so no unlock notices.",
     "extra-fighters": "New fighters on the character select screen (paged), with their portraits, grid icons and stock icons.",
@@ -144,8 +147,15 @@ class App:
         for dll in sorted(folder.glob("*.dll")) if folder.is_dir() else []:
             if dll.stem.endswith("_runtime"):
                 continue
-            out.append({"id": dll.stem, "name": dll.stem.replace("-", " ").title(), "summary": FIRST_PARTY.get(dll.stem, "Built from this PascalPatch checkout."),
-                        "source": "built-in", "enabled": True, "version": __version__, "settings_schema": [], "settings": {},
+            m = {}
+            for base in (Path(__file__).resolve().parents[4], self.root):   # this checkout's plugins/<id>/plugin.json
+                try:
+                    m = json.loads((base / "plugins" / dll.stem / "plugin.json").read_text(encoding="utf-8")); break
+                except (OSError, ValueError):
+                    pass
+            out.append({"id": dll.stem, "name": m.get("name") or dll.stem.replace("-", " ").title(),
+                        "summary": m.get("summary") or FIRST_PARTY.get(dll.stem, "Built from this PascalPatch checkout."),
+                        "source": "built-in", "profile_plugin": dll.stem in PROFILE_PLUGINS, "enabled": True, "version": m.get("version") or __version__, "settings_schema": [], "settings": {},
                         "modified": datetime.datetime.fromtimestamp(dll.stat().st_mtime).isoformat(timespec="minutes")})
         return out
 
@@ -261,7 +271,7 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/profile-mods":
                 roadmap, enabled, missing = a.gui.profile_mods(q["id"][0])
                 keys = ("id", "name", "kind", "version", "online_safe", "description", "status", "category", "tags")
-                return self._send(200, {"catalog": [{k: (list(v) if isinstance(v, tuple) else v) for k in keys for v in [getattr(e, k)]} for e in roadmap],
+                return self._send(200, {"catalog": [{k: (list(v) if isinstance(v, tuple) else v) for k in keys for v in [getattr(e, k)]} for e in roadmap.values()],
                                         "enabled": sorted(enabled), "missing": sorted(missing)})
             if p == "/api/plugins":
                 return self._send(200, {"installed": a.plugins().installed(), "builtin": a.builtin()})
