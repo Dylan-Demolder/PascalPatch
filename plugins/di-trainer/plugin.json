@@ -1,0 +1,18 @@
+{
+  "id": "di-trainer",
+  "name": "DI Trainer",
+  "version": "1.0.0",
+  "abi": 1,
+  "entry": "di-trainer.dll",
+  "summary": "Shows where a hit will send you while you are frozen in hitlag: with no DI, with the DI you are holding, and with the DI that survives best.",
+  "author": "PascalPatch",
+  "license": "GPL-2.0-or-later",
+  "tags": ["hud", "training", "di"],
+  "min_runtime": "0.3",
+  "settings": [
+    {"key": "show_none", "type": "bool", "label": "Path with no DI", "default": true},
+    {"key": "show_best", "type": "bool", "label": "Best survival DI", "default": true},
+    {"key": "keep", "type": "bool", "label": "Keep the path on screen while flying", "default": true},
+    {"key": "toggle_key", "type": "key", "label": "Show / hide", "default": "F10"}
+  ]
+}
