@@ -45,8 +45,41 @@ def open_window(url, title, data_dir, size=(1320, 860)):
         proc = subprocess.Popen([exe, f"--app={url}", f"--user-data-dir={profile}", f"--window-size={size[0]},{size[1]}",
                                  "--no-first-run", "--no-default-browser-check", "--disable-extensions"])
         proc.wait()
+        # msedge.exe is only a launcher: it hands the window to a browser process and exits at once, so
+        # wait on the profile instead. Chromium keeps <profile>/lockfile open while any window is up.
+        _wait_for_profile(profile)
         return
     webbrowser.open(url)
+    _serve_until_interrupted()
+
+
+def _profile_in_use(profile):
+    lock = Path(profile) / "lockfile"
+    if not lock.exists():
+        return False
+    try:
+        os.close(os.open(lock, os.O_RDWR))   # a stale lock left by a crash opens fine
+        return False
+    except OSError:
+        return True
+
+
+def _wait_for_profile(profile, start_timeout=30.0):
+    """Return once the browser holding ``profile`` has closed its last window."""
+    deadline = time.monotonic() + start_timeout
+    while not _profile_in_use(profile):
+        if time.monotonic() > deadline:   # never saw the browser start: keep serving until Ctrl+C
+            _serve_until_interrupted()
+            return
+        time.sleep(0.25)
+    try:
+        while _profile_in_use(profile):
+            time.sleep(1)
+    except KeyboardInterrupt:
+        pass
+
+
+def _serve_until_interrupted():
     try:
         while True:
             time.sleep(3600)
