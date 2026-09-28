@@ -91,7 +91,27 @@ async function pagePlay(root) {
         S.profiles.length ? h('div', { class: 'pp-stack' }, pick, h('div', { class: 'play-row' }, play, build,
           h('span', { class: 'pp-small pp-muted' }, 'In game, press ', h('span', { class: 'pp-kbd' }, 'F2'), ' for the PascalPatch overlay.')))
           : empty('No profiles yet', 'A profile says which characters and plugins go into your game.', h('a', { class: 'pp-btn pp-btn--primary', href: '#profiles' }, 'New profile'))),
-      frame(['Status'], checks, st.problems?.length ? h('div', { class: 'pp-notice pp-notice--warn', style: 'margin-top:12px' }, h('div', {}, st.problems.join(' '))) : null)));
+      frame(['Status'], checks, st.problems?.length ? setupSteps(st.problems) : null)));
+}
+
+// What is left to set up, one step per problem, each with the button that fixes it.
+function setupSteps(problems) {
+  const step = (text) => {
+    const cmd = /run (tooling\/\S+?\.py)/.exec(text);
+    let action = null;
+    if (cmd) {
+      const line = `python ${cmd[1]}`;
+      action = h('div', { class: 'setup-cmd' }, h('code', {}, line), h('button', { class: 'pp-btn pp-btn--ghost pp-btn--sm', onclick: async () => {
+        try { await navigator.clipboard.writeText(line); toast('Copied. Run it in the PascalPatch folder.'); } catch (e) { toast('Copy failed: select the command instead', 'danger'); }
+      } }, 'Copy'));
+    } else if (/melee_port|Settings/.test(text)) {
+      action = h('a', { class: 'pp-btn pp-btn--sm', href: '#settings' }, 'Open Settings');
+    }
+    return h('li', {}, h('div', {}, text), action);
+  };
+  return h('div', { class: 'pp-notice pp-notice--warn setup-steps', style: 'margin-top:12px' },
+    h('strong', {}, 'To finish setting up'), h('ol', {}, problems.map(step)),
+    h('button', { class: 'pp-btn pp-btn--ghost pp-btn--sm', onclick: async () => { await refreshStatus(); route(); } }, 'Check again'));
 }
 
 // ---------------------------------------------------------------- Profiles
@@ -111,7 +131,8 @@ async function pageProfiles(root) {
       h('thead', {}, h('tr', {}, h('th', {}, 'Fighter'), h('th', {}, 'Built on'), h('th', {}, 'Added as'))),
       h('tbody', {}, p.characters.map((c, i) => h('tr', {}, h('td', {}, h('span', { class: `pp-tag pp-port pp-port--${PORTS[i % 4]}` }, c.name)), h('td', {}, c.slot), h('td', {}, c.install === 'new' ? 'new fighter' : 'replacement')))))
       : h('p', { class: 'pp-muted' }, 'No custom fighters. Make some in Character Studio and build its roster into this profile.');
-    const mods = h('div', { class: 'pp-list' }, h('div', { class: 'pp-list-row pp-muted' }, 'Loading mods…'));
+    const mods = h('div', { class: 'pp-list' });
+    const modsSlot = h('div');
     detail.replaceChildren(
       frame([p.name, p.id],
         h('div', { class: 'pp-stack' },
@@ -125,10 +146,17 @@ async function pageProfiles(root) {
             h('button', { class: 'pp-btn pp-btn--ghost pp-btn--sm', 'data-tip': 'Delete this profile (its builds stay on disk).', onclick: () => confirmDialog(`Delete ${p.name}?`, 'The profile file is removed. Built games stay in the data folder.', 'Delete', async () => {
               await run(() => api.post('/api/profile/delete', { id: p.id }), 'Profile deleted'); route(); }) }, 'Delete')))),
       frame(['Fighters'], chars),
-      frame(['Mods'], mods));
+      frame(['Plugins'], h('div', { class: 'pp-stack' },
+        h('p', { class: 'pp-muted', style: 'margin:0' }, `Every plugin you switch on under Installed runs in this profile, and in every other one. ${S.status?.plugins || 0} available.`),
+        h('div', { class: 'play-row' }, h('a', { class: 'pp-btn pp-btn--sm', href: '#plugins' }, 'Installed plugins'), h('a', { class: 'pp-btn pp-btn--ghost pp-btn--sm', href: '#browse' }, 'Browse plugins')))),
+      modsSlot);
     try {
       const m = await api.get('/api/profile-mods?id=' + encodeURIComponent(p.id));
-      mods.replaceChildren(...(m.catalog.length ? m.catalog.map((e) => {
+      // Build-time file mods from before plugins. Only ones that work are offered; roadmap entries are left out.
+      const usable = m.catalog.filter((e) => m.enabled.includes(e.id) || (e.status === 'available' && e.id !== 'demo-mod'));
+      if (!usable.length) return;
+      modsSlot.replaceWith(frame(['File mods'], mods));
+      mods.replaceChildren(...(usable.length ? usable.map((e) => {
         const on = m.enabled.includes(e.id);
         const sw = h('input', { type: 'checkbox', checked: on, disabled: e.status === 'planned', onchange: async (ev) => {
           try { await api.post('/api/profile-mod', { profile: p.id, mod: e.id, enabled: ev.target.checked }); toast(`${e.name} ${ev.target.checked ? 'on' : 'off'}`); }
@@ -138,7 +166,7 @@ async function pageProfiles(root) {
           e.online_safe ? null : h('span', { class: 'pp-tag' }, 'offline'),
           h('label', { class: 'pp-switch' }, sw, h('span', { class: 'pp-switch-track' })));
       }) : [h('div', { class: 'pp-list-row pp-muted' }, 'No mods in the catalog.')]));
-    } catch (e) { mods.replaceChildren(h('div', { class: 'pp-list-row pp-muted' }, e.message)); }
+    } catch (e) { modsSlot.replaceWith(frame(['File mods'], h('div', { class: 'pp-list-row pp-muted' }, e.message))); }
   };
   root.append(pageHead('Profiles', 'A profile is one version of your game: its fighters, mods and plugins.',
     h('button', { class: 'pp-btn pp-btn--primary', onclick: newProfileDialog }, 'New profile')),
@@ -214,7 +242,10 @@ function settingsDialog(p) {
 // ---------------------------------------------------------------- Browse
 async function pageBrowse(root, focus) {   // focus: a plugin id from #browse/<id> (the plugin site links here)
   let data = await api.get('/api/store');
-  if (focus && !data.plugins.some((p) => p.id === focus)) { try { data = await api.post('/api/store/refresh'); } catch (e) {} }
+  // Fetch the list without being asked the first time, when it is a day old (to show updates), or
+  // when the plugin site linked to a plugin the list does not have yet. Offline, the old list stays.
+  const stale = !data.fetched || Date.now() / 1000 - data.fetched > 86400;
+  if (stale || (focus && !data.plugins.some((p) => p.id === focus))) { try { data = await api.post('/api/store/refresh'); } catch (e) {} }
   const grid = h('div', { class: 'pp-cards' });
   const search = h('input', { class: 'pp-input', type: 'search', placeholder: 'Search plugins', oninput: () => draw() });
   const tagSel = h('select', { class: 'pp-select', style: 'max-width:180px', onchange: () => draw() });

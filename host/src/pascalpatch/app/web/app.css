@@ -29,3 +29,10 @@
 .pp-field-group:first-child { margin-top: 0; }
 .path-row { display: flex; gap: 6px; }
 .path-row .pp-input { flex: 1; min-width: 0; }
+.setup-steps ol { margin: 8px 0 10px; padding-left: 20px; display: grid; gap: 10px; }
+.setup-steps li > div:first-child { margin-bottom: 6px; }
+.setup-cmd { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.setup-cmd code { font-size: 12px; padding: 3px 6px; border-radius: 4px; background: var(--pp-sunken); }
+.setup-steps { display: block; }
+.setup-steps li { min-width: 0; }
+.setup-cmd code { overflow-wrap: anywhere; }
