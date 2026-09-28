@@ -110,7 +110,7 @@ def main(argv=None):
                        f"Python {PYTHON_VERSION} (Windows embeddable package, python.org), so PascalPatch runs\r\n"
                        "without installing Python. Its license is LICENSE.txt in this folder.\r\n")
     digest = hashlib.sha256(zpath.read_bytes()).hexdigest()
-    (out / f"{zpath.name}.sha256").write_text(f"{digest}  {zpath.name}\n", encoding="ascii")
+    (out / f"{zpath.name}.sha256").write_bytes(f"{digest}  {zpath.name}\n".encode("ascii"))   # LF: sha256sum -c reads it
     print(zpath)
     print(f"sha256 {digest}  {zpath.stat().st_size / 1e6:.1f} MB")
     return 0
