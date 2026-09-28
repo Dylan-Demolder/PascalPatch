@@ -145,7 +145,8 @@ def main(argv=None):
             log.insert(0, {"version": manifest["version"], "notes": manifest["changes"]})
         cat[pid] = {"id": pid, "name": manifest["name"], "summary": manifest["summary"], "description": readme.strip(),
                     "author": manifest.get("author", "PascalPatch"), "tags": manifest.get("tags", []),
-                    "homepage": manifest.get("homepage"), "abi": manifest["abi"], "settings": manifest.get("settings", []),
+                    "homepage": manifest.get("homepage"), "abi": manifest["abi"], "min_runtime": manifest.get("min_runtime"),
+                    "settings": manifest.get("settings", []),
                     "icon": manifest.get("icon"), "changelog": log, "updated": int(time.time())}
         if a.host == "releases":
             uploads.append((tag, out / "packages" / name))

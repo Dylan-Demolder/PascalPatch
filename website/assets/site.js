@@ -4,6 +4,21 @@
 (() => {
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // A README's Markdown, the small part plugins use: paragraphs, "- " lists (continued by indented
+  // lines), **bold** and `code`. Everything is escaped first, so a README can never inject markup.
+  const inline = (t) => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  const readme = (text) => String(text || "").split(/\n\s*\n/).map((block) => {
+    const lines = block.split("\n");
+    if (/^\s*[-*] /.test(lines[0])) {
+      const items = [];
+      for (const l of lines) {
+        if (/^\s*[-*] /.test(l)) items.push(l.replace(/^\s*[-*] /, ""));
+        else if (items.length) items[items.length - 1] += " " + l.trim();
+      }
+      return `<ul>${items.map((i) => `<li>${inline(i)}</li>`).join("")}</ul>`;
+    }
+    return `<p>${inline(lines.map((l) => l.trim()).join(" "))}</p>`;
+  }).join("");
   const verKey = (v) => String(v).split(/[.-]/).map((p) => (/^\d+$/.test(p) ? p.padStart(8, "0") : "~" + p)).join(".");
   let plugins = [], tag = "all";
 
@@ -61,13 +76,13 @@
     $("#d-title").textContent = p.name;
     $("#d-body").innerHTML = `
       <p class="plugin-summary">${esc(p.summary)}</p>
-      ${p.description ? `<p class="readme">${esc(p.description)}</p>` : ""}
+      ${p.description ? `<div class="readme">${readme(p.description)}</div>` : ""}
       ${(p.settings || []).length ? `<div><h4 class="pp-h3">In the F2 window</h4><ul>${p.settings.map(settingRow).join("")}</ul></div>` : ""}
       <dl class="detail-grid">
         <dt>Version</dt><dd>${esc(e.version)}</dd>
         <dt>Author</dt><dd>${esc(p.author || e.maintainer)}</dd>
         <dt>License</dt><dd>${esc(e.license)}</dd>
-        <dt>Needs</dt><dd>PascalPatch runtime ABI ${esc(p.abi ?? 1)}${p.min_runtime ? `, runtime ${esc(p.min_runtime)}+` : ""}</dd>
+        <dt>Needs</dt><dd>${p.min_runtime ? `PascalPatch ${esc(p.min_runtime)} or newer` : `PascalPatch runtime ABI ${esc(p.abi ?? 1)}`}</dd>
         <dt>SHA-256</dt><dd class="pp-mono pp-small">${esc(e.sha256)}</dd>
         ${(p.changelog || []).length ? `<dt>Changes</dt><dd>${p.changelog.map((c) => `<div><b>${esc(c.version)}</b> ${esc(c.notes)}</div>`).join("")}</dd>` : ""}
       </dl>

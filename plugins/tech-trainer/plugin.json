@@ -1,0 +1,25 @@
+{
+  "id": "tech-trainer",
+  "name": "Tech Trainer",
+  "version": "1.0.0",
+  "abi": 1,
+  "entry": "tech-trainer.dll",
+  "summary": "Instant feedback on L-cancels, short hops, wavedashes and techs: made it, or how many frames early or late.",
+  "author": "PascalPatch",
+  "license": "GPL-2.0-or-later",
+  "tags": ["hud", "training"],
+  "min_runtime": "0.3",
+  "settings": [
+    {"key": "port", "type": "choice", "label": "Player", "default": "1",
+     "options": [{"value": "1", "label": "Port 1"}, {"value": "2", "label": "Port 2"}, {"value": "3", "label": "Port 3"}, {"value": "4", "label": "Port 4"}]},
+    {"key": "watch", "type": "choice", "label": "Coach", "default": "player",
+     "options": [{"value": "player", "label": "Just that player"}, {"value": "humans", "label": "Every human player"}]},
+    {"key": "lcancel", "type": "bool", "label": "L-cancels", "default": true},
+    {"key": "hops", "type": "bool", "label": "Short hops and full hops", "default": true},
+    {"key": "wavedash", "type": "bool", "label": "Wavedashes", "default": true},
+    {"key": "techs", "type": "bool", "label": "Techs", "default": true},
+    {"key": "tally", "type": "bool", "label": "Success tally in the corner", "default": true},
+    {"key": "reset_key", "type": "key", "label": "Reset the tally", "default": "F8"},
+    {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.95, "min": 0.3, "max": 1.0}
+  ]
+}

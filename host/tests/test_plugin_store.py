@@ -142,6 +142,17 @@ class PluginStoreTests(unittest.TestCase):
         self.assertTrue(validate_manifest(_manifest(abi=99)))
         self.assertTrue(validate_manifest(_manifest(entry="other.dll")))
         self.assertTrue(validate_manifest(_manifest(settings=[{"key": "x", "type": "choice"}])))
+        self.assertEqual(validate_manifest(_manifest(min_runtime="0.3")), [])
+        self.assertTrue(validate_manifest(_manifest(min_runtime="latest")))
+        self.assertEqual(validate_manifest(_manifest(settings=[{"key": "k", "type": "key", "default": "F5"}])), [])
+
+    def test_repo_plugins_are_valid(self):
+        root = Path(__file__).parents[2] / "plugins"
+        for manifest in root.glob("*/plugin.json"):
+            m = json.loads(manifest.read_text(encoding="utf-8"))
+            if "entry" in m:   # native plugins (demo-mod is the older static example)
+                self.assertEqual(validate_manifest(m), [], manifest.parent.name)
+                self.assertTrue((manifest.parent / "README.md").is_file(), manifest.parent.name)
 
     def test_shipped_trust_store_is_valid(self):
         trust = json.loads((Path(__file__).parents[1] / "src/pascalpatch/trust.json").read_text())

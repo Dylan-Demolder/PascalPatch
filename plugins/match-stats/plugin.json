@@ -1,0 +1,17 @@
+{
+  "id": "match-stats",
+  "name": "Match Stats",
+  "version": "1.0.0",
+  "abi": 1,
+  "entry": "match-stats.dll",
+  "summary": "Openings, kills, damage per opening, neutral wins, L-cancel rate and inputs per minute for every match, with a history file.",
+  "author": "PascalPatch",
+  "license": "GPL-2.0-or-later",
+  "tags": ["stats", "hud"],
+  "min_runtime": "0.3",
+  "settings": [
+    {"key": "card", "type": "bool", "label": "Show the stats when a match ends", "default": true},
+    {"key": "peek_key", "type": "key", "label": "Hold to see the stats during a match", "default": "F4"},
+    {"key": "history", "type": "bool", "label": "Keep a history file (match-stats.jsonl)", "default": true}
+  ]
+}

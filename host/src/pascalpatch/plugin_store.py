@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import time
 import zipfile
@@ -67,6 +68,8 @@ def validate_manifest(m, entry=None):
         e.append(ValidationError("plugin.json.entry", "entry", "must be <id>.dll"))
     if "abi" in m and (not isinstance(m["abi"], int) or not 1 <= m["abi"] <= PLUGIN_ABI):
         e.append(ValidationError("plugin.json.abi", "abi", f"needs runtime ABI {m['abi']}; this PascalPatch serves up to {PLUGIN_ABI}"))
+    if "min_runtime" in m and not (isinstance(m["min_runtime"], str) and re.fullmatch(r"\d+\.\d+(\.\d+)?", m["min_runtime"])):
+        e.append(ValidationError("plugin.json.min_runtime", "version", "must be a version like \"0.3\""))
     for i, s in enumerate(m.get("settings", [])):
         where = f"plugin.json.settings[{i}]"
         if not isinstance(s, dict) or not isinstance(s.get("key"), str) or s.get("type") not in SETTING_TYPES:

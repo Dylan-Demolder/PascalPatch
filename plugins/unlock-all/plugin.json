@@ -1,16 +1,28 @@
 {
   "id": "unlock-all",
   "name": "Unlock All",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "abi": 1,
   "entry": "unlock-all.dll",
   "summary": "Every character and stage is selectable from the first boot, without touching your memory card.",
   "author": "PascalPatch",
   "license": "GPL-2.0-or-later",
-  "tags": ["unlocks"],
+  "tags": [
+    "unlocks"
+  ],
   "settings": [
-    {"key": "characters", "type": "bool", "label": "Unlock every character", "default": true},
-    {"key": "stages", "type": "bool", "label": "Unlock every stage on the select screens", "default": true,
-     "help": "Only while choosing, so the game never shows unlock notices."}
-  ]
+    {
+      "key": "characters",
+      "type": "bool",
+      "label": "Unlock every character",
+      "default": true
+    },
+    {
+      "key": "stages",
+      "type": "bool",
+      "label": "Unlock every stage",
+      "default": true
+    }
+  ],
+  "changes": "A fresh save no longer boots into a run of \"You got a trophy\" notices: characters, like stages, are unlocked only while a select screen is up."
 }

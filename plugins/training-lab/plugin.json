@@ -1,0 +1,26 @@
+{
+  "id": "training-lab",
+  "name": "Training Lab",
+  "version": "1.0.0",
+  "abi": 1,
+  "entry": "training-lab.dll",
+  "summary": "Pause, frame advance and slow motion on hotkeys, plus percent reset and lock, infinite shield and endless stocks.",
+  "author": "PascalPatch",
+  "license": "GPL-2.0-or-later",
+  "tags": ["training", "hotkeys"],
+  "min_runtime": "0.3",
+  "settings": [
+    {"key": "pause_key", "type": "key", "label": "Pause / resume", "default": "F5"},
+    {"key": "step_key", "type": "key", "label": "Frame advance", "default": "F6"},
+    {"key": "slow_key", "type": "key", "label": "Slow motion on / off", "default": "F7"},
+    {"key": "slow_speed", "type": "choice", "label": "Slow motion speed", "default": "half",
+     "options": [{"value": "half", "label": "Half speed"}, {"value": "quarter", "label": "Quarter speed"}]},
+    {"key": "who", "type": "choice", "label": "Percent, shield and stock options apply to", "default": "p2",
+     "options": [{"value": "p1", "label": "Port 1"}, {"value": "p2", "label": "Port 2"}, {"value": "all", "label": "Everyone"}, {"value": "cpu", "label": "CPU players"}]},
+    {"key": "reset_key", "type": "key", "label": "Reset percent to 0", "default": "F9"},
+    {"key": "lock_percent", "type": "bool", "label": "Lock percent", "default": false},
+    {"key": "percent", "type": "int", "label": "Locked percent", "default": 60, "min": 0, "max": 999},
+    {"key": "infinite_shield", "type": "bool", "label": "Infinite shield", "default": false},
+    {"key": "endless_stocks", "type": "bool", "label": "Endless stocks", "default": false}
+  ]
+}

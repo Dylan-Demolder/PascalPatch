@@ -1,0 +1,18 @@
+{
+  "id": "combo-counter",
+  "name": "Combo Counter",
+  "version": "1.0.0",
+  "abi": 1,
+  "entry": "combo-counter.dll",
+  "summary": "Counts the hits and damage of every combo as it lands, and keeps each player's best combo of the match.",
+  "author": "PascalPatch",
+  "license": "GPL-2.0-or-later",
+  "tags": ["hud", "training", "stats"],
+  "min_runtime": "0.3",
+  "settings": [
+    {"key": "min_hits", "type": "int", "label": "Show combos from this many hits", "default": 2, "min": 1, "max": 10},
+    {"key": "reset", "type": "int", "label": "Frames free before a combo ends", "default": 45, "min": 10, "max": 120},
+    {"key": "best", "type": "bool", "label": "Keep each player's best combo on screen", "default": true},
+    {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.95, "min": 0.3, "max": 1.0}
+  ]
+}

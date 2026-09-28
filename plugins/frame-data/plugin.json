@@ -1,0 +1,21 @@
+{
+  "id": "frame-data",
+  "name": "Frame Data",
+  "version": "1.0.0",
+  "abi": 1,
+  "entry": "frame-data.dll",
+  "summary": "Shows each fighter's action state, frame, hitlag and hitstun, and who is plus after every hit or shield.",
+  "author": "PascalPatch",
+  "license": "GPL-2.0-or-later",
+  "tags": ["hud", "training", "frame data"],
+  "min_runtime": "0.3",
+  "settings": [
+    {"key": "ports", "type": "choice", "label": "Fighters", "default": "p1p2",
+     "options": [{"value": "p1", "label": "Port 1"}, {"value": "p1p2", "label": "Ports 1 and 2"}, {"value": "all", "label": "All ports"}]},
+    {"key": "panels", "type": "bool", "label": "State panels", "default": true},
+    {"key": "advantage", "type": "bool", "label": "Frame advantage after hits and shields", "default": true},
+    {"key": "toast", "type": "bool", "label": "Also pop up each result", "default": false},
+    {"key": "detail", "type": "bool", "label": "Show state ids and positions", "default": false},
+    {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.9, "min": 0.3, "max": 1.0}
+  ]
+}

@@ -54,7 +54,12 @@ body.pp-root { display: flex; flex-direction: column; }
 .detail-grid { display: grid; grid-template-columns: max-content 1fr; gap: 4px var(--pp-space-4); margin: 0; }
 .detail-grid dt { color: var(--pp-text-dim); }
 .detail-grid dd { margin: 0; overflow-wrap: anywhere; }
-.readme { white-space: pre-wrap; color: var(--pp-text-muted); margin: 0; }
+.readme { color: var(--pp-text-muted); }
+.readme p, .readme ul { margin: 0 0 10px; }
+.readme ul { padding-left: 20px; }
+.readme li { margin: 3px 0; }
+.readme b { color: var(--pp-text); }
+.readme code { font-family: ui-monospace, Consolas, monospace; font-size: .92em; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,.07); color: var(--pp-text); }
 #details { width: min(640px, calc(100vw - 32px)); max-width: none; }
 #details .pp-dialog-head { display: flex; align-items: center; gap: var(--pp-space-3); }
 
