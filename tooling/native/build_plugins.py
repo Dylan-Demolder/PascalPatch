@@ -1,7 +1,7 @@
 """Build PascalPatch's native runtime and plugins into <data>/native-plugins.
 
 runtime/native builds pascalpatch-launch.exe and pascalpatch_runtime.dll (injected into
-an unmodified melee_port.exe); each plugins/<id>/native/ folder is a CMake
+an unmodified melee_port.exe) and PascalPatch.exe (the tray app); each plugins/<id>/native/ folder is a CMake
 project producing <id>.dll. The
 builds need Visual Studio 2022 (or Build Tools) and CMake, and a folder with
 nlohmann/json.hpp (melee-unlocked ships one under port/third_party).
@@ -56,7 +56,7 @@ def main(argv=None):
         subprocess.run([a.cmake, "-S", str(src.parent), "-B", str(build), "-A", "x64", *defs],
                        check=True, stdout=subprocess.DEVNULL)
         subprocess.run([a.cmake, "--build", str(build), "--config", "Release"], check=True)
-        outputs = ["pascalpatch-launch.exe", "pascalpatch_runtime.dll"] if pid == "runtime" else [f"{pid}.dll"]
+        outputs = ["pascalpatch-launch.exe", "pascalpatch_runtime.dll", "PascalPatch.exe"] if pid == "runtime" else [f"{pid}.dll"]
         for name in outputs:
             shutil.copy2(build / "Release" / name, out / name); built.append(str(out / name))
     for path in built:

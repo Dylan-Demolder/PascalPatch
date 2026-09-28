@@ -288,6 +288,7 @@ class App:
 class Handler(BaseHTTPRequestHandler):
     app: App = None
     origin = ""
+    quit = None   # set by serve() for the tray app
 
     def log_message(self, *a):
         pass
@@ -369,6 +370,8 @@ class Handler(BaseHTTPRequestHandler):
                 a.plugins().uninstall(b["id"]); return self._send(200, {"ok": True})
             if p == "/api/settings": return self._send(200, a.save_settings(b))
             if p == "/api/studio": return self._send(200, a.open_studio())
+            if p == "/api/quit" and Handler.quit:
+                self._send(200, {"ok": True}); Handler.quit(); return
             if p == "/api/pick": return self._send(200, a.pick(b.get("kind", ""), b.get("title", "Choose a file"), b.get("start", "")))
             return self._send(404, {"error": "not found"})
         except (PascalPatchError, CatalogError, KeyError, ValueError, OSError) as exc:
@@ -379,11 +382,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(400, {"error": msg})
 
 
-def serve(root, data, port=0, window=True):
+def serve(root, data, port=0, window=True, tray=False):
+    """Serve the app. tray: run by PascalPatch.exe, which reads the ready line, opens the window
+    itself and stops the server with /api/quit."""
     Handler.app = App(root, data)
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     Handler.origin = f"http://127.0.0.1:{server.server_address[1]}"
-    print(f"PascalPatch {__version__}: {Handler.origin}/  (Ctrl+C to stop)", flush=True)
+    Handler.quit = (lambda: threading.Thread(target=server.shutdown, daemon=True).start()) if tray else None
+    if tray:
+        print("PASCALPATCH_READY " + json.dumps({"url": Handler.origin + "/", "data": str(Handler.app.data), "version": __version__}), flush=True)
+    else:
+        print(f"PascalPatch {__version__}: {Handler.origin}/  (Ctrl+C to stop)", flush=True)
     if window:
         from .window import open_window
         threading.Thread(target=server.serve_forever, daemon=True).start()

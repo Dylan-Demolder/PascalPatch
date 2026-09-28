@@ -67,6 +67,29 @@ class AppServerTests(unittest.TestCase):
         self.assertNotIn("--user-dir", flags)
         self.assertNotIn("--settings-path", release_args(game / "melee_port.exe", self.tmp.name, ["--settings-path=mine.ini"]))
 
+    def test_the_tray_app_starts_the_server_and_quits_it(self):
+        # PascalPatch.exe runs `app --tray`, reads the ready line and stops the server with /api/quit
+        import os, subprocess, sys
+        from urllib.error import HTTPError
+        from urllib.request import Request
+        with self.assertRaises(HTTPError, msg="only the tray app's server can be quit") as no:
+            urlopen(Request(Handler.origin + "/api/quit", data=b"{}", method="POST"), timeout=10)
+        self.assertEqual(no.exception.code, 404)
+        env = dict(os.environ, PYTHONPATH=str(REPO / "host" / "src"), PYTHONUNBUFFERED="1")
+        proc = subprocess.Popen([sys.executable, "-m", "pascalpatch.cli", "--root", self.tmp.name, "--data", self.tmp.name, "app", "--tray"],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+        self.addCleanup(lambda: proc.poll() is None and proc.kill())
+        tag, _, rest = proc.stdout.readline().partition(" ")
+        self.assertEqual(tag, "PASCALPATCH_READY")
+        ready = json.loads(rest)
+        self.assertEqual(Path(ready["data"]), Path(self.tmp.name).resolve())
+        with urlopen(ready["url"] + "api/status", timeout=10) as r:
+            self.assertIn("version", json.loads(r.read()))
+        with urlopen(Request(ready["url"] + "api/quit", data=b"{}", method="POST"), timeout=10) as r:
+            self.assertEqual(json.loads(r.read()), {"ok": True})
+        self.assertEqual(proc.wait(timeout=15), 0)
+        proc.stdout.close()
+
     def test_a_new_install_is_told_to_make_a_profile(self):
         root = Path(self.tmp.name) / "install"; root.mkdir()
         problems = App(root, Path(self.tmp.name) / "data").status()["problems"]

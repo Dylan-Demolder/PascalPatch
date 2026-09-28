@@ -46,11 +46,17 @@ That's all. PascalPatch brings its own Python, and its in-game runtime comes bui
 
 1. Download **`PascalPatch-<version>-windows.zip`** from PascalPatch's [latest release](https://github.com/Dylan-Demolder/PascalPatch/releases/latest).
 2. Unzip it anywhere, for example next to your Melee Unlocked folder.
-3. Open the `PascalPatch-<version>` folder and double-click **`pascalpatch.cmd`**.
+3. Open the `PascalPatch-<version>` folder and double-click **`PascalPatch.exe`**.
 
 Windows may say it protected your PC, because the download is new and not signed by a company. Click **More info**, then **Run anyway**. You only see this once.
 
-The app opens in its own window. A console window opens with it: that is the app's server, and closing it closes the app. Your settings, plugins and logs live in PascalPatch's data folder (`%USERPROFILE%\.local\share\pascalpatch`), not in the unzipped folder.
+The app opens in its own window, and PascalPatch's icon appears in the notification area (the tray) beside the clock. Windows 10 first puts new icons under the **^** arrow; drag it onto the taskbar to keep it in view.
+
+- **Closing the window** leaves PascalPatch running in the tray. Click the icon to open it again.
+- **Right-click the icon** to **Play** a profile, open **Character Studio**, turn **Start with Windows** on or off, or **Quit PascalPatch**.
+- Double-clicking `PascalPatch.exe` again while it runs just brings its window back.
+
+Your settings, plugins and logs live in PascalPatch's data folder (`%USERPROFILE%\.local\share\pascalpatch`), not in the unzipped folder. `pascalpatch.cmd` is still there for the command line.
 
 ### Open the app
 
@@ -83,7 +89,7 @@ git clone https://github.com/Dylan-Demolder/PascalPatch
 python tooling/native/build_plugins.py
 ```
 
-Run the second command inside the `PascalPatch` folder, and again after each `git pull`. `pascalpatch.cmd` then uses your installed Python. `python tooling/release/package.py` builds the release zip.
+Run the second command inside the `PascalPatch` folder, and again after each `git pull`. `pascalpatch.cmd` then opens the app with your installed Python. (`PascalPatch.exe` is built into the data folder's `native-plugins`, away from the checkout, so from source use `pascalpatch.cmd`.) `python tooling/release/package.py` builds the release zip.
 
 ## Play
 
@@ -316,7 +322,8 @@ The built game for each profile lives in PascalPatch's data folder, never beside
 | The Play page says Melee Unlocked is missing | Settings: **Browse…** to `melee_port.exe` in your Melee Unlocked folder. |
 | The Play page says the runtime is not built | The release zip includes it: check the `bin` folder was unzipped too. From source, run `python tooling/native/build_plugins.py` in the PascalPatch folder. |
 | The game stops at boot with "OSPanic" in its log | Update PascalPatch: versions before 0.5 did not pass Melee Unlocked's release folders to the game. |
-| `pascalpatch.cmd` says it needs Python | Unzip the whole download first: opening it from inside the zip leaves its own Python behind. |
+| `PascalPatch.exe` says it cannot find its Python | Unzip the whole download first: opening it from inside the zip leaves its own Python behind. |
+| Nothing seems to happen when you open PascalPatch | It may already be running: look for its icon in the tray (under **^**) and click it. |
 | The game starts, but F2 does nothing | Melee Unlocked must use Direct3D 12 (F1 > Graphics backend). Click the game window so it has focus. |
 | A plugin does nothing | Is it switched on (Installed)? Are you in a match? Check its F2 tab for "failed to load" and its log. |
 | A plugin says it needs a newer PascalPatch | Download the latest release (from source: `git pull`, then rebuild the runtime). |

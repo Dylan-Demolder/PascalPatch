@@ -53,7 +53,7 @@ jobs:
           if ($LASTEXITCODE) { throw "the bundled Python cannot run PascalPatch" }
           & "$root/python/python.exe" -c "from melee_character_studio import projects; import sys; sys.exit(len(projects.examples()) == 0)"
           if ($LASTEXITCODE) { throw "the bundled Python cannot run Character Studio or finds no examples" }
-          foreach ($f in "bin/pascalpatch-launch.exe", "bin/pascalpatch_runtime.dll", "bin/quick-match.dll", "pascalpatch.cmd", "studio/examples/roster.json") {
+          foreach ($f in "PascalPatch.exe", "bin/pascalpatch-launch.exe", "bin/pascalpatch_runtime.dll", "bin/quick-match.dll", "pascalpatch.cmd", "studio/examples/roster.json") {
             if (-not (Test-Path "$root/$f")) { throw "missing $f" }
           }
       - name: Attach to the release

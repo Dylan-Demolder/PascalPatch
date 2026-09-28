@@ -1,0 +1,36 @@
+// PascalPatch.exe's icon and version details (Properties > Details in Explorer).
+// PP_VERSION_* come from runtime/native/pp_runtime.h, through CMakeLists.txt.
+#include <winver.h>
+#include "app_resource.h"
+
+IDI_APP ICON "app.ico"
+
+#define PP_STR2(x) #x
+#define PP_STR(x) PP_STR2(x)
+#define PP_VERSION_TEXT PP_STR(PP_VERSION_MAJOR) "." PP_STR(PP_VERSION_MINOR) "." PP_STR(PP_VERSION_PATCH)
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION PP_VERSION_MAJOR, PP_VERSION_MINOR, PP_VERSION_PATCH, 0
+PRODUCTVERSION PP_VERSION_MAJOR, PP_VERSION_MINOR, PP_VERSION_PATCH, 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "PascalPatch"
+      VALUE "FileDescription", "PascalPatch"
+      VALUE "FileVersion", PP_VERSION_TEXT
+      VALUE "InternalName", "PascalPatch"
+      VALUE "LegalCopyright", "GPL-2.0-or-later"
+      VALUE "OriginalFilename", "PascalPatch.exe"
+      VALUE "ProductName", "PascalPatch"
+      VALUE "ProductVersion", PP_VERSION_TEXT
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

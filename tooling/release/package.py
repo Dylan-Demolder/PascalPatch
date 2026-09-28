@@ -1,4 +1,4 @@
-"""Build the PascalPatch release download: unzip it and run pascalpatch.cmd, no compiler needed.
+"""Build the PascalPatch release download: unzip it and run PascalPatch.exe, no compiler needed.
 
     python tooling/release/package.py --out dist
 
@@ -6,6 +6,7 @@ The zip holds this checkout's tracked files (the app, the SDK, the docs and the 
 sources, so the GPL source travels with the binaries) minus the folders only the project itself
 uses (DEV_ONLY), plus:
 
+    PascalPatch.exe   the tray app, which runs the app with the bundled Python
     bin/     pascalpatch-launch.exe, pascalpatch_runtime.dll and the built-in plugins
              (unlock-all, extra-fighters, move-graft, quick-match), built here with
              tooling/native/build_plugins.py, or taken from --bin
@@ -36,11 +37,12 @@ PYTHON_VERSION = "3.13.15"
 PYTHON_URL = f"https://www.python.org/ftp/python/{PYTHON_VERSION}/python-{PYTHON_VERSION}-embed-amd64.zip"
 PYTHON_SHA256 = "d1f04d990aee1253d8569e8e5104e30fa9f5fa830899f14843448872d936a2cf"   # from python.org's release page
 BUILT_IN = ("unlock-all", "extra-fighters", "move-graft", "quick-match")
-# Kept out of the download so its folder shows players little more than pascalpatch.cmd; they
+# Kept out of the download so its folder shows players little more than PascalPatch.exe; they
 # stay in the repository, which the release's tag points at.
 DEV_ONLY = (".github/", "design/", "spikes/", "website/", "tools/", ".gitignore", "backend.py", "package.json", "pyproject.toml")
 STUDIO_DEV_ONLY = (".github/", ".gitignore")
 BINARIES = ("pascalpatch-launch.exe", "pascalpatch_runtime.dll", *(f"{p}.dll" for p in BUILT_IN))
+APP_EXE = "PascalPatch.exe"   # the tray app players double-click: the top of the download, not bin/
 
 
 def version():
@@ -107,7 +109,7 @@ def main(argv=None):
     zpath = out / f"{top}-windows.zip"
     with tempfile.TemporaryDirectory() as tmp:
         binaries = Path(a.bin).resolve() if a.bin else build_binaries(Path(tmp))
-        missing = [b for b in BINARIES if not (binaries / b).is_file()]
+        missing = [b for b in (*BINARIES, APP_EXE) if not (binaries / b).is_file()]
         if missing:
             raise SystemExit(f"not built: {', '.join(missing)} (in {binaries})")
         py = zipfile.ZipFile(io.BytesIO(python_embed(a.python_cache)))
@@ -116,6 +118,7 @@ def main(argv=None):
                 z.write(REPO / f, f"{top}/{f}")
             for b in BINARIES:
                 z.write(binaries / b, f"{top}/bin/{b}")
+            z.write(binaries / APP_EXE, f"{top}/{APP_EXE}")
             for f in tracked_files(studio, STUDIO_DEV_ONLY):
                 z.write(studio / f, f"{top}/studio/{f}")
             z.writestr(f"{top}/studio/VERSION.txt", f"Character Studio {studio_ver} ({studio_commit})\r\n")

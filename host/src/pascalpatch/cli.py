@@ -57,7 +57,7 @@ def cmd_launch(args):
  return 0
 def cmd_app(args):
  from .app.server import serve
- return serve(_root(args),BuildStore(args.data).root,port=args.http_port,window=not args.no_window)
+ return serve(_root(args),BuildStore(args.data).root,port=args.http_port,window=not (args.no_window or args.tray),tray=args.tray)
 def cmd_logs(args):
  d=BuildStore(args.data).root/"logs"/args.id
  for p in sorted(d.glob("*.log")) if d.exists() else []: print(p)
@@ -69,7 +69,7 @@ def main(argv=None):
   x=sub.add_parser(name); x.add_argument("id"); x.set_defaults(func=fn)
  x=sub.choices["launch"]; x.add_argument("--dolphin"); x.add_argument("--launcher",help="folder holding pascalpatch-launch.exe and pascalpatch_runtime.dll"); x.add_argument("--allow-unsafe",action="store_true"); x.add_argument("--no-build",action="store_true"); x.add_argument("--dry-run",action="store_true"); x.add_argument("--wait",action="store_true"); x.add_argument("--timeout",type=float,default=None); x.add_argument("--runtime",choices=("native","dolphin"),default="native"); x.add_argument("--port"); x.add_argument("--port-cwd"); x.add_argument("--port-arg",action="append",default=[],help="extra melee_port.exe argument (repeatable)")
  x=sub.add_parser("logs"); x.add_argument("id"); x.set_defaults(func=cmd_logs)
- x=sub.add_parser("app",help="open the PascalPatch desktop app"); x.add_argument("--http-port",type=int,default=0); x.add_argument("--no-window",action="store_true",help="serve only; open the printed address yourself"); x.set_defaults(func=cmd_app)
+ x=sub.add_parser("app",help="open the PascalPatch desktop app"); x.add_argument("--http-port",type=int,default=0); x.add_argument("--no-window",action="store_true",help="serve only; open the printed address yourself"); x.add_argument("--tray",action="store_true",help=argparse.SUPPRESS); x.set_defaults(func=cmd_app)   # --tray: run by PascalPatch.exe
  args=ap.parse_args(argv)
  try: return args.func(args)
  except PascalPatchError as e:
