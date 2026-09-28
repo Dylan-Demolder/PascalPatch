@@ -7,7 +7,7 @@ what they are doing ("Nair f7", "Guard", "DamageFlyN"), and chips for hitlag, hi
 **Frame advantage.** Every time an attack connects, on a body or on a shield, the plugin counts
 the frames until each side can act again and shows the difference under the attacker's panel:
 
-- `Jab on shield -13`: the defender can act 13 frames before you, so they can punish.
+- `Jab on shield -10`: the defender can act 10 frames before you, so they can punish.
 - `Nair on shield -24 (landed 12f later)`: aerials are only as safe as they are low; this one hit
   12 frames before landing. Hit lower (or L-cancel) and the number climbs.
 - `Usmash: true combo`: the second hit came before the defender could act.

@@ -70,6 +70,8 @@ void frame(void *user) {
 
 Helpers cover the usual questions: `pp_state_is_damage`, `_shield`, `_aerial_landing`, `_grabbed`, `_down`, `_punished` (the test combo counters and "openings" are built on), `pp_hitlag`, `pp_kind_name`, `pp_port_rgb` and `pp_rgba` for Pascal UI colours.
 
+Game flags are often left over from an earlier state. The interrupt flag behind `pp_can_interrupt` stays set through shield stun and landings, where the game never reads it, so the helper only counts it in attacks, grabs, throws and specials. Before trusting a field, log it every frame across the moment you care about (see Testing against the game below).
+
 ## Examples
 
 Every plugin in `plugins/` is a complete, tested example:

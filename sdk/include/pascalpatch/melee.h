@@ -210,8 +210,15 @@ static inline int pp_state_is_actionable(uint32_t s) {
            s == PP_ST_CLIFF_WAIT;
 }
 
-/* The move's IASA frames have begun: the player may already act out of it. */
-static inline int pp_can_interrupt(const pp_host *h, uint32_t fp) { return (h->rd8(fp + PP_FT_FLAGS_2218) & 0x80) != 0; }
+/* The move's IASA frames have begun: the player may already act out of it. The flag behind this
+ * (set by the move script's "allow interrupt" command) is only cleared when a new script sets it
+ * again, so it is left over in states that never read it, such as shield stun (GuardSetOff) and
+ * landings. Only attacks, grabs, throws and specials (character states, 0x155 on) count here. */
+static inline int pp_can_interrupt(const pp_host *h, uint32_t fp) {
+    uint32_t s = h->rd32(fp + PP_FT_STATE);
+    int move = (s >= PP_ST_ATTACK_11 && s <= PP_ST_ATTACK_AIR_LW) || (s >= PP_ST_CATCH && s <= PP_ST_THROW_LW) || s >= 0x155;
+    return move && (h->rd8(fp + PP_FT_FLAGS_2218) & 0x80) != 0;
+}
 
 /* The name players use for a common move ("Nair", "Fsmash", "Up throw"), or the action state's own
  * name for everything else (specials: "SpecialN", ...). */
