@@ -1,0 +1,21 @@
+{
+  "id": "wavedash-trainer",
+  "name": "Wavedash Trainer",
+  "version": "1.0.0",
+  "abi": 1,
+  "entry": "wavedash-trainer.dll",
+  "summary": "Breaks down every wavedash: when you pressed L/R, the stick angle, how long it was against your character's best, and one tip to fix it.",
+  "author": "PascalPatch",
+  "license": "GPL-2.0-or-later",
+  "tags": ["hud", "training", "wavedash"],
+  "min_runtime": "0.3",
+  "settings": [
+    {"key": "port", "type": "choice", "label": "Player", "default": "1",
+     "options": [{"value": "1", "label": "Port 1"}, {"value": "2", "label": "Port 2"}, {"value": "3", "label": "Port 3"}, {"value": "4", "label": "Port 4"}]},
+    {"key": "watch", "type": "choice", "label": "Coach", "default": "player",
+     "options": [{"value": "player", "label": "Just that player"}, {"value": "humans", "label": "Every human player"}]},
+    {"key": "panel", "type": "bool", "label": "Breakdown panel", "default": true},
+    {"key": "reset_key", "type": "key", "label": "Reset the count", "default": "F12"},
+    {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.95, "min": 0.3, "max": 1.0}
+  ]
+}

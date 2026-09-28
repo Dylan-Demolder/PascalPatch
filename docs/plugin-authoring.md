@@ -88,6 +88,7 @@ Every plugin in `plugins/` is a complete, tested example:
 | `match-stats` | summarise a match when it ends and append a history file beside the DLL |
 | `hitbox-viewer` | project world positions onto the screen with the game's camera and draw capsules (falling back to circles on 0.3) |
 | `di-trainer` | read the stage's blast zones and a fighter's attributes, and replay the game's own physics to predict a launch |
+| `wavedash-trainer` | follow a fighter through its action states frame by frame and grade a technique against the game's own rules |
 | `unlock-all` | change the game's save flags only while a screen that reads them is up |
 
 ## What makes a plugin useful
