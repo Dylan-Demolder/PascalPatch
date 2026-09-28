@@ -156,9 +156,9 @@ extern "C" __declspec(dllexport) int pp_plugin_load(const pp_host* host, const c
   H = host;
   H->declare_setting(ID, R"({"key":"hitboxes","type":"bool","label":"Hitboxes","default":true})");
   H->declare_setting(ID, R"({"key":"hurtboxes","type":"bool","label":"Hurtboxes","default":true})");
-  H->declare_setting(ID, R"({"key":"toggle_key","type":"key","label":"Show / hide","default":"F3"})");
+  H->declare_setting(ID, R"({"key":"toggle_key","type":"key","label":"Show / hide","default":"Numpad1"})");
   H->declare_setting(ID, R"({"key":"opacity","type":"float","label":"Opacity","default":0.9,"min":0.2,"max":1.0})");
-  H->set_status(ID, "Drawing hitboxes (red) and hurtboxes (yellow). F3 shows or hides them.");
+  H->set_status(ID, "Drawing hitboxes (red) and hurtboxes (yellow). Numpad1 (or the key you choose) shows or hides them.");
   H->on_frame(frame, nullptr);
   return 0;
 }

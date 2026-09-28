@@ -106,7 +106,7 @@ The maintainer may remove a plugin that breaks these rules, and may update a lis
 Publishing a merged community plugin, on the machine that holds the signing key:
 
 ```bash
-python tooling/native/build_plugins.py --data <data> --json-include <third_party> --plugins-root <pascalpatch-plugins>/community --only <id>
+python tooling/native/build_plugins.py --data <data> --plugins-root <pascalpatch-plugins>/community --only <id>
 ```
 
 ```bash

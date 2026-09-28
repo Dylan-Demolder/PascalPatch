@@ -38,7 +38,7 @@ Choose a default that does not collide. Players can rebind any clash, but a good
 
 | Key | Used by |
 |---|---|
-| F1, F2, F3, F11 | the port and the overlay (keep clear) |
+| F1, F2, F3, F11 | Melee Unlocked (F1 PC settings, F3 Lab view, F11 menu) and the PascalPatch overlay (F2): keep clear |
 | F4 | Match Stats |
 | F5, F6, F7, F9 | Training Lab: pause, step, slow motion, reset |
 | F8 | Tech Trainer |
@@ -48,6 +48,7 @@ Choose a default that does not collide. Players can rebind any clash, but a good
 | Home, End, Delete, PageUp, PageDown | Training Lab: dummy, save, load, record, play |
 | Backspace | Quick Match: restart |
 | Numpad0 | the SDK template |
+| Numpad1 | Hitbox Viewer |
 
 The number row, letters and the rest of the numpad are free. Many players use a keyboard for the game itself, though, so letters are a poor default.
 

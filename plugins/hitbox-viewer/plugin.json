@@ -1,7 +1,8 @@
 {
   "id": "hitbox-viewer",
   "name": "Hitbox Viewer",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "changes": "Show / hide moves from F3 to Numpad1, because F3 also toggles Melee Unlocked's Lab view. Works in Quick Match too.",
   "abi": 1,
   "entry": "hitbox-viewer.dll",
   "summary": "Draws every fighter's hitboxes and hurtboxes over the game, with invincibility and intangibility shown in colour.",
@@ -12,7 +13,7 @@
   "settings": [
     {"key": "hitboxes", "type": "bool", "label": "Hitboxes", "default": true},
     {"key": "hurtboxes", "type": "bool", "label": "Hurtboxes", "default": true},
-    {"key": "toggle_key", "type": "key", "label": "Show / hide", "default": "F3"},
+    {"key": "toggle_key", "type": "key", "label": "Show / hide", "default": "Numpad1"},
     {"key": "opacity", "type": "float", "label": "Opacity", "default": 0.9, "min": 0.2, "max": 1.0}
   ]
 }

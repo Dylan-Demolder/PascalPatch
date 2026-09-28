@@ -6,7 +6,7 @@ Hitbox Viewer draws what the game actually tests for collisions, on top of the m
 - **Green** hurtboxes are invincible: hits connect but do nothing, as in the first frames of a ledge grab.
 - **Blue** hurtboxes are intangible: hits pass straight through, as in rolls, spot dodges and air dodges.
 
-Press **F3** to show or hide the boxes. You can change the key, turn either kind off, or make them fainter in the plugin's settings.
+Press **Numpad1** to show or hide the boxes (F3 belongs to Melee Unlocked's Lab view). You can change the key, turn either kind off, or make them fainter in the plugin's settings.
 
 It pairs well with Training Lab: pause with F5 and step with F6 to see exactly which frame a move comes out, or where a dodge stops being intangible.
 
