@@ -191,7 +191,7 @@ class CoreTests(unittest.TestCase):
   with patch("urllib.request.urlopen",return_value=Response()):
    self.assertEqual(fetch_https_index("https://registry.example/index.json",trust),entries)
    cache=Path(tempfile.mkdtemp())/"index.json"
-   self.assertEqual(update_https_index("https://registry.example/index.json",cache,trust),cache)
+   self.assertEqual(Path(update_https_index("https://registry.example/index.json",cache,trust)).resolve(),Path(cache).resolve())
    self.assertEqual(json.loads(cache.read_text()),signed)
   with self.assertRaises(ValueError): fetch_https_index("http://registry.example/index.json",trust)
   tampered=dict(signed); tampered["entries"]=[{"id":"tampered"}]
