@@ -13,7 +13,7 @@ namespace pp {
 constexpr const char* VERSION = "0.5.0";
 
 struct Setting {
-  std::string key, label, type = "bool", help;   // type: bool int float choice text
+  std::string key, label, type = "bool", help, group;   // type: bool int float choice text; group: a heading
   double num = 0, def = 0, min = 0, max = 1, step = 0;
   std::vector<std::string> options, option_labels;
   std::string text, def_text;

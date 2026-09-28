@@ -338,6 +338,7 @@ pp::Setting parse_setting(const json& j) {
   s.type = j.value("type", "bool");
   s.label = j.value("label", s.key);
   s.help = j.value("help", "");
+  s.group = j.value("group", "");
   s.min = j.value("min", 0.0);
   s.max = j.value("max", s.type == "int" ? 100.0 : 1.0);
   s.step = j.value("step", 0.0);

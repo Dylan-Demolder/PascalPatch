@@ -718,40 +718,40 @@ extern "C" __declspec(dllexport) int pp_plugin_load(const pp_host* host, const c
     return 2;
   }
   H = host;
-  H->declare_setting(ID, R"J({"key":"pause_key","type":"key","label":"Pause / resume","default":"F5"})J");
-  H->declare_setting(ID, R"J({"key":"step_key","type":"key","label":"Frame advance","default":"F6"})J");
-  H->declare_setting(ID, R"J({"key":"slow_key","type":"key","label":"Slow motion on / off","default":"F7"})J");
-  H->declare_setting(ID, R"J({"key":"slow_speed","type":"choice","label":"Slow motion speed","default":"half","options":[{"value":"half","label":"Half speed"},{"value":"quarter","label":"Quarter speed"}]})J");
-  H->declare_setting(ID, R"J({"key":"who","type":"choice","label":"Percent, shield and stock options apply to","default":"p2","options":[{"value":"p1","label":"Port 1"},{"value":"p2","label":"Port 2"},{"value":"all","label":"Everyone"},{"value":"cpu","label":"CPU players"}]})J");
-  H->declare_setting(ID, R"J({"key":"reset_key","type":"key","label":"Reset percent to 0","default":"F9"})J");
-  H->declare_setting(ID, R"J({"key":"lock_percent","type":"bool","label":"Lock percent","default":false})J");
-  H->declare_setting(ID, R"J({"key":"percent","type":"int","label":"Locked percent","default":60,"min":0,"max":999})J");
-  H->declare_setting(ID, R"J({"key":"infinite_shield","type":"bool","label":"Infinite shield","default":false})J");
-  H->declare_setting(ID, R"J({"key":"endless_stocks","type":"bool","label":"Endless stocks","default":false})J");
+  H->declare_setting(ID, R"J({"key":"pause_key","group":"Hotkeys","type":"key","label":"Pause / resume","default":"F5"})J");
+  H->declare_setting(ID, R"J({"key":"step_key","group":"Hotkeys","type":"key","label":"Frame advance","default":"F6"})J");
+  H->declare_setting(ID, R"J({"key":"slow_key","group":"Hotkeys","type":"key","label":"Slow motion on / off","default":"F7"})J");
+  H->declare_setting(ID, R"J({"key":"slow_speed","group":"Hotkeys","type":"choice","label":"Slow motion speed","default":"half","options":[{"value":"half","label":"Half speed"},{"value":"quarter","label":"Quarter speed"}]})J");
+  H->declare_setting(ID, R"J({"key":"reset_key","group":"Hotkeys","type":"key","label":"Reset percent to 0","default":"F9"})J");
+  H->declare_setting(ID, R"J({"key":"who","group":"Practice","type":"choice","label":"Percent, shield and stock options apply to","default":"p2","options":[{"value":"p1","label":"Port 1"},{"value":"p2","label":"Port 2"},{"value":"all","label":"Everyone"},{"value":"cpu","label":"CPU players"}]})J");
+  H->declare_setting(ID, R"J({"key":"lock_percent","group":"Practice","type":"bool","label":"Lock percent","default":false})J");
+  H->declare_setting(ID, R"J({"key":"percent","group":"Practice","type":"int","label":"Locked percent","default":60,"min":0,"max":999})J");
+  H->declare_setting(ID, R"J({"key":"infinite_shield","group":"Practice","type":"bool","label":"Infinite shield","default":false})J");
+  H->declare_setting(ID, R"J({"key":"endless_stocks","group":"Practice","type":"bool","label":"Endless stocks","default":false})J");
   if (PP_HOST_HAS(H, state_load)) {
-    H->declare_setting(ID, R"J({"key":"save_key","type":"key","label":"Save state","default":"End"})J");
-    H->declare_setting(ID, R"J({"key":"load_key","type":"key","label":"Load state","default":"Delete"})J");
-    H->declare_setting(ID, R"J({"key":"reload","type":"choice","label":"Load the state again on its own","default":"off","options":[{"value":"off","label":"Never"},{"value":"exchange","label":"When the exchange is over (the dummy's port is free again, or KO'd)"},{"value":"3s","label":"After 3 seconds"},{"value":"5s","label":"After 5 seconds"}]})J");
-    H->declare_setting(ID, R"J({"key":"state_dpad","type":"bool","label":"D-pad right saves, D-pad left loads (as in UnclePunch)","default":true})J");
+    H->declare_setting(ID, R"J({"key":"save_key","group":"Savestates","type":"key","label":"Save state","default":"End"})J");
+    H->declare_setting(ID, R"J({"key":"load_key","group":"Savestates","type":"key","label":"Load state","default":"Delete"})J");
+    H->declare_setting(ID, R"J({"key":"reload","group":"Savestates","type":"choice","label":"Load the state again on its own","default":"off","options":[{"value":"off","label":"Never"},{"value":"exchange","label":"When the exchange is over (the dummy's port is free again, or KO'd)"},{"value":"3s","label":"After 3 seconds"},{"value":"5s","label":"After 5 seconds"}]})J");
+    H->declare_setting(ID, R"J({"key":"state_dpad","group":"Savestates","type":"bool","label":"D-pad right saves, D-pad left loads (as in UnclePunch)","default":true})J");
   }
   if (PP_HOST_HAS(H, pad_set)) {
-    H->declare_setting(ID, R"J({"key":"dummy","type":"bool","label":"Dummy on when a match starts","default":false})J");
-    H->declare_setting(ID, R"J({"key":"dummy_key","type":"key","label":"Dummy on / off","default":"Home"})J");
-    H->declare_setting(ID, R"J({"key":"dummy_port","type":"choice","label":"Dummy port (set it to a human player)","default":"p2","options":[{"value":"p1","label":"Port 1"},{"value":"p2","label":"Port 2"},{"value":"p3","label":"Port 3"},{"value":"p4","label":"Port 4"}]})J");
-    H->declare_setting(ID, R"J({"key":"stance","type":"choice","label":"Dummy stands","default":"stand","options":[{"value":"stand","label":"Standing"},{"value":"crouch","label":"Crouching"},{"value":"shield","label":"Shielding"},{"value":"jump","label":"Jumping"}]})J");
-    H->declare_setting(ID, R"J({"key":"di","type":"choice","label":"DI","default":"survival","options":[{"value":"none","label":"None"},{"value":"survival","label":"Survival (up and in)"},{"value":"combo","label":"Combo (down and away)"},{"value":"in","label":"In"},{"value":"out","label":"Out"},{"value":"random","label":"Random"}]})J");
-    H->declare_setting(ID, R"J({"key":"sdi","type":"choice","label":"SDI","default":"none","options":[{"value":"none","label":"None"},{"value":"some","label":"Some"},{"value":"max","label":"As much as possible"}]})J");
-    H->declare_setting(ID, R"J({"key":"tech","type":"choice","label":"Tech","default":"random","options":[{"value":"miss","label":"Never (miss the tech)"},{"value":"in_place","label":"In place"},{"value":"toward","label":"Toward you"},{"value":"away","label":"Away from you"},{"value":"random","label":"Random (misses too)"}]})J");
-    H->declare_setting(ID, R"J({"key":"getup","type":"choice","label":"Get up (after a missed tech)","default":"random","options":[{"value":"stand","label":"Stand"},{"value":"toward","label":"Roll toward you"},{"value":"away","label":"Roll away"},{"value":"attack","label":"Getup attack"},{"value":"random","label":"Random"}]})J");
-    H->declare_setting(ID, (std::string(R"J({"key":"counter_hit","type":"choice","label":"When hitstun ends","default":"none","options":)J") + ACTIONS + "}").c_str());
-    H->declare_setting(ID, (std::string(R"J({"key":"counter_shield","type":"choice","label":"When shield stun ends","default":"none","options":)J") + ACTIONS + "}").c_str());
-    H->declare_setting(ID, R"J({"key":"recover","type":"bool","label":"Recover to the stage when knocked off","default":true})J");
-    H->declare_setting(ID, R"J({"key":"mash","type":"bool","label":"Mash out of grabs","default":false})J");
-    H->declare_setting(ID, R"J({"key":"record_key","type":"key","label":"Record your inputs (start / stop)","default":"PageUp"})J");
-    H->declare_setting(ID, R"J({"key":"play_key","type":"key","label":"Dummy plays the recording (start / stop)","default":"PageDown"})J");
-    H->declare_setting(ID, R"J({"key":"record_port","type":"choice","label":"Record the inputs of","default":"p1","options":[{"value":"p1","label":"Port 1"},{"value":"p2","label":"Port 2"},{"value":"p3","label":"Port 3"},{"value":"p4","label":"Port 4"}]})J");
-    H->declare_setting(ID, R"J({"key":"loop","type":"bool","label":"Loop the playback","default":true})J");
-    H->set_status(ID, "F5 pause, F6 frame advance, F7 slow motion, F9 reset percent. D-pad right / End save a state, D-pad left / Delete load it. Home: dummy on / off; PageUp record, PageDown play.");
+    H->declare_setting(ID, R"J({"key":"dummy","group":"Dummy","type":"bool","label":"Dummy on when a match starts","default":false})J");
+    H->declare_setting(ID, R"J({"key":"dummy_key","group":"Dummy","type":"key","label":"Dummy on / off","default":"Home"})J");
+    H->declare_setting(ID, R"J({"key":"dummy_port","group":"Dummy","type":"choice","label":"Dummy port (set it to a human player)","default":"p2","options":[{"value":"p1","label":"Port 1"},{"value":"p2","label":"Port 2"},{"value":"p3","label":"Port 3"},{"value":"p4","label":"Port 4"}]})J");
+    H->declare_setting(ID, R"J({"key":"stance","group":"Dummy","type":"choice","label":"Dummy stands","default":"stand","options":[{"value":"stand","label":"Standing"},{"value":"crouch","label":"Crouching"},{"value":"shield","label":"Shielding"},{"value":"jump","label":"Jumping"}]})J");
+    H->declare_setting(ID, R"J({"key":"di","group":"Dummy reactions","type":"choice","label":"DI","default":"survival","options":[{"value":"none","label":"None"},{"value":"survival","label":"Survival (up and in)"},{"value":"combo","label":"Combo (down and away)"},{"value":"in","label":"In"},{"value":"out","label":"Out"},{"value":"random","label":"Random"}]})J");
+    H->declare_setting(ID, R"J({"key":"sdi","group":"Dummy reactions","type":"choice","label":"SDI","default":"none","options":[{"value":"none","label":"None"},{"value":"some","label":"Some"},{"value":"max","label":"As much as possible"}]})J");
+    H->declare_setting(ID, R"J({"key":"tech","group":"Dummy reactions","type":"choice","label":"Tech","default":"random","options":[{"value":"miss","label":"Never (miss the tech)"},{"value":"in_place","label":"In place"},{"value":"toward","label":"Toward you"},{"value":"away","label":"Away from you"},{"value":"random","label":"Random (misses too)"}]})J");
+    H->declare_setting(ID, R"J({"key":"getup","group":"Dummy reactions","type":"choice","label":"Get up (after a missed tech)","default":"random","options":[{"value":"stand","label":"Stand"},{"value":"toward","label":"Roll toward you"},{"value":"away","label":"Roll away"},{"value":"attack","label":"Getup attack"},{"value":"random","label":"Random"}]})J");
+    H->declare_setting(ID, (std::string(R"J({"key":"counter_hit","group":"Dummy reactions","type":"choice","label":"When hitstun ends","default":"none","options":)J") + ACTIONS + "}").c_str());
+    H->declare_setting(ID, (std::string(R"J({"key":"counter_shield","group":"Dummy reactions","type":"choice","label":"When shield stun ends","default":"none","options":)J") + ACTIONS + "}").c_str());
+    H->declare_setting(ID, R"J({"key":"recover","group":"Dummy reactions","type":"bool","label":"Recover to the stage when knocked off","default":true})J");
+    H->declare_setting(ID, R"J({"key":"mash","group":"Dummy reactions","type":"bool","label":"Mash out of grabs","default":false})J");
+    H->declare_setting(ID, R"J({"key":"record_key","group":"Recording","type":"key","label":"Record your inputs (start / stop)","default":"PageUp"})J");
+    H->declare_setting(ID, R"J({"key":"play_key","group":"Recording","type":"key","label":"Dummy plays the recording (start / stop)","default":"PageDown"})J");
+    H->declare_setting(ID, R"J({"key":"record_port","group":"Recording","type":"choice","label":"Record the inputs of","default":"p1","options":[{"value":"p1","label":"Port 1"},{"value":"p2","label":"Port 2"},{"value":"p3","label":"Port 3"},{"value":"p4","label":"Port 4"}]})J");
+    H->declare_setting(ID, R"J({"key":"loop","group":"Recording","type":"bool","label":"Loop the playback","default":true})J");
+    H->set_status(ID, "F5 pause, F6 step, F7 slow, F9 0%. D-pad right / left: save / load. Home: dummy. PageUp record, PageDown play.");
   } else {
     H->set_status(ID, "F5 pause, F6 frame advance, F7 slow motion, F9 reset percent. (The dummy needs PascalPatch 0.5.)");
   }

@@ -185,7 +185,10 @@ async function pagePlugins(root) {
 }
 function settingsDialog(p) {
   const values = { ...p.settings };
-  const fields = p.settings_schema.map((s) => {
+  let group = '';
+  const fields = p.settings_schema.flatMap((s) => {
+    const heading = s.group && s.group !== group ? h('div', { class: 'pp-field-group' }, s.group) : null;
+    group = s.group || '';
     const label = s.label || s.key; let input;
     if (s.type === 'bool') input = h('label', { class: 'pp-switch' }, h('input', { type: 'checkbox', checked: !!values[s.key], onchange: (e) => { values[s.key] = e.target.checked; } }), h('span', { class: 'pp-switch-track' }), h('span', {}, label));
     else if (s.type === 'choice') input = h('select', { class: 'pp-select', onchange: (e) => { values[s.key] = e.target.value; } },
@@ -193,7 +196,8 @@ function settingsDialog(p) {
     else if (s.type === 'int' || s.type === 'float') input = h('input', { class: 'pp-input', type: 'number', min: s.min, max: s.max, step: s.step || (s.type === 'int' ? 1 : 0.05), value: values[s.key],
       oninput: (e) => { values[s.key] = s.type === 'int' ? parseInt(e.target.value, 10) : parseFloat(e.target.value); } });
     else input = h('input', { class: 'pp-input', value: values[s.key] ?? '', oninput: (e) => { values[s.key] = e.target.value; } });
-    return h('div', { class: 'pp-field' }, s.type === 'bool' ? null : h('label', {}, label), input, s.help ? h('span', { class: 'pp-hint' }, s.help) : null);
+    const field = h('div', { class: 'pp-field' }, s.type === 'bool' ? null : h('label', {}, label), input, s.help ? h('span', { class: 'pp-hint' }, s.help) : null);
+    return heading ? [heading, field] : [field];
   });
   openDialog(`${p.name} settings`, fields, 'Save', async () => { await run(() => api.post('/api/plugins/settings', { id: p.id, values }), 'Settings saved'); route(); });
 }

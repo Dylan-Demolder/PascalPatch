@@ -22,3 +22,8 @@
 .toolbar .pp-input { max-width: 280px; }
 .desc { white-space: pre-line; }
 @media (max-width: 980px) { .hero, .split { grid-template-columns: 1fr; } }
+
+/* a heading over a group of plugin settings ("group" in plugin.json) */
+.pp-field-group { margin: 14px 0 2px; padding-bottom: 4px; border-bottom: 1px solid var(--pp-line);
+  font-size: var(--pp-size-xs); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--pp-text-dim); }
+.pp-field-group:first-child { margin-top: 0; }

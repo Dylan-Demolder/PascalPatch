@@ -26,7 +26,7 @@ plugins/<id>/
 }
 ```
 
-Setting types: `bool`, `int`, `float` (`min`/`max`), `choice` (`options`: values or `{value, label}`), `text`, and `key` (a hotkey: the default is a key name such as `"F5"`, the F2 window rebinds it by pressing a key, Esc unbinds it, and `setting_number` returns its Windows virtual-key code, 0 when unbound). A plugin can also declare settings itself with `declare_setting`, which is how a plugin loaded straight from a profile gets a settings tab.
+Setting types: `bool`, `int`, `float` (`min`/`max`), `choice` (`options`: values or `{value, label}`), `text`, and `key` (a hotkey: the default is a key name such as `"F5"`, the F2 window rebinds it by pressing a key, Esc unbinds it, and `setting_number` returns its Windows virtual-key code, 0 when unbound). A plugin can also declare settings itself with `declare_setting`, which is how a plugin loaded straight from a profile gets a settings tab. Any setting can carry `help` (a tooltip) and `group` (a heading: the F2 window and the app start a new section wherever the group changes, so keep a group's settings together; older runtimes ignore it).
 
 `min_runtime` is the oldest PascalPatch that has every host call the plugin uses; the site shows it as "Needs PascalPatch 0.3 or newer". The plugin should still check `PP_HOST_HAS` and refuse to load (return non-zero, with a log line) on an older runtime.
 

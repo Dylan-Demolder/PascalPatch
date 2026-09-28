@@ -431,7 +431,15 @@ void plugin_tab(pp::Plugin& p) {
     ImGui::TextDisabled("This plugin has no settings.");
   } else {
     bool commit = false;
-    for (auto& s : p.settings) commit |= setting_widget(p, s);
+    const std::string* group = nullptr;
+    for (auto& s : p.settings) {
+      if (!s.group.empty() && (!group || *group != s.group)) {   // a heading where a group starts
+        ImGui::Spacing();
+        ImGui::SeparatorText(s.group.c_str());
+      }
+      group = &s.group;
+      commit |= setting_widget(p, s);
+    }
     ImGui::Spacing();
     if (ImGui::Button("Reset to defaults")) {
       for (auto& s : p.settings) { s.num = s.def; s.text = s.def_text; ui.text.erase(p.id + "/" + s.key); }
