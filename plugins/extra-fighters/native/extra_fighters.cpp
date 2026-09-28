@@ -693,12 +693,16 @@ void preload_ckind(pp_cpu* cpu, void*) {
   }
 }
 
-// The stock icons above each player's damage (ifStock_802F8298, a GObj proc run every frame
-// for each player's stock display): the game picks the icon by animating each stock's texture
-// to the player's CSS kind and costume, which is the base fighter's for a new fighter. After
-// it runs, a new fighter's (or replaced slot's) stocks show its own picture and lose the
-// texture animation that would put the base's back. The display is rebuilt every match.
-constexpr uint32_t IF_STOCK = 0x802F8298;
+// The stock icons above each player's damage (fn_802F9410, the GObj proc run every frame for
+// each player's stock display): the game picks the icon by animating each stock's texture to
+// the player's CSS kind and costume, which is the base fighter's for a new fighter. After it
+// runs, a new fighter's (or replaced slot's) stocks show its own picture and lose the texture
+// animation that would put the base's back. The display is rebuilt every match. The proc is
+// hooked, not ifStock_802F8298 that it calls: that call is direct, so a hook there never runs,
+// and it only draws stock matches (mode 0); timed and endless matches (mode 1) draw one head
+// in the proc itself. Mode 2 is the coin count, which has no fighter picture.
+constexpr uint32_t IF_STOCK = 0x802F9410;
+constexpr uint32_t STOCK_MODE_COINS = 2;
 constexpr uint32_t STOCK_PLAYERS = 0x804A1378 + 0x08;   // ifStock_804A1378.player[6], 0x50 bytes each
 constexpr uint32_t STOCK_PLAYER_SIZE = 0x50, STOCK_JOBJS = 0x04;   // x4[8]: [1..5] the stocks
 constexpr uint32_t GOBJ_USER_DATA = 0x2C;
@@ -725,8 +729,8 @@ void if_stock(pp_cpu* cpu, void*) {
   uint32_t gobj = H->reg(cpu, 3);
   H->call(cpu, g_if_stock);
   uint32_t ud = H->rd32(gobj + GOBJ_USER_DATA);
-  uint32_t player = ud ? H->rd8(ud) : 99;
-  if (player >= 6) return;
+  uint32_t player = ud ? H->rd8(ud) : 99;   // IfStockUserData: player, mode
+  if (player >= 6 || H->rd8(ud + 1) == STOCK_MODE_COINS) return;
   int img = -1;
   int c = player < 4 && kind_of(g_pick[player]) >= 0 ? g_pick[player] : -1;
   if (c >= 0) img = g_fighters[c].stock;
