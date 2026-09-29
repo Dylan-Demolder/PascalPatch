@@ -349,12 +349,33 @@ void set_autostart(bool on) {
 
 // ---- the tray menu ----
 
+void load_profiles() {
+  g_profiles.clear();
+  auto r = http(L"GET", L"/api/profiles");
+  try {
+    for (auto& p : json::parse(r.second)) g_profiles.emplace_back(p.at("id").get<std::string>(), p.value("name", p.at("id").get<std::string>()));
+  } catch (...) {}
+}
+
 void play(size_t i) {
   if (i >= g_profiles.size()) return;
   auto [id, name] = g_profiles[i];
   auto r = http(L"POST", L"/api/launch", json{{"id", id}}.dump());
   if (r.first == 200) balloon(L"Starting " + widen(name), L"Building the game with your plugins, then starting Melee.");
   else balloon(L"Could not start " + widen(name), error_of(r));
+}
+
+// A tray menu command: picked from the menu, or sent as WM_COMMAND (the Play ids then follow
+// /api/profiles' order).
+void run_command(UINT cmd) {
+  if (cmd == ID_OPEN) open_window();
+  else if (cmd == ID_STUDIO) {
+    auto r = http(L"POST", L"/api/studio", "{}");
+    if (r.first == 200) balloon(L"Character Studio", L"Opening Character Studio...");
+    else balloon(L"Could not open Character Studio", error_of(r));
+  } else if (cmd == ID_AUTOSTART) set_autostart(!autostart_on());
+  else if (cmd == ID_QUIT) DestroyWindow(g_wnd);
+  else if (cmd >= ID_PLAY_FIRST) play(cmd - ID_PLAY_FIRST);
 }
 
 void show_menu() {
@@ -365,12 +386,7 @@ void show_menu() {
   SetMenuDefaultItem(menu, ID_OPEN, FALSE);
   HMENU plays = CreatePopupMenu();
   g_profiles.clear();
-  if (ready) {
-    auto r = http(L"GET", L"/api/profiles");
-    try {
-      for (auto& p : json::parse(r.second)) g_profiles.emplace_back(p.at("id").get<std::string>(), p.value("name", p.at("id").get<std::string>()));
-    } catch (...) {}
-  }
+  if (ready) load_profiles();
   for (size_t i = 0; i < g_profiles.size() && i < 30; ++i) AppendMenuW(plays, MF_STRING, ID_PLAY_FIRST + i, widen(g_profiles[i].second).c_str());
   if (g_profiles.empty()) AppendMenuW(plays, MF_STRING | MF_GRAYED, 0, L"No profiles yet: make one in PascalPatch");
   AppendMenuW(menu, MF_POPUP | (ready ? 0 : MF_GRAYED), (UINT_PTR)plays, L"Play");
@@ -385,14 +401,7 @@ void show_menu() {
   UINT cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY, pt.x, pt.y, 0, g_wnd, nullptr);
   PostMessageW(g_wnd, WM_NULL, 0, 0);
   DestroyMenu(menu);   // and its Play submenu
-  if (cmd == ID_OPEN) open_window();
-  else if (cmd == ID_STUDIO) {
-    auto r = http(L"POST", L"/api/studio", "{}");
-    if (r.first == 200) balloon(L"Character Studio", L"Opening Character Studio...");
-    else balloon(L"Could not open Character Studio", error_of(r));
-  } else if (cmd == ID_AUTOSTART) set_autostart(!autostart_on());
-  else if (cmd == ID_QUIT) DestroyWindow(g_wnd);
-  else if (cmd >= ID_PLAY_FIRST) play(cmd - ID_PLAY_FIRST);
+  if (cmd) run_command(cmd);
 }
 
 void add_icon() {
@@ -417,6 +426,15 @@ LRESULT CALLBACK wndproc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
       }
       return 0;
     case WM_SHOW_WINDOW: open_window(); return 0;
+    case WM_COMMAND: {
+      bool ready;
+      { std::lock_guard<std::mutex> l(g_mu); ready = g_ready; }
+      UINT cmd = LOWORD(wp);
+      if (!ready && cmd != ID_QUIT && cmd != ID_AUTOSTART) return 0;
+      if (cmd >= ID_PLAY_FIRST) load_profiles();
+      run_command(cmd);
+      return 0;
+    }
     case WM_READY: {
       bool open;
       std::wstring version;
@@ -437,7 +455,7 @@ LRESULT CALLBACK wndproc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
         for (auto& line : g_tail) tail += widen(line) + L"\n";
       }
       Shell_NotifyIconW(NIM_DELETE, &g_nid);
-      error_box(L"PascalPatch stopped unexpectedly (exit code " + std::to_wstring((DWORD)wp) + L").\n\n" +
+      error_box(L"PascalPatch stopped unexpectedly (exit code " + std::to_wstring((int)(DWORD)wp) + L").\n\n" +
                 (tail.empty() ? L"It printed nothing." : L"Its last lines:\n\n" + tail));
       g_quitting = true;
       DestroyWindow(w);
